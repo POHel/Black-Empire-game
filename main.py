@@ -3,6 +3,8 @@ import sys
 import math
 import random
 import sqlite3
+import json
+#кароче скоро реализую тут логику для сохранения настроек файлом config.json
 from coreLogic import AppLogic
 from typing import Dict, List, Tuple, Optional, Callable, Any
 from enum import Enum

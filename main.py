@@ -19,7 +19,6 @@ COMPANY_NAME = "SKATT.corp"
 VERSION = "0.0.1"
 
 WINDOW_SIZES = {
-    '800x600': (800, 600),
     '1280x720': (1280, 720),
     '1920x1080': (1920, 1080)
 }

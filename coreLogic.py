@@ -4,8 +4,9 @@ class AppLogic:
 		self.balance()
 		self.earn_one_click()
 		self.earn_click()
-		self.earn_click_level()
-
+		self.show_earn_click_level()
+		self.taxes()
+	#отображение баланса
 	def balance(self):
 		connect_balance = sqlite3.connect('data/business_data.db')
 		cursor_balance = connect_balance.cursor()
@@ -13,6 +14,7 @@ class AppLogic:
 		result = cursor_balance.fetchone()[0]
 		connect_balance.close()
 		return result
+	#возвращаем значение заработка за 1 клик
 	def earn_one_click(self):
 		connect_earn_one_click = sqlite3.connect('data/business_data.db')
 		cursor_earn_one_click = connect_earn_one_click.cursor()
@@ -20,6 +22,7 @@ class AppLogic:
 		result = cursor_earn_one_click.fetchone()[0]
 		connect_earn_one_click.close()
 		return result
+	#обновляем данные о балансе в базе данных
 	def earn_click(self):
 		balance = self.balance()
 		balance += self.earn_one_click()
@@ -33,11 +36,19 @@ class AppLogic:
 		all_money.execute('UPDATE status set all_moneys = ?', (balance,))
 		all_money_status.commit()
 		all_money_status.close()
-	def earn_click_level(self):
+	#отображение уровня кликера(заработок за 1 клик)
+	def show_earn_click_level(self):
 		connect_earn_one_click = sqlite3.connect('data/business_data.db')
 		cursor_earn_one_click = connect_earn_one_click.cursor()
 		cursor_earn_one_click.execute('SELECT earn_click_level FROM wallet')
 		result_level = cursor_earn_one_click.fetchone()[0]
 		connect_earn_one_click.close()
-		click_level = '1'
-		return click_level
+		return result_level
+	#отображение налогов в месяц
+	def taxes(self):
+		connect_taxes = sqlite3.connect('data/business_data.db')
+		cursor_taxes = connect_taxes.cursor()
+		cursor_taxes.execute('SELECT taxes FROM wallet')
+		result_taxes = cursor_taxes.fetchone()[0]
+		connect_taxes.close()
+		return result_taxes

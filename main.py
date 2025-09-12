@@ -969,7 +969,8 @@ class MainGameView(View):
         self.app_logic = AppLogic()
         self.money = self.app_logic.balance()
         self.click = self.app_logic.earn_one_click()
-        self.click_level = self.app_logic.earn_click_level()
+        self.click_level = self.app_logic.show_earn_click_level()
+        self.taxes = self.app_logic.taxes()
         
         # Нижняя панель вкладок
         tab_width = WINDOW_WIDTH / 6
@@ -1030,7 +1031,7 @@ class MainGameView(View):
             "Магазины": [
                 Card(WINDOW_WIDTH/3, 250, 280, 100, "Белый рынок", "Легальные товары",
                      lambda: self.show_shop("Белый рынок"), theme['card_light']),
-                Card(2*WINDOW_WIDTH/3, 250, 280, 100, "Чёрный рынок", "Эксклюзивные товары",
+                Card(2*WINDOW_WIDTH/3, 250, 280, 100, "Чёрный рынок", "Эксклюзивные и запрещённые товары",
                      lambda: self.show_shop("Чёрный рынок"), theme['card_dark'])
             ]
         }
@@ -1321,13 +1322,13 @@ class MainGameView(View):
         # Статистика игрока
         stats = [
             f"Общий баланс: ${self.money:,}",
-            "Уровень: 15",
-            "Опыт: 1250/2000",
-            "Игровое время: 25 часов",
-            "Всего кликов: 12,500",
-            "Налоги: $5,000/мес",
-            "Рейтинг Forbes: #156",
-            "Транспорт: Lamborghini Aventador"
+            f"Уровень: {self.click_level}",
+            f"Опыт: 1250/2000",
+            f"Игровое время: 25 часов",
+            f"Всего кликов: 12,500",
+            f"Налоги: ${self.taxes}/мес",
+            f"Рейтинг Forbes: #156",
+            f"Транспорт: Lamborghini Aventador"
         ]
         
         for i, stat in enumerate(stats):

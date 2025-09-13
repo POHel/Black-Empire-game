@@ -78,135 +78,88 @@ CREATE TABLE IF NOT EXISTS business(
 ''')
 connect.commit()
 connect.close()
-connect = sqlite3.connect('data/shops.db')
+connect = sqlite3.connect('data/white_shop.db')
 cursor = connect.cursor()
 cursor.executescript('''
-CREATE TABLE IF NOT EXISTS white_shop(
+CREATE TABLE IF NOT EXISTS island(
                id INTEGER PRIMARY KEY,
-               items_name TEXT NOT NULL,
-               price FLOAT NOT NULL
                );
-CREATE TABLE IF NOT EXISTS black_shop(
+CREATE TABLE IF NOT EXISTS boosters(
                id INTEGER PRIMARY KEY,
-               black_items_name TEXT NOT NULL,
-               price FLOAT NOT NULL
                );
-CREATE TABLE IF NOT EXISTS cars_shop(
+CREATE TABLE IF NOT EXISTS NFT(
                id INTEGER PRIMARY KEY,
-               cars_name TEXT NOT NULL,
-               price FLOAT NOT NULL
                );
-CREATE TABLE IF NOT EXISTS airplane_shop(
+CREATE TABLE IF NOT EXISTS cars(
                id INTEGER PRIMARY KEY,
-               airplane_name TEXT NOT NULL,
-               price FLOAT NOT NULL
                );
-CREATE TABLE IF NOT EXISTS yacht_shop(
+CREATE TABLE IF NOT EXISTS unique_items(
                id INTEGER PRIMARY KEY,
-               yacht_name TEXT NOT NULL,
-               price FLOAT NOT NULL
-               );           
-CREATE TABLE IF NOT EXISTS monet_shop(
+               );                     
+CREATE TABLE IF NOT EXISTS yacht(
                id INTEGER PRIMARY KEY,
-               monet_name TEXT NOT NULL,
-               price FLOAT NOT NULL
                );
-CREATE TABLE IF NOT EXISTS NFT_shop(
+
+CREATE TABLE IF NOT EXISTS airplanes(
                id INTEGER PRIMARY KEY,
-               NFT_name TEXT NOT NULL,
-               price FLOAT NOT NULL
                );
-CREATE TABLE IF NOT EXISTS retro_cars_shop(
+CREATE TABLE IF NOT EXISTS residence(
                id INTEGER PRIMARY KEY,
-               retro_cars_name TEXT NOT NULL,
-               price FLOAT NOT NULL
                );
-CREATE TABLE IF NOT EXISTS pictures_shop(
+
+CREATE TABLE IF NOT EXISTS jewelry(
                id INTEGER PRIMARY KEY,
-               picture_name TEXT NOT NULL,
-               price FLOAT NOT NULL
                );
-CREATE TABLE IF NOT EXISTS islands_shop(
+
+''')
+connect.commit()
+connect.close()
+connect = sqlite3.connect('data/black_shop.db')
+cursor = connect.cursor()
+cursor.executescript('''
+CREATE TABLE IF NOT EXISTS guns(
                id INTEGER PRIMARY KEY,
-               island_name TEXT NOT NULL,
-               price FLOAT NOT NULL
                );
-CREATE TABLE IF NOT EXISTS jewelry_shop(
+CREATE TABLE IF NOT EXISTS substances(
                id INTEGER PRIMARY KEY,
-               jewelry_name TEXT NOT NULL,
-               price FLOAT NOT NULL
                );
-CREATE TABLE IF NOT EXISTS unique_items_shop(
+CREATE TABLE IF NOT EXISTS medication(
                id INTEGER PRIMARY KEY,
-               unique_item_name TEXT NOT NULL,
-               price FLOAT NOT NULL
+               );
+CREATE TABLE IF NOT EXISTS contraband(
+               id INTEGER PRIMARY KEY,
+               );
+CREATE TABLE IF NOT EXISTS dangerous_services(
+               id INTEGER PRIMARY KEY,
+               );                     
+CREATE TABLE IF NOT EXISTS cyber_implants(
+               id INTEGER PRIMARY KEY,
+               );
+
+CREATE TABLE IF NOT EXISTS gamble(
+               id INTEGER PRIMARY KEY,
+               );
+CREATE TABLE IF NOT EXISTS exotic(
+               id INTEGER PRIMARY KEY,
+               );
+
+CREATE TABLE IF NOT EXISTS rarities(
+               id INTEGER PRIMARY KEY,
+               );
+CREATE TABLE IF NOT EXISTS legendaries(
+               id INTEGER PRIMARY KEY,
                );
 ''')
 connect.commit()
 connect.close()
-
 connect = sqlite3.connect('data/items.db')
 cursor = connect.cursor()
 cursor.executescript('''
-CREATE TABLE IF NOT EXISTS white_shop(
+CREATE TABLE IF NOT EXISTS test(
                id INTEGER PRIMARY KEY,
-               items_name TEXT NOT NULL,
-               price FLOAT NOT NULL
-               );
-CREATE TABLE IF NOT EXISTS black_shop(
-               id INTEGER PRIMARY KEY,
-               black_items_name TEXT NOT NULL,
-               price FLOAT NOT NULL
-               );
-CREATE TABLE IF NOT EXISTS cars_shop(
-               id INTEGER PRIMARY KEY,
-               cars_name TEXT NOT NULL,
-               price FLOAT NOT NULL
-               );
-CREATE TABLE IF NOT EXISTS airplane_shop(
-               id INTEGER PRIMARY KEY,
-               airplane_name TEXT NOT NULL,
-               price FLOAT NOT NULL
-               );
-CREATE TABLE IF NOT EXISTS yacht_shop(
-               id INTEGER PRIMARY KEY,
-               yacht_name TEXT NOT NULL,
-               price FLOAT NOT NULL
-               );           
-CREATE TABLE IF NOT EXISTS monet_shop(
-               id INTEGER PRIMARY KEY,
-               monet_name TEXT NOT NULL,
-               price FLOAT NOT NULL
-               );
-CREATE TABLE IF NOT EXISTS NFT_shop(
-               id INTEGER PRIMARY KEY,
-               NFT_name TEXT NOT NULL,
-               price FLOAT NOT NULL
-               );
-CREATE TABLE IF NOT EXISTS retro_cars_shop(
-               id INTEGER PRIMARY KEY,
-               retro_cars_name TEXT NOT NULL,
-               price FLOAT NOT NULL
-               );
-CREATE TABLE IF NOT EXISTS pictures_shop(
-               id INTEGER PRIMARY KEY,
-               picture_name TEXT NOT NULL,
-               price FLOAT NOT NULL
-               );
-CREATE TABLE IF NOT EXISTS islands_shop(
-               id INTEGER PRIMARY KEY,
-               island_name TEXT NOT NULL,
-               price FLOAT NOT NULL
-               );
-CREATE TABLE IF NOT EXISTS jewelry_shop(
-               id INTEGER PRIMARY KEY,
-               jewelry_name TEXT NOT NULL,
-               price FLOAT NOT NULL
-               );
-CREATE TABLE IF NOT EXISTS unique_items_shop(
-               id INTEGER PRIMARY KEY,
-               unique_item_name TEXT NOT NULL,
-               price FLOAT NOT NULL
+               test_name TEXT NOT NULL,
+               test_fl FLOAT NOT NULL,
+               test_int INTEGER NOT NULL
                );
 ''')
 connect.commit()

@@ -1,11 +1,16 @@
 import sqlite3
 class AppLogic:
 	def __init__(self):
+		self.name = 'Black Empire'
+		self.company_name = 'SOFT.corp'
+		self.version = '0.0.1'
 		self.balance()
 		self.earn_one_click()
 		self.earn_click()
 		self.show_earn_click_level()
 		self.taxes()
+
+#работа с базой данных
 	#отображение баланса
 	def balance(self):
 		connect_balance = sqlite3.connect('data/business_data.db')

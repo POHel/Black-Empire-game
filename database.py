@@ -6,7 +6,7 @@ cursor.executescript('''
 CREATE TABLE IF NOT EXISTS wallet(
                id INTEGER PRIMARY KEY,
                all_moneys FLOAT NOT NULL,
-               balance FLOAT NOT NULL,
+               balanc FLOAT NOT NULL,
                moneys_one_click FLOAT NOT NULL,
                moneys_in_hour FLOAT NOT NULL,
                moneys_rent_in_hour FLOAT NOT NULL,

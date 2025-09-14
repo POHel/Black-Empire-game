@@ -8,6 +8,8 @@ class AppLogic:
 		self.earn_one_click()
 		self.earn_click()
 		self.show_earn_click_level()
+		self.show_earn_business_in_hour()
+		self.show_earn_rent_in_hour()
 		self.taxes()
 
 #работа с базой данных
@@ -29,7 +31,6 @@ class AppLogic:
 		connect_earn_one_click.close()
 		return result
 	
-
 	#обновляем данные о балансе в базе данных
 	def earn_click(self):
 		balance = self.balance()

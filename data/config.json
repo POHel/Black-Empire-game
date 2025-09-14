@@ -1,5 +1,6 @@
 {
-    "window_size": ["1280x720", "1920x1080"],
+    "window_size": [["1280"],["720"], ["1920"],["1080"]],
+    "current_window_size": ["1920", "1980"]
     "themes": ["dark", "light"],
     "current_theme": "dark",
     "languages": ["ru", "en"],

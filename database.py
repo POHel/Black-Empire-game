@@ -1,5 +1,5 @@
 import sqlite3
-connect = sqlite3.connect('data/business_data.db')
+connect = sqlite3.connect('data/data.db')
 cursor = connect.cursor()
 
 cursor.executescript('''

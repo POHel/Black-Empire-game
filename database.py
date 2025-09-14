@@ -314,30 +314,21 @@ CREATE TABLE IF NOT EXISTS legendaries(
 connect.commit()
 connect.close()
 
-connect = sqlite3.connect('data/black_items.db')
+connect = sqlite3.connect('data/all_boosters.db')
 cursor = connect.cursor()
 cursor.executescript('''
-CREATE TABLE IF NOT EXISTS boosters(
+CREATE TABLE IF NOT EXISTS temporary_boosters(
                id INTEGER PRIMARY KEY,
-               name_boosters TEXT NOT NULL,
-               price_boosters FLOAT NOT NULL,
+               name_temporary_boosters TEXT NOT NULL,
+               price_temporary_boosters FLOAT NOT NULL,
+               time_boosters FLOAT NOT NULL,
                );
                      
-CARETE TABLE IF NOT EXISTS exotic(
+CARETE TABLE IF NOT EXISTS permanent_boosters(
                id INTEGER PRIMARY KEY,
-               name_exotic TEXT NOT NULL,
-               price_exotic FLOAT NOT NULL,
-               );
-                     
-CREATE TABLE IF NOT EXISTS medication(
-               id INTEGER PRIMARY KEY,
-               name_medication TEXT NOT NULL,
-               price_medication FLOAT NOT NULL,
-               );
-                                       
-CREATE TABLE IF NOT EXISTS substances(
-               id INTEGER PRIMARY KEY,
-               name_substances TEXT NOT NULL,
-               price_substances FLOAT NOT NULL,
+               name_permanent_boosters TEXT NOT NULL,
+               price_permanent_boosters FLOAT NOT NULL,
                );
 ''')
+connect.commit()
+connect.close()

@@ -1,4 +1,5 @@
 import sqlite3
+import json
 #работа с логикой приложения
 class AppLogic:
 	def __init__(self):
@@ -81,29 +82,108 @@ class update_db:
 		balance = self.export.balance()
 		balance += self.export.earn_one_click()
 
-		#update in wallet
-		connect_earn_click = sqlite3.connect('data/data.db')
-		cursor_earn_click = connect_earn_click.cursor()
-		cursor_earn_click.execute('UPDATE wallet set balance = ?', (balance,))
-		connect_earn_click.commit()
-		connect_earn_click.close()
-		#update in status
-		connect_earn_click = sqlite3.connect('data/data.db')
-		cursor_earn_click = connect_earn_click.cursor()
-		cursor_earn_click.execute('UPDATE status set balance = ?', (balance,))
-		connect_earn_click.commit()
-		connect_earn_click.close()
+		# Use a single connection and transaction for all updates
+		with sqlite3.connect('data/data.db') as connection:
+			cursor = connection.cursor()
+			# Update wallet balance
+			cursor.execute('UPDATE wallet SET balance = ?', (balance,))
+			# Update status balance
+			cursor.execute('UPDATE status SET balance = ?', (balance,))
+			# Update status all_money
+			cursor.execute('UPDATE status SET all_money = ?', (balance,))
+			# Update wallet all_moneys
+			cursor.execute('UPDATE wallet SET all_moneys = ?', (balance,))
+			# Commit all changes
+			connection.commit()
 
-		#update in status
-		all_money_status = sqlite3.connect('data/data.db')
-		all_money = all_money_status.cursor()
-		all_money.execute('UPDATE status set all_money = ?', (balance,))
-		all_money_status.commit()
-		all_money_status.close()
+	
+class settings:
+	def __init__(self):
+		self.get_current_theme()
+		self.get_current_window_size()
+		self.get_current_fps()
+		self.get_current_lang()
 
-		#update in wallet
-		all_money_wallet = sqlite3.connect('data/data.db')
-		all_money_w = all_money_wallet.cursor()
-		all_money_w.execute('UPDATE wallet set all_moneys = ?', (balance,))
-		all_money_wallet.commit()
-		all_money_wallet.close()
+	#импортирование текущей темы
+	def get_current_theme(self):
+		with open("data/config.json", 'r', encoding='utf-8') as file:
+			config_current_theme = json.load(file)
+		return config_current_theme["current_theme"]
+	
+	#импортирование текущей размера экрана
+	def get_current_window_size(self):
+		with open("data/config.json", 'r', encoding='utf-8') as file:
+			config_current_window_size = json.load(file)
+		return config_current_window_size["current_window_size"]
+	
+	#импортирование текущего фпс
+	def get_current_fps(self):
+		with open("data/config.json", 'r', encoding='utf-8') as file:
+			config_current_fps = json.load(file)
+		return config_current_fps["current_fps"]
+	
+	#импортирование текущего языка
+	def get_current_lang(self):
+		with open("data/config.json", 'r', encoding='utf-8') as file:
+			config_current_lang = json.load(file)
+		return config_current_lang["current_lang"]
+	
+	#установка выбранной темы
+	def set_current_theme(self, theme):
+		with open("data/config.json", "r", encoding="utf-8") as file:
+			config = json.load(file)
+			config["current_theme"] = theme
+			file.seek(0)
+			json.dump(config, file, ensure_ascii=False, indent=4)
+			file.truncate()
+
+	#установка размера экрана
+	def set_current_window_size(self, height, width):
+		with open("data/config.json", "r", encoding="utf-8") as file:
+			config = json.load(file)
+			config["current_window_size"] = [height, width]
+			file.seek(0)
+			json.dump(config, file, ensure_ascii=False, indent=4)
+			file.truncate()
+
+	#установка фпс
+	def set_current_fps(self, fps):
+		with open("data/config.json", "r", encoding="utf-8") as file:
+			config = json.load(file)
+			config["current_fps"] = fps
+			file.seek(0)
+			json.dump(config, file, ensure_ascii=False, indent=4)
+			file.truncate()
+
+	#установка языка
+	def set_current_lang(self, lang):
+		with open("data/config.json", "r", encoding="utf-8") as file:
+			config = json.load(file)
+			config["current_lang"] = lang
+			file.seek(0)
+			json.dump(config, file, ensure_ascii=False, indent=4)
+			file.truncate()
+
+	#показ всех тем
+	def show_themes(self):
+		with open("data/config.json", 'r', encoding='utf-8') as file:
+			config_themes = json.load(file)
+		return config_themes["themes"]
+
+	#показ всех размеров экрана
+	def show_window_sizes(self):
+		with open("data/config.json", 'r', encoding='utf-8') as file:
+			config_window_sizes = json.load(file)
+		return config_window_sizes["window_size"]
+
+	#показ всех фпс
+	def show_fps(self):
+		with open("data/config.json", 'r', encoding='utf-8') as file:
+			config_fps = json.load(file)
+		return config_fps["FPS"]
+
+	#показ всех языков
+	def show_langs(self):
+		with open("data/config.json", 'r', encoding='utf-8') as file:
+			config_langs = json.load(file)
+		return config_langs["languages"]

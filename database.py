@@ -92,6 +92,7 @@ CREATE TABLE IF NOT EXISTS boosters(
                id INTEGER PRIMARY KEY,
                name_boosters TEXT NOT NULL,
                money_boosters FLOAT NOT NULL,
+               time_boosters FLOAT NOT NULL,
                );
                      
 CREATE TABLE IF NOT EXISTS NFT(

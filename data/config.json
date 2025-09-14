@@ -1,0 +1,9 @@
+{
+    "window_size": ["1280x720", "1920x1080"],
+    "themes": ["dark", "light"],
+    "current_theme": "dark",
+    "languages": ["ru", "en"],
+    "current_lang": "ru",
+    "FPS": ["30", "60", "120"],
+    "current_fps": "60"
+}

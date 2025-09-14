@@ -16,8 +16,8 @@ pygame.font.init()
 
 logic = AppLogic()
 # Константы компании
-COMPANY_NAME = logic.company_name()
-VERSION = "0.0.1"
+COMPANY_NAME = logic.company_name
+VERSION = logic.version
 
 WINDOW_SIZES = {
     '1280x720': (1280, 720),

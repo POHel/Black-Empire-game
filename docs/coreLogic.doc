@@ -2,9 +2,9 @@
 импортируем: from coreLogic import AppLogic
 получение данных:
     инициализируем класс Logic = AppLogic()
-        получаем имя: name = Logic.name()
-        получаем имя компании: c_name = Logic.company_name()
-        получаем версию: version = Logic.version()
+        получаем имя: name = Logic.name
+        получаем имя компании: c_name = Logic.company_name
+        получаем версию: version = Logic.version
 
 
 функции получения данных из таблицы

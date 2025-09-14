@@ -15,7 +15,7 @@ class AppLogic:
 	def balance(self):
 		connect_balance = sqlite3.connect('data/data.db')
 		cursor_balance = connect_balance.cursor()
-		cursor_balance.execute('SELECT moneys FROM wallet')
+		cursor_balance.execute('SELECT balance FROM wallet')
 		result = cursor_balance.fetchone()[0]
 		connect_balance.close()
 		return result
@@ -33,19 +33,19 @@ class AppLogic:
 		balance += self.earn_one_click()
 		connect_earn_click = sqlite3.connect('data/data.db')
 		cursor_earn_click = connect_earn_click.cursor()
-		cursor_earn_click.execute('UPDATE wallet set moneys = ?', (balance,))
+		cursor_earn_click.execute('UPDATE wallet set balance = ?', (balance,))
 		connect_earn_click.commit()
 		connect_earn_click.close()
 		all_money_status = sqlite3.connect('data/data.db')
 		all_money = all_money_status.cursor()
-		all_money.execute('UPDATE status set all_moneys = ?', (balance,))
+		all_money.execute('UPDATE status set all_money = ?', (balance,))
 		all_money_status.commit()
 		all_money_status.close()
 	#отображение уровня кликера(заработок за 1 клик)
 	def show_earn_click_level(self):
 		connect_earn_one_click = sqlite3.connect('data/data.db')
 		cursor_earn_one_click = connect_earn_one_click.cursor()
-		cursor_earn_one_click.execute('SELECT earn_click_level FROM wallet')
+		cursor_earn_one_click.execute('SELECT moneys_one_click FROM wallet')
 		result_level = cursor_earn_one_click.fetchone()[0]
 		connect_earn_one_click.close()
 		return result_level

@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS wallet(
                moneys_one_click FLOAT NOT NULL,
                moneys_in_hour FLOAT NOT NULL,
                moneys_rent_in_hour FLOAT NOT NULL,
-               taxes FLOAT NOT NULL,
+               taxes FLOAT NOT NULL
                );
                         
 CREATE TABLE IF NOT EXISTS my_bag(
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS my_bag(
                dividend_yield FLOAT NOT NULL,
                stable_income FLOAT NOT NULL,
                growth_potential FLOAT NOT NULL,
-               rental_income FLOAT NOT NULL,
+               rental_income FLOAT NOT NULL
                );
 
 CREATE TABLE IF NOT EXISTS actives(
@@ -27,21 +27,21 @@ CREATE TABLE IF NOT EXISTS actives(
                name_actives TEXT NOT NULL,
                money_actives FLOAT NOT NULL,
                amount_actives TEXT NOT NULL,
-               profitability_actives FLOAT NOT NULL,
+               profitability_actives FLOAT NOT NULL
                ); 
                                          
 CREATE TABLE IF NOT EXISTS homes(
             id INTEGER PRIMARY KEY,
                name_homes TEXT NOT NULL,
                money_homes FLOAT NOT NULL,
-               profitability_homes FLOAT NOT NULL,
+               profitability_homes FLOAT NOT NULL
                );  
                      
 CREATE TABLE IF NOT EXISTS crypto(
             id INTEGER PRIMARY KEY,
                name_crypto TEXT NOT NULL,
                money_crypto FLOAT NOT NULL,
-               amount_crypto TEXT NOT NULL,
+               amount_crypto TEXT NOT NULL
                );                   
 
 CREATE TABLE IF NOT EXISTS status(
@@ -85,56 +85,56 @@ cursor.executescript('''
 CREATE TABLE IF NOT EXISTS island(
                id INTEGER PRIMARY KEY,
                name_island TEXT NOT NULL,
-               price_island FLOAT NOT NULL,
+               price_island FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS boosters(
                id INTEGER PRIMARY KEY,
                name_boosters TEXT NOT NULL,
                price_boosters FLOAT NOT NULL,
-               time_boosters FLOAT NOT NULL,
+               time_boosters FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS NFT(
                id INTEGER PRIMARY KEY,
                name_NFT TEXT NOT NULL,
-               price_NFT FLOAT NOT NULL,
+               price_NFT FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS cars(
                id INTEGER PRIMARY KEY,
                name_cars TEXT NOT NULL,
-               price_cars FLOAT NOT NULL,
+               price_cars FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS unique_items(
                id INTEGER PRIMARY KEY,
                name_unique_items TEXT NOT NULL,
-               price_unique_items FLOAT NOT NULL,
+               price_unique_items FLOAT NOT NULL
                ); 
                                          
 CREATE TABLE IF NOT EXISTS yacht(
                id INTEGER PRIMARY KEY,
                name_yacht TEXT NOT NULL,
-               price_yacht FLOAT NOT NULL,
+               price_yacht FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS airplanes(
                id INTEGER PRIMARY KEY,
                name_airplanes TEXT NOT NULL,
-               price_airplanes FLOAT NOT NULL,
+               price_airplanes FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS residence(
                id INTEGER PRIMARY KEY,
                name_residence TEXT NOT NULL,
-               price_residence FLOAT NOT NULL,
+               price_residence FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS jewelry(
                id INTEGER PRIMARY KEY,
                name_jewelry TEXT NOT NULL,
-               price_jewelry FLOAT NOT NULL,
+               price_jewelry FLOAT NOT NULL
                );
 
 ''')
@@ -146,61 +146,61 @@ cursor.executescript('''
 CREATE TABLE IF NOT EXISTS guns(
                id INTEGER PRIMARY KEY,
                name_guns TEXT NOT NULL,
-               price_guns FLOAT NOT NULL,
+               price_guns FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS substances(
                id INTEGER PRIMARY KEY,
                name_substances TEXT NOT NULL,
-               price_substances FLOAT NOT NULL,
+               price_substances FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS medication(
                id INTEGER PRIMARY KEY,
                name_medication TEXT NOT NULL,
-               price_medication FLOAT NOT NULL,
+               price_medication FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS contraband(
                id INTEGER PRIMARY KEY,
                name_contraband TEXT NOT NULL,
-               price_contraband FLOAT NOT NULL,
+               price_contraband FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS dangerous_services(
                id INTEGER PRIMARY KEY,
                name_dangerous_services TEXT NOT NULL,
-               price_dangerous_services FLOAT NOT NULL,
+               price_dangerous_services FLOAT NOT NULL
                );   
                                        
 CREATE TABLE IF NOT EXISTS cyber_implants(
                id INTEGER PRIMARY KEY,
                name_cyber_implants TEXT NOT NULL,
-               price_cyber_implants FLOAT NOT NULL,
+               price_cyber_implants FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS gamble(
                id INTEGER PRIMARY KEY,
                name_gamble TEXT NOT NULL,
-               price_gamble FLOAT NOT NULL,
+               price_gamble FLOAT NOT NULL
                );
                      
-CARETE TABLE IF NOT EXISTS exotic(
+CREATE TABLE IF NOT EXISTS exotic(
                id INTEGER PRIMARY KEY,
                name_exotic TEXT NOT NULL,
-               price_exotic FLOAT NOT NULL,
+               price_exotic FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS rarities(
                id INTEGER PRIMARY KEY,
                name_rarities TEXT NOT NULL,
-               price_rarities FLOAT NOT NULL,
+               price_rarities FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS legendaries(
                id INTEGER PRIMARY KEY,
                name_legendaries TEXT NOT NULL,
-               price_legendaries FLOAT NOT NULL,
+               price_legendaries FLOAT NOT NULL
                );
 ''')
 
@@ -212,49 +212,49 @@ cursor.executescript('''
 CREATE TABLE IF NOT EXISTS island(
                id INTEGER PRIMARY KEY,
                name_island TEXT NOT NULL,
-               price_island FLOAT NOT NULL,
+               price_island FLOAT NOT NULL
                );
                        
 CREATE TABLE IF NOT EXISTS NFT(
                id INTEGER PRIMARY KEY,
                name_NFT TEXT NOT NULL,
-               price_NFT FLOAT NOT NULL,
+               price_NFT FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS cars(
                id INTEGER PRIMARY KEY,
                name_cars TEXT NOT NULL,
-               price_cars FLOAT NOT NULL,
+               price_cars FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS unique_items(
                id INTEGER PRIMARY KEY,
                name_unique_items TEXT NOT NULL,
-               price_unique_items FLOAT NOT NULL,
+               price_unique_items FLOAT NOT NULL
                ); 
                                          
 CREATE TABLE IF NOT EXISTS yacht(
                id INTEGER PRIMARY KEY,
                name_yacht TEXT NOT NULL,
-               price_yacht FLOAT NOT NULL,
+               price_yacht FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS airplanes(
                id INTEGER PRIMARY KEY,
                name_airplanes TEXT NOT NULL,
-               price_airplanes FLOAT NOT NULL,
+               price_airplanes FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS residence(
                id INTEGER PRIMARY KEY,
                name_residence TEXT NOT NULL,
-               price_residence FLOAT NOT NULL,
+               price_residence FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS jewelry(
                id INTEGER PRIMARY KEY,
                name_jewelry TEXT NOT NULL,
-               price_jewelry FLOAT NOT NULL,
+               price_jewelry FLOAT NOT NULL
                );
 ''')
 
@@ -266,49 +266,49 @@ cursor.executescript('''
 CREATE TABLE IF NOT EXISTS substances(
                id INTEGER PRIMARY KEY,
                name_substances TEXT NOT NULL,
-               price_substances FLOAT NOT NULL,
+               price_substances FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS contraband(
                id INTEGER PRIMARY KEY,
                name_contraband TEXT NOT NULL,
-               price_contraband FLOAT NOT NULL,
+               price_contraband FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS dangerous_services(
                id INTEGER PRIMARY KEY,
                name_dangerous_services TEXT NOT NULL,
-               price_dangerous_services FLOAT NOT NULL,
+               price_dangerous_services FLOAT NOT NULL
                );   
                                        
 CREATE TABLE IF NOT EXISTS cyber_implants(
                id INTEGER PRIMARY KEY,
                name_cyber_implants TEXT NOT NULL,
-               price_cyber_implants FLOAT NOT NULL,
+               price_cyber_implants FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS gamble(
                id INTEGER PRIMARY KEY,
                name_gamble TEXT NOT NULL,
-               price_gamble FLOAT NOT NULL,
+               price_gamble FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS exotic(
                id INTEGER PRIMARY KEY,
                name_exotic TEXT NOT NULL,
-               price_exotic FLOAT NOT NULL,
+               price_exotic FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS rarities(
                id INTEGER PRIMARY KEY,
                name_rarities TEXT NOT NULL,
-               price_rarities FLOAT NOT NULL,
+               price_rarities FLOAT NOT NULL
                );
                      
 CREATE TABLE IF NOT EXISTS legendaries(
                id INTEGER PRIMARY KEY,
                name_legendaries TEXT NOT NULL,
-               price_legendaries FLOAT NOT NULL,
+               price_legendaries FLOAT NOT NULL
                );
 ''')
 connect.commit()
@@ -321,13 +321,13 @@ CREATE TABLE IF NOT EXISTS temporary_boosters(
                id INTEGER PRIMARY KEY,
                name_temporary_boosters TEXT NOT NULL,
                price_temporary_boosters FLOAT NOT NULL,
-               time_boosters FLOAT NOT NULL,
+               time_boosters FLOAT NOT NULL
                );
                      
-CARETE TABLE IF NOT EXISTS permanent_boosters(
+CREATE TABLE IF NOT EXISTS permanent_boosters(
                id INTEGER PRIMARY KEY,
                name_permanent_boosters TEXT NOT NULL,
-               price_permanent_boosters FLOAT NOT NULL,
+               price_permanent_boosters FLOAT NOT NULL
                );
 ''')
 connect.commit()

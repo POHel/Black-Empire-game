@@ -11,6 +11,7 @@ class AppLogic:
 		self.taxes()
 
 #работа с базой данных
+	#работа с таблицой wallet
 	#отображение баланса
 	def balance(self):
 		connect_balance = sqlite3.connect('data/data.db')

@@ -1,4 +1,4 @@
-import pygame # pyright: ignore[reportMissingImports]
+import pygame
 import sys
 import math
 import random

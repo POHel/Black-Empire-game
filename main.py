@@ -14,8 +14,9 @@ from datetime import datetime
 pygame.init()
 pygame.font.init()
 
+logic = AppLogic()
 # Константы компании
-COMPANY_NAME = "SKATT.corp"
+COMPANY_NAME = logic.company_name()
 VERSION = "0.0.1"
 
 WINDOW_SIZES = {

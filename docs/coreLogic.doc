@@ -1,0 +1,15 @@
+в классе AppLogic можно получить доступ к названию игры, имени компании и версии игры
+импортируем: from coreLogic import AppLogic
+получение данных:
+    инициализируем класс Logic = AppLogic()
+        получаем имя: name = Logic.name()
+        получаем имя компании: c_name = Logic.company_name()
+        получаем версию: version = Logic.version()
+
+
+функции получения данных из таблицы
+инициализируем класс Logic = AppLogic()
+получаем баланс money = self.app_logic.balance()
+обновляем данные о балансе в базе данных click = self.app_logic.earn_one_click()
+отображение уровня кликера(заработок за 1 клик) click_level = self.app_logic.show_earn_click_level()
+получаем сумму налогов taxes = self.app_logic.taxes()

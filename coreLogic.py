@@ -28,20 +28,40 @@ class AppLogic:
 		result = cursor_earn_one_click.fetchone()[0]
 		connect_earn_one_click.close()
 		return result
+	
+
 	#обновляем данные о балансе в базе данных
 	def earn_click(self):
 		balance = self.balance()
 		balance += self.earn_one_click()
+
+		#update in wallet
 		connect_earn_click = sqlite3.connect('data/data.db')
 		cursor_earn_click = connect_earn_click.cursor()
 		cursor_earn_click.execute('UPDATE wallet set balance = ?', (balance,))
 		connect_earn_click.commit()
 		connect_earn_click.close()
+		#update in status
+		connect_earn_click = sqlite3.connect('data/data.db')
+		cursor_earn_click = connect_earn_click.cursor()
+		cursor_earn_click.execute('UPDATE status set balance = ?', (balance,))
+		connect_earn_click.commit()
+		connect_earn_click.close()
+
+		#update in status
 		all_money_status = sqlite3.connect('data/data.db')
 		all_money = all_money_status.cursor()
 		all_money.execute('UPDATE status set all_money = ?', (balance,))
 		all_money_status.commit()
 		all_money_status.close()
+
+		#update in wallet
+		all_money_wallet = sqlite3.connect('data/data.db')
+		all_money_w = all_money_wallet.cursor()
+		all_money_w.execute('UPDATE wallet set all_moneys = ?', (balance,))
+		all_money_wallet.commit()
+		all_money_wallet.close()
+
 	#отображение уровня кликера(заработок за 1 клик)
 	def show_earn_click_level(self):
 		connect_earn_one_click = sqlite3.connect('data/data.db')
@@ -50,6 +70,25 @@ class AppLogic:
 		result_level = cursor_earn_one_click.fetchone()[0]
 		connect_earn_one_click.close()
 		return result_level
+	
+	#отображение заработка с бизнеса в час
+	def show_earn_business_in_hour(self):
+		connect_earn_business_in_hour = sqlite3.connect('data/data.db')
+		cursor_earn_business_in_hour = connect_earn_business_in_hour.cursor()
+		cursor_earn_business_in_hour.execute('SELECT moneys_in_hour FROM wallet')
+		result_earn_business_in_hour = cursor_earn_business_in_hour.fetchone()[0]
+		connect_earn_business_in_hour.close()
+		return result_earn_business_in_hour
+	
+	#отображение заработка с аренды в час
+	def show_earn_rent_in_hour(self):
+		connect_earn_rent_in_hour = sqlite3.connect('data/data.db')
+		cursor_earn_rent_in_hour = connect_earn_rent_in_hour.cursor()
+		cursor_earn_rent_in_hour.execute('SELECT moneys_rent_in_hour FROM wallet')
+		result_earn_rent_in_hour = cursor_earn_rent_in_hour.fetchone()[0]
+		connect_earn_rent_in_hour.close()
+		return result_earn_rent_in_hour
+	
 	#отображение налогов в месяц
 	def taxes(self):
 		connect_taxes = sqlite3.connect('data/data.db')

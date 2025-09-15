@@ -5,7 +5,7 @@ import random
 import sqlite3
 import json
 #кароче скоро реализую тут логику для сохранения настроек файлом config.json
-from coreLogic import AppLogic, export_db, update_db
+from coreLogic import AppLogic, ExportDB, UpdateDB
 from typing import Dict, List, Tuple, Optional, Callable, Any
 from enum import Enum
 from datetime import datetime
@@ -967,8 +967,8 @@ class MainGameView(View):
         self.on_back = on_back
         self.show_detail_view = show_detail_view
         self.current_subview = "Кликер"
-        self.export = export_db()
-        self.updated = update_db()
+        self.export = ExportDB()
+        self.updated = UpdateDB()
         self.money = self.export.balance()
         self.click = self.export.earn_one_click()
         self.click_level = self.export.show_earn_click_level()
@@ -1131,7 +1131,7 @@ class MainGameView(View):
             if self.current_subview == "Кликер":
                 click_area = pygame.Rect(200, 100, WINDOW_WIDTH - 400, 400)
                 if click_area.collidepoint(mouse_pos):
-                    self.updated.earn_click()
+                    self.updated.update_balance_and_condition()
                     self.money = self.export.balance()
                     self.money_change_animation = 1.0
                     

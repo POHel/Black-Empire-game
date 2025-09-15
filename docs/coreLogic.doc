@@ -1,15 +1,43 @@
 в классе AppLogic можно получить доступ к названию игры, имени компании и версии игры
 импортируем: from coreLogic import AppLogic
-получение данных:
+
+получение названий:
     инициализируем класс Logic = AppLogic()
         получаем имя: name = Logic.name
         получаем имя компании: c_name = Logic.company_name
         получаем версию: version = Logic.version
 
 
-функции получения данных из таблицы
-инициализируем класс Logic = AppLogic()
-получаем баланс money = self.app_logic.balance()
-обновляем данные о балансе в базе данных click = self.app_logic.earn_one_click()
-отображение уровня кликера(заработок за 1 клик) click_level = self.app_logic.show_earn_click_level()
-получаем сумму налогов taxes = self.app_logic.taxes()
+получения данных из таблицы:
+    инициализируем класс export = ExportDB()
+        получаем баланс self.export.balance()
+        обновляем данные о балансе в базе данных self.export.earn_one_click()
+        отображение уровня кликера(заработок за 1 клик) self.export.show_earn_click_level()
+        отображение заработка с бизнеса в час self.export.show_earn_business_in_hour()
+        отображение заработка с аренды в час self.export.show_earn_rent_in_hour()
+        получаем сумму налогов self.export.taxes()
+
+Обновления в базе данных:
+    инициализируем класс update = UpdateDB()
+    обновляем данные о балансе в ьазе данных(таблицы: wallet, status)
+    функция self.update.update_balance_and_condition()
+
+
+настройки:
+    инициализируем класс setting = Settings()
+        импортирование текущей темы self.setting.get_current_theme()
+        импортирование текущей размера экрана self.setting.get_current_window_size()
+        импортирование текущего фпс self.setting.get_current_fps()
+        импортирование текущего языка self.setting.get_current_lang()
+        установка выбранной темы self.setting.set_current_theme(theme) --> theme является str
+        установка размера экрана self.setting.set_current_window_size(height, width) --> width и height - int
+        установка фпс self.setting.set_current_fps(fps) --> fps является int
+        установка языка self.setting.set_current_lang(lang) --> lang является str
+        показ всех тем self.setting.show_themes()
+        показ всех размеров экрана self.setting.show_window_sizes()
+        показ всех фпс self.setting.show_fps()
+        показ всех языков self.setting.show_langs()
+
+
+
+

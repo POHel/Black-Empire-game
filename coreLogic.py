@@ -8,7 +8,7 @@ class AppLogic:
 		self.version = '0.0.1'
 
 #класс для экспортирование из базы данных
-class export_db:
+class ExportDB:
 	def __init__(self):
 		self.balance()
 		self.earn_one_click()
@@ -72,37 +72,34 @@ class export_db:
 		return result_taxes
 
 #класс для обновления в базе данных	
-class update_db:
+class UpdateDB:
 	def __init__(self):
-		self.export = export_db()
-		self.earn_click()
+		self.export = ExportDB()
+		self.update_balance_and_condition()
 	
 	#обновляем данные о балансе в базе данных
-	def earn_click(self):
+	def update_balance_and_condition(self):
 		balance = self.export.balance()
 		balance += self.export.earn_one_click()
-
-		# Use a single connection and transaction for all updates
 		with sqlite3.connect('data/data.db') as connection:
 			cursor = connection.cursor()
-			# Update wallet balance
 			cursor.execute('UPDATE wallet SET balance = ?', (balance,))
-			# Update status balance
 			cursor.execute('UPDATE status SET balance = ?', (balance,))
-			# Update status all_money
 			cursor.execute('UPDATE status SET all_money = ?', (balance,))
-			# Update wallet all_moneys
 			cursor.execute('UPDATE wallet SET all_moneys = ?', (balance,))
-			# Commit all changes
 			connection.commit()
 
 	
-class settings:
+class Settings:
 	def __init__(self):
 		self.get_current_theme()
 		self.get_current_window_size()
 		self.get_current_fps()
 		self.get_current_lang()
+		self.show_fps()
+		self.show_langs()
+		self.show_themes()
+		self.show_window_sizes()
 
 	#импортирование текущей темы
 	def get_current_theme(self):
@@ -129,7 +126,7 @@ class settings:
 		return config_current_lang["current_lang"]
 	
 	#установка выбранной темы
-	def set_current_theme(self, theme):
+	def set_current_theme(self, theme: str):
 		with open("data/config.json", "r", encoding="utf-8") as file:
 			config = json.load(file)
 			config["current_theme"] = theme
@@ -138,7 +135,7 @@ class settings:
 			file.truncate()
 
 	#установка размера экрана
-	def set_current_window_size(self, height, width):
+	def set_current_window_size(self, height: int, width: int):
 		with open("data/config.json", "r", encoding="utf-8") as file:
 			config = json.load(file)
 			config["current_window_size"] = [height, width]
@@ -147,7 +144,7 @@ class settings:
 			file.truncate()
 
 	#установка фпс
-	def set_current_fps(self, fps):
+	def set_current_fps(self, fps: int):
 		with open("data/config.json", "r", encoding="utf-8") as file:
 			config = json.load(file)
 			config["current_fps"] = fps
@@ -156,7 +153,7 @@ class settings:
 			file.truncate()
 
 	#установка языка
-	def set_current_lang(self, lang):
+	def set_current_lang(self, lang: str):
 		with open("data/config.json", "r", encoding="utf-8") as file:
 			config = json.load(file)
 			config["current_lang"] = lang

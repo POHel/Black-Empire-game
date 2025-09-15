@@ -1,10 +1,32 @@
 {
-    "window_size": [["1280", "720"], ["1920", "1080"]],
-    "current_window_size": ["1920", "1080"],
-    "themes": ["dark", "light"],
+    "window_size": [
+        [
+            "1280",
+            "720"
+        ],
+        [
+            "1920",
+            "1080"
+        ]
+    ],
+    "current_window_size": [
+        "1920",
+        "1080"
+    ],
+    "themes": [
+        "dark",
+        "light"
+    ],
     "current_theme": "dark",
-    "languages": ["ru", "en"],
+    "languages": [
+        "ru",
+        "en"
+    ],
     "current_lang": "ru",
-    "FPS": ["30", "60", "120"],
-    "current_fps": "60"
+    "FPS": [
+        "30",
+        "60",
+        "120"
+    ],
+    "current_fps": 30
 }

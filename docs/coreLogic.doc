@@ -16,6 +16,12 @@
         отображение заработка с бизнеса в час self.export.show_earn_business_in_hour()
         отображение заработка с аренды в час self.export.show_earn_rent_in_hour()
         получаем сумму налогов self.export.taxes()
+        получение статуса self.export.get_full_status()
+        получение данных портфеля self.export.get_bag()
+        получение данных своей недвижимости self.export.get_my_homes()
+        получение данных своей криптовалюты self.export.get_crypto()
+        получение данных своих бизнесов self.export.get_business()
+        получение данных своих активов gself.export.get_actives()
 
 Обновления в базе данных:
     инициализируем класс update = UpdateDB()

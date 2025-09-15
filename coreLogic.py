@@ -10,12 +10,16 @@ class AppLogic:
 #класс для экспортирование из базы данных
 class ExportDB:
 	def __init__(self):
-		self.balance()
-		self.earn_one_click()
-		self.show_earn_click_level()
-		self.show_earn_business_in_hour()
-		self.show_earn_rent_in_hour()
-		self.taxes()
+		self.balance
+		self.earn_one_click
+		self.show_earn_click_level
+		self.show_earn_business_in_hour
+		self.show_earn_rent_in_hour
+		self.taxes
+		self.get_full_status
+		self.get_bag
+		self.get_my_homes
+		self.get_crypto
 
 	#работа с таблицой wallet
 	#отображение баланса
@@ -26,6 +30,7 @@ class ExportDB:
 		result = cursor_balance.fetchone()[0]
 		connect_balance.close()
 		return result
+	
 	#возвращаем значение заработка за 1 клик
 	def earn_one_click(self):
 		connect_earn_one_click = sqlite3.connect('data/data.db')
@@ -70,6 +75,66 @@ class ExportDB:
 		result_taxes = cursor_taxes.fetchone()[0]
 		connect_taxes.close()
 		return result_taxes
+	
+	#получение статуса
+	def get_full_status(self):
+		connect = sqlite3.connect("data/data.db")
+		cursor = connect.cursor()
+		cursor.execute("""SELECT all_money, balance, income_business, income_rent, actives, amount_business, amount_homes, amount_company, amount_cars, amount_airplanes, amount_yachts, amount_items, amount_islands, earn_clicks, earn_business, earn_rent, earn_crypto FROM status""")
+		result = cursor.fetchall()
+		for results in result:
+			return results
+		connect.close()
+
+	#получение данных портфеля
+	def get_bag(self):
+		connect = sqlite3.connect("data/data.db")
+		cursor = connect.cursor()
+		cursor.execute("""SELECT all_moneys_bag, dividend_yield, stable_income, growth_potential, rental_income FROM my_bag""")
+		result = cursor.fetchall()
+		for results in result:
+			return results
+		connect.close()
+
+	#получение данных своей недвижимости
+	def get_my_homes(self):
+		connect = sqlite3.connect("data/data.db")
+		cursor = connect.cursor()
+		cursor.execute("""SELECT name_homes, money_homes, profitability_homes FROM homes""")
+		result = cursor.fetchall()
+		for results in result:
+			return results
+		connect.close()
+
+	#получение данных своей криптовалюты
+	def get_crypto(self):
+		connect = sqlite3.connect("data/data.db")
+		cursor = connect.cursor()
+		cursor.execute("""SELECT name_crypto, money_crypto, amount_crypto FROM crypto""")
+		result = cursor.fetchall()
+		for results in result:
+			return results
+		connect.close()
+
+	#получение данных своих бизнесов
+	def get_business(self):
+		connect = sqlite3.connect("data/data.db")
+		cursor = connect.cursor()
+		cursor.execute("""SELECT my_business_name, levels, earn_in_hour, type, all_moneys, capitalization, time FROM business""")
+		result = cursor.fetchall()
+		for results in result:
+			return results
+		connect.close()
+
+	#получение данных своих активов
+	def get_actives(self):
+		connect = sqlite3.connect("data/data.db")
+		cursor = connect.cursor()
+		cursor.execute("""SELECT name_actives, money_actives, amount_actives, profitability_actives FROM actives""")
+		result = cursor.fetchall()
+		for results in result:
+			return results
+		connect.close()
 
 #класс для обновления в базе данных	
 class UpdateDB:
@@ -89,7 +154,6 @@ class UpdateDB:
 			cursor.execute('UPDATE wallet SET all_moneys = ?', (balance,))
 			connection.commit()
 
-	
 class Settings:
 	def __init__(self):
 		self.get_current_theme()
@@ -127,39 +191,43 @@ class Settings:
 	
 	#установка выбранной темы
 	def set_current_theme(self, theme: str):
-		with open("data/config.json", "r", encoding="utf-8") as file:
+		with open("data/config.json", "r+", encoding="utf-8") as file:
 			config = json.load(file)
 			config["current_theme"] = theme
 			file.seek(0)
 			json.dump(config, file, ensure_ascii=False, indent=4)
 			file.truncate()
+		return "Done"
 
 	#установка размера экрана
 	def set_current_window_size(self, height: int, width: int):
-		with open("data/config.json", "r", encoding="utf-8") as file:
+		with open("data/config.json", "r+", encoding="utf-8") as file:
 			config = json.load(file)
 			config["current_window_size"] = [height, width]
 			file.seek(0)
 			json.dump(config, file, ensure_ascii=False, indent=4)
 			file.truncate()
+		return "Done"
 
 	#установка фпс
 	def set_current_fps(self, fps: int):
-		with open("data/config.json", "r", encoding="utf-8") as file:
+		with open("data/config.json", "r+", encoding="utf-8") as file:
 			config = json.load(file)
 			config["current_fps"] = fps
 			file.seek(0)
 			json.dump(config, file, ensure_ascii=False, indent=4)
 			file.truncate()
+		return "Done"
 
 	#установка языка
 	def set_current_lang(self, lang: str):
-		with open("data/config.json", "r", encoding="utf-8") as file:
+		with open("data/config.json", "r+", encoding="utf-8") as file:
 			config = json.load(file)
 			config["current_lang"] = lang
 			file.seek(0)
 			json.dump(config, file, ensure_ascii=False, indent=4)
 			file.truncate()
+		return "Done"
 
 	#показ всех тем
 	def show_themes(self):

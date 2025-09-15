@@ -5,7 +5,7 @@ import random
 import sqlite3
 import json
 #кароче скоро реализую тут логику для сохранения настроек файлом config.json
-from coreLogic import AppLogic
+from coreLogic import AppLogic, export_db, update_db
 from typing import Dict, List, Tuple, Optional, Callable, Any
 from enum import Enum
 from datetime import datetime
@@ -14,9 +14,10 @@ from datetime import datetime
 pygame.init()
 pygame.font.init()
 
+logic = AppLogic()
 # Константы компании
-COMPANY_NAME = "SKATT.corp"
-VERSION = "0.0.1"
+COMPANY_NAME = logic.company_name
+VERSION = logic.version
 
 WINDOW_SIZES = {
     '1280x720': (1280, 720),
@@ -25,7 +26,7 @@ WINDOW_SIZES = {
 
 # Настройки по умолчанию
 WINDOW_WIDTH, WINDOW_HEIGHT = WINDOW_SIZES['1920x1080']
-FPS = 60
+FPS = 120
 CURRENT_THEME = 'dark'
 CURRENT_RESOLUTION = '1920x1080'
 
@@ -966,11 +967,12 @@ class MainGameView(View):
         self.on_back = on_back
         self.show_detail_view = show_detail_view
         self.current_subview = "Кликер"
-        self.app_logic = AppLogic()
-        self.money = self.app_logic.balance()
-        self.click = self.app_logic.earn_one_click()
-        self.click_level = self.app_logic.show_earn_click_level()
-        self.taxes = self.app_logic.taxes()
+        self.export = export_db()
+        self.updated = update_db()
+        self.money = self.export.balance()
+        self.click = self.export.earn_one_click()
+        self.click_level = self.export.show_earn_click_level()
+        self.taxes = self.export.taxes()
         
         # Нижняя панель вкладок
         tab_width = WINDOW_WIDTH / 6
@@ -1129,8 +1131,8 @@ class MainGameView(View):
             if self.current_subview == "Кликер":
                 click_area = pygame.Rect(200, 100, WINDOW_WIDTH - 400, 400)
                 if click_area.collidepoint(mouse_pos):
-                    self.app_logic.earn_click()
-                    self.money = self.app_logic.balance()
+                    self.updated.earn_click()
+                    self.money = self.export.balance()
                     self.money_change_animation = 1.0
                     
                     self.particle_system.burst(

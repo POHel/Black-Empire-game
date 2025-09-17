@@ -421,15 +421,15 @@ class LoadingScreen:
             x, y = random.randint(0, SCREEN_WIDTH), random.randint(0, SCREEN_HEIGHT)
             size = random.uniform(1, 3)
             pygame.draw.circle(self.screen, (255, 255, 255, 100), (x, y), int(size))
-
+"""
 class BarGraphRenderer:
-    """Рендерер графика с увеличенным закруглением."""
+    #Рендерер графика с увеличенным закруглением.
     
     def __init__(self):
         self.bar_cache = {}
     
     def draw_bar_graph(self, surface, x, y, bar_width, heights, bar_count=5):
-        """Рисует столбчатую диаграмму."""
+        #Рисует столбчатую диаграмму.
         spacing = 50
         max_height = max(heights) if heights else 1
         
@@ -468,7 +468,7 @@ class BarGraphRenderer:
                 
                 self.bar_cache[cache_key] = bar_surf
             
-            surface.blit(self.bar_cache[cache_key], (bar_x, y - scaled_height))
+            surface.blit(self.bar_cache[cache_key], (bar_x, y - scaled_height))"""
 
 class Game:
     """Основной класс игры."""
@@ -482,7 +482,7 @@ class Game:
         
         self.font_manager = FontManager()
         self.icon_renderer = IconRenderer()
-        self.bar_renderer = BarGraphRenderer()
+        #self.bar_renderer = BarGraphRenderer() #Графики в менюшке
         self.loading_screen = LoadingScreen(self.screen, self.font_manager)
         
         self.stars = []
@@ -658,7 +658,8 @@ class Game:
             desc_y += 30
         
         # График
-        self.bar_renderer.draw_bar_graph(self.screen, x+40, y+550, 40, self.bar_heights)
+        # временно отключено
+        #self.bar_renderer.draw_bar_graph(self.screen, x+40, y+550, 40, self.bar_heights)
         
         # Правая панель
         x, y = self.right_panel_rect.topleft

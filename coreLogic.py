@@ -1,6 +1,5 @@
 import sqlite3
 import json
-import sys
 
 #работа с логикой приложения
 class AppLogic:

@@ -47,3 +47,6 @@
 
 
 
+Выход из приложения:
+    import coreLogic
+    coreLogic.quit()

@@ -1,3 +1,5 @@
+import time
+import coreLogic
 from coreLogic import AppLogic, ExportDB, UpdateDB, Settings
 logic = AppLogic()
 export = ExportDB()
@@ -7,3 +9,6 @@ setting = Settings()
 #print(setting.get_current_fps())
 #print(setting.set_current_fps(30))
 #print(setting.get_current_fps)
+print('hi')
+time.sleep(2)
+coreLogic.quit()

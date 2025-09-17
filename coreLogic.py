@@ -2,8 +2,6 @@ import sqlite3
 import json
 import sys
 
-def quit():
-	sys.exit()
 #работа с логикой приложения
 class AppLogic:
 	def __init__(self):

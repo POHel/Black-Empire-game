@@ -44,9 +44,3 @@
         показ всех фпс self.setting.show_fps()
         показ всех языков self.setting.show_langs()
 
-
-
-
-Выход из приложения:
-    import coreLogic
-    coreLogic.quit()

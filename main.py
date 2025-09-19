@@ -7,6 +7,7 @@ from pygame import gfxdraw
 from typing import List, Tuple, Optional, Dict
 from dataclasses import dataclass
 from enum import Enum
+from coreLogic import ExportDB
 
 # Initialize Pygame
 pygame.init()
@@ -40,6 +41,8 @@ class ScreenState(Enum):
     LOADING = 0
     MENU = 1
     SETTINGS = 2
+    INVESTMENTS = 3
+    CLICKER = 4
 
 @dataclass
 class Star:
@@ -583,6 +586,407 @@ class LoadingScreen:
             size = random.uniform(1, 3)
             pygame.draw.circle(self.screen, (255, 255, 255, 100), (x, y), int(size))
 
+class ClickerMenu:
+    """Простая временная версия кликера."""
+    
+    def __init__(self, game):
+        self.game = game
+        self.balance = 0
+        self.click_value = 1
+        self.initialize_ui()
+    
+    def initialize_ui(self):
+        """Инициализация UI кликера."""
+        # Кнопки левой панели навигации
+        self.nav_buttons = []
+        nav_options = [
+            ("Кликер", lambda: None, True),  # Активная кнопка
+            ("Магазины", lambda: print("Магазины"), False),
+            ("Инвестиции", lambda: self.game.open_investments(), False),
+            ("Бизнесы", lambda: print("Бизнесы"), False),
+            ("Профиль", lambda: print("Профиль"), False)
+        ]
+        
+        button_width, button_height = 200, 60
+        button_x = 50
+        button_y_start = 150
+        
+        for i, (text, action, is_active) in enumerate(nav_options):
+            rect = pygame.Rect(button_x, button_y_start + i * 70, button_width, button_height)
+            self.nav_buttons.append(NavButton(rect, text, action, is_active))
+    
+    def draw(self, surface):
+        """Отрисовывает кликер."""
+        # Рисуем левую панель навигации
+        nav_panel_rect = pygame.Rect(30, 120, 240, 500)
+        self.draw_panel(surface, nav_panel_rect, (30, 30, 50, 200))
+        
+        # Рисуем правую панель с кликером
+        content_panel_rect = pygame.Rect(300, 120, 1100, 600)
+        self.draw_panel(surface, content_panel_rect, (30, 30, 50, 200))
+        
+        # Рисуем кнопки навигации
+        for button in self.nav_buttons:
+            button.draw(surface, self.game.font_manager.get_font('button'))
+        
+        # Рисуем интерфейс кликера
+        self.draw_clicker_interface(surface, 350, 200)
+    
+    def draw_panel(self, surface, rect, color):
+        """Рисует панель с закругленными углами."""
+        pygame.draw.rect(surface, color, rect, border_radius=15)
+        pygame.draw.rect(surface, (100, 100, 150, 255), rect, width=2, border_radius=15)
+    
+    def draw_clicker_interface(self, surface, x, y):
+        """Рисует интерфейс кликера."""
+        # Баланс
+        balance_font = self.game.font_manager.get_font('title')
+        balance_text = f"Баланс: {self.balance}$"
+        balance_surf = balance_font.render(balance_text, True, TEXT_PRIMARY)
+        surface.blit(balance_surf, (x, y))
+        
+        # Кнопка для клика
+        click_button_rect = pygame.Rect(x, y + 100, 200, 200)
+        pygame.draw.circle(surface, PURPLE_PRIMARY, click_button_rect.center, 100)
+        pygame.draw.circle(surface, LIGHT_PURPLE, click_button_rect.center, 100, 5)
+        
+        click_font = self.game.font_manager.get_font('button')
+        click_text = "КЛИК!"
+        click_surf = click_font.render(click_text, True, TEXT_PRIMARY)
+        click_rect = click_surf.get_rect(center=click_button_rect.center)
+        surface.blit(click_surf, click_rect)
+        
+        # Значение клика
+        value_font = self.game.font_manager.get_font('desc')
+        value_text = f"+{self.click_value}$ за клик"
+        value_surf = value_font.render(value_text, True, TEXT_SECONDARY)
+        surface.blit(value_surf, (x + 250, y + 150))
+    
+    def handle_click(self):
+        """Обрабатывает клик по кнопке."""
+        self.balance += self.click_value
+    
+    def handle_event(self, event):
+        """Обрабатывает события кликера."""
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mouse_pos = pygame.mouse.get_pos()
+            
+            # Проверяем клики по кнопкам навигации
+            for button in self.nav_buttons:
+                if button.rect.collidepoint(mouse_pos):
+                    button.click()
+                    return True
+            
+            # Проверяем клик по кнопке кликера
+            click_button_rect = pygame.Rect(350, 300, 200, 200)
+            if click_button_rect.collidepoint(mouse_pos):
+                self.handle_click()
+                return True
+        
+        return False
+
+#вкладка Инвестиции
+class InvestmentMenu:
+    """Класс для меню инвестиций."""
+    
+    def __init__(self, game):
+        self.game = game
+        self.export = ExportDB()
+        self.current_tab = "акции"  # Текущая активная вкладка
+        self.buttons = []
+        self.tab_buttons = []
+        self.initialize_ui()
+    
+    def initialize_ui(self):
+        """Инициализация UI элементов меню инвестиций."""
+        # Кнопки левой панели навигации
+        nav_buttons = [
+            ("Кликер", lambda: print("Переход в кликер")),
+            ("Магазины", lambda: print("Переход в магазины")),
+            ("Инвестиции", lambda: None),  # Активная кнопка
+            ("Бизнесы", lambda: print("Переход в бизнесы")),
+            ("Профиль", lambda: print("Переход в профиль"))
+        ]
+        
+        # Создаем кнопки навигации
+        button_width, button_height = 200, 60
+        button_x = 50
+        button_y_start = 150
+        
+        for i, (text, action) in enumerate(nav_buttons):
+            rect = pygame.Rect(button_x, button_y_start + i * 70, button_width, button_height)
+            is_active = text == "Инвестиции"
+            self.buttons.append(NavButton(rect, text, action, is_active))
+        
+        # Кнопки вкладок (акции, недвижимость, криптовалюта)
+        tab_button_width, tab_button_height = 150, 50
+        tab_button_x = 300
+        tab_button_y = 100
+        
+        tab_buttons = [
+            ("Акции", lambda: self.set_current_tab("акции")),
+            ("Недвижимость", lambda: self.set_current_tab("недвижимость")),
+            ("Криптовалюта", lambda: self.set_current_tab("криптовалюта"))
+        ]
+        
+        for i, (text, action) in enumerate(tab_buttons):
+            rect = pygame.Rect(tab_button_x + i * 160, tab_button_y, tab_button_width, tab_button_height)
+            is_active = text.lower() == self.current_tab
+            self.tab_buttons.append(TabButton(rect, text, action, is_active))
+    
+    def set_current_tab(self, tab_name):
+        """Устанавливает текущую активную вкладку."""
+        self.current_tab = tab_name
+        # Обновляем состояние кнопок вкладок
+        for button in self.tab_buttons:
+            button.is_active = button.text.lower() == tab_name
+    
+    def draw(self, surface):
+        """Отрисовывает меню инвестиций."""
+        # Рисуем левую панель навигации
+        nav_panel_rect = pygame.Rect(30, 120, 240, 500)
+        self.draw_panel(surface, nav_panel_rect, (30, 30, 50, 200))
+        
+        # Рисуем правую панель с контентом
+        content_panel_rect = pygame.Rect(300, 120, 1100, 600)
+        self.draw_panel(surface, content_panel_rect, (30, 30, 50, 200))
+        
+        # Рисуем кнопки навигации
+        for button in self.buttons:
+            button.draw(surface, self.game.font_manager.get_font('button'))
+        
+        # Рисуем кнопки вкладок
+        for button in self.tab_buttons:
+            button.draw(surface, self.game.font_manager.get_font('button'))
+        
+        # Рисуем виджет с данными портфеля
+        self.draw_portfolio_widget(surface, 320, 170)
+        
+        # Рисуем контент в зависимости от активной вкладки
+        if self.current_tab == "акции":
+            self.draw_stocks_content(surface, 320, 250)
+        elif self.current_tab == "недвижимость":
+            self.draw_real_estate_content(surface, 320, 250)
+        elif self.current_tab == "криптовалюта":
+            self.draw_crypto_content(surface, 320, 250)
+    
+    def draw_panel(self, surface, rect, color):
+        """Рисует панель с закругленными углами."""
+        pygame.draw.rect(surface, color, rect, border_radius=15)
+        pygame.draw.rect(surface, (100, 100, 150, 255), rect, width=2, border_radius=15)
+    
+    def draw_portfolio_widget(self, surface, x, y):
+        """Рисует виджет с данными портфеля."""
+        widget_rect = pygame.Rect(x, y, 1060, 60)
+        self.draw_panel(surface, widget_rect, (40, 40, 70, 200))
+        
+        # Получаем данные портфеля (заглушка - в реальности из ExportDB)
+        portfolio_data = self.game.export_db.get_bag() if hasattr(self.game, 'export_db') else (0, 0, 0, 0, 0, 0)
+        
+        labels = [
+            f"Стоимость всего портфеля: {portfolio_data[0]}$",
+            f"Дивидендная доходность: {portfolio_data[1]}%",
+            f"Стабильный доход: {portfolio_data[2]}$",
+            f"Потенциал роста: {portfolio_data[3]}%",
+            f"Доход от аренды: {portfolio_data[4]}$",
+            f"Общая стоимость криптовалюты: {portfolio_data[5]}$"
+        ]
+        
+        font = self.game.font_manager.get_font('desc')
+        label_width = 1060 // len(labels)
+        
+        for i, label in enumerate(labels):
+            text_surf = font.render(label, True, TEXT_PRIMARY)
+            text_x = x + i * label_width + (label_width - text_surf.get_width()) // 2
+            surface.blit(text_surf, (text_x, y + 20))
+    
+    def draw_stocks_content(self, surface, x, y):
+        """Рисует контент для вкладки акций."""
+        # Заголовок
+        title_font = self.game.font_manager.get_font('subtitle')
+        title_surf = title_font.render("Доступные акции", True, TEXT_PRIMARY)
+        surface.blit(title_surf, (x, y))
+        
+        # Получаем список акций (заглушка - в реальности из базы данных)
+        # В реальном коде: stocks = self.get_available_stocks()
+        actives = self.export.get_actives()
+        if actives:
+            stocks = actives
+        else:
+            stocks = ["Все акции куплены"]
+        
+        # Отображаем акции в виде сетки
+        stock_width, stock_height = 200, 40
+        columns = 4
+        spacing = 20
+        
+        for i, stock in enumerate(stocks):
+            row = i // columns
+            col = i % columns
+            
+            stock_x = x + col * (stock_width + spacing)
+            stock_y = y + 50 + row * (stock_height + spacing)
+            
+            # Рисуем кнопку акции
+            stock_rect = pygame.Rect(stock_x, stock_y, stock_width, stock_height)
+            self.draw_stock_button(surface, stock_rect, stock)
+    
+    def draw_real_estate_content(self, surface, x, y):
+        """Рисует контент для вкладки недвижимость."""
+        # Заголовок
+        title_font = self.game.font_manager.get_font('subtitle')
+        title_surf = title_font.render("Доступная недвижимость", True, TEXT_PRIMARY)
+        surface.blit(title_surf, (x, y))
+        
+        actives = self.export.get_homes()
+        if actives:
+            stocks = actives
+        else:
+            stocks = ["Вся недвижимость куплена"]
+        
+        # Отображаем акции в виде сетки
+        stock_width, stock_height = 200, 40
+        columns = 4
+        spacing = 20
+        
+        for i, stock in enumerate(stocks):
+            row = i // columns
+            col = i % columns
+            
+            stock_x = x + col * (stock_width + spacing)
+            stock_y = y + 50 + row * (stock_height + spacing)
+            
+            # Рисуем кнопку акции
+            stock_rect = pygame.Rect(stock_x, stock_y, stock_width, stock_height)
+            self.draw_stock_button(surface, stock_rect, stock)
+    
+    def draw_crypto_content(self, surface, x, y):
+        """Рисует контент для вкладки криптовалюта."""
+        # Заголовок
+        title_font = self.game.font_manager.get_font('subtitle')
+        title_surf = title_font.render("Доступная криптовалюта", True, TEXT_PRIMARY)
+        surface.blit(title_surf, (x, y))
+        
+        actives = self.export.get_crypto()
+        if actives:
+            stocks = actives
+        else:
+            stocks = ["Вся криптовалюта куплена"]
+        
+        # Отображаем акции в виде сетки
+        stock_width, stock_height = 200, 40
+        columns = 4
+        spacing = 20
+        
+        for i, stock in enumerate(stocks):
+            row = i // columns
+            col = i % columns
+            
+            stock_x = x + col * (stock_width + spacing)
+            stock_y = y + 50 + row * (stock_height + spacing)
+            
+            # Рисуем кнопку акции
+            stock_rect = pygame.Rect(stock_x, stock_y, stock_width, stock_height)
+            self.draw_stock_button(surface, stock_rect, stock)
+    
+    def draw_stock_button(self, surface, rect, stock_name):
+        """Рисует кнопку акции."""
+        pygame.draw.rect(surface, (60, 60, 100, 255), rect, border_radius=10)
+        pygame.draw.rect(surface, (100, 100, 150, 255), rect, width=1, border_radius=10)
+        
+        font = self.game.font_manager.get_font('desc')
+        text_surf = font.render(stock_name, True, TEXT_PRIMARY)
+        text_rect = text_surf.get_rect(center=rect.center)
+        surface.blit(text_surf, text_rect)
+    
+    def handle_event(self, event):
+        """Обрабатывает события меню инвестиций."""
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mouse_pos = pygame.mouse.get_pos()
+            
+            # Проверяем клики по кнопкам навигации
+            for button in self.buttons:
+                if button.rect.collidepoint(mouse_pos):
+                    button.click()
+                    return True
+            
+            # Проверяем клики по кнопкам вкладок
+            for button in self.tab_buttons:
+                if button.rect.collidepoint(mouse_pos):
+                    button.click()
+                    return True
+            
+            # Проверяем клики по акциям/недвижимости/крипте
+            if self.current_tab == "акции":
+                # Логика обработки кликов по акциям
+                pass
+            
+            # Аналогично для других вкладок
+        
+        return False
+
+
+class NavButton:
+    """Кнопка навигации в левой панели."""
+    
+    def __init__(self, rect, text, action, is_active=False):
+        self.rect = rect
+        self.text = text
+        self.action = action
+        self.is_active = is_active
+    
+    def draw(self, surface, font):
+        """Рисует кнопку навигации."""
+        if self.is_active:
+            color = (80, 80, 140, 255)  # Активный цвет
+            text_color = (255, 255, 255, 255)
+        else:
+            color = (50, 50, 90, 255)  # Неактивный цвет
+            text_color = (200, 200, 200, 255)
+        
+        pygame.draw.rect(surface, color, self.rect, border_radius=10)
+        pygame.draw.rect(surface, (100, 100, 150, 255), self.rect, width=1, border_radius=10)
+        
+        text_surf = font.render(self.text, True, text_color)
+        text_rect = text_surf.get_rect(center=self.rect.center)
+        surface.blit(text_surf, text_rect)
+    
+    def click(self):
+        """Выполняет действие при клике."""
+        if self.action:
+            self.action()
+
+
+class TabButton:
+    """Кнопка вкладки (акции, недвижимость, криптовалюта)."""
+    
+    def __init__(self, rect, text, action, is_active=False):
+        self.rect = rect
+        self.text = text
+        self.action = action
+        self.is_active = is_active
+    
+    def draw(self, surface, font):
+        """Рисует кнопку вкладки."""
+        if self.is_active:
+            color = (70, 70, 120, 255)  # Активный цвет
+            text_color = (255, 255, 255, 255)
+        else:
+            color = (50, 50, 90, 255)  # Неактивный цвет
+            text_color = (180, 180, 180, 255)
+        
+        pygame.draw.rect(surface, color, self.rect, border_radius=10)
+        pygame.draw.rect(surface, (100, 100, 150, 255), self.rect, width=1, border_radius=10)
+        
+        text_surf = font.render(self.text, True, text_color)
+        text_rect = text_surf.get_rect(center=self.rect.center)
+        surface.blit(text_surf, text_rect)
+    
+    def click(self):
+        """Выполняет действие при клике."""
+        if self.action:
+            self.action()
+
 class Game:
     """Основной класс игры."""
     
@@ -595,6 +999,8 @@ class Game:
         
         self.font_manager = FontManager()
         self.icon_renderer = IconRenderer()
+        self.clicker_menu = ClickerMenu(self)
+        self.investment_menu = InvestmentMenu(self)
         self.loading_screen = LoadingScreen(self.screen, self.font_manager)
         
         self.stars = []
@@ -620,6 +1026,13 @@ class Game:
     
     def play_game(self):
         print("Запуск игры...")
+        self.state = ScreenState.CLICKER
+
+    def open_investments(self):
+        self.state = ScreenState.INVESTMENTS
+
+    def open_clicker(self):
+        self.state = ScreenState.CLICKER
     
     def open_settings(self):
         self.state = ScreenState.SETTINGS
@@ -669,7 +1082,7 @@ class Game:
                 "Выход", 
                 lambda s, x, y, size=30: self.icon_renderer.draw_exit_icon(s, x, y, size), 
                 self.exit_game
-            )
+            ),
         ]
         
         # Панель настроек
@@ -782,7 +1195,7 @@ class Game:
                 self.running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    if self.state == ScreenState.SETTINGS:
+                    if self.state in [ScreenState.SETTINGS, ScreenState.CLICKER, ScreenState.INVESTMENTS]:
                         self.back_to_menu()
                     else:
                         self.running = False
@@ -810,6 +1223,14 @@ class Game:
                 
                 if event.type == pygame.MOUSEMOTION:
                     self.back_button.hovered = self.back_button.is_hovered(mouse_pos)
+            
+            elif self.state == ScreenState.CLICKER:
+                if self.clicker_menu.handle_event(event):
+                    continue
+
+            elif self.state == ScreenState.INVESTMENTS:
+                if self.investment_menu.handle_event(event):
+                    continue
     
     def draw_stars(self, dt):
         """Отрисовывает анимированные звезды."""
@@ -921,15 +1342,24 @@ class Game:
             self.draw_panel(self.right_panel_rect, "right")
         elif self.state == ScreenState.SETTINGS:
             self.draw_panel(self.settings_panel_rect, "settings")
+        elif self.state == ScreenState.CLICKER:
+            pass
+        elif self.state == ScreenState.INVESTMENTS:
+            pass
         
         # Интерфейс
         self.draw_ui()
+
+        if self.state == ScreenState.CLICKER:
+            self.clicker_menu.draw(self.screen)
+        elif self.state == ScreenState.INVESTMENTS:
+            self.investment_menu.draw(self.screen)
     
     def run(self):
         while self.running:
             if self.state == ScreenState.LOADING:
                 self.run_loading()
-            elif self.state in [ScreenState.MENU, ScreenState.SETTINGS]:
+            elif self.state in [ScreenState.MENU, ScreenState.SETTINGS, ScreenState.CLICKER, ScreenState.INVESTMENTS]:
                 self.run_menu()
             
             pygame.display.flip()

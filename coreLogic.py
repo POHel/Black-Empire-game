@@ -20,7 +20,12 @@ class ExportDB:
 		self.get_full_status
 		self.get_bag
 		self.get_my_homes
+		self.get_my_crypto
+		self.get_my_actives
+		self.get_my_business
+		self.get_actives
 		self.get_crypto
+		self.get_homes
 
 	#работа с таблицой wallet
 	#отображение баланса
@@ -108,7 +113,7 @@ class ExportDB:
 		connect.close()
 
 	#получение данных своей криптовалюты
-	def get_crypto(self):
+	def get_my_crypto(self):
 		connect = sqlite3.connect("data/data.db")
 		cursor = connect.cursor()
 		cursor.execute("""SELECT name_crypto, money_crypto, amount_crypto FROM crypto""")
@@ -118,7 +123,7 @@ class ExportDB:
 		connect.close()
 
 	#получение данных своих бизнесов
-	def get_business(self):
+	def get_my_business(self):
 		connect = sqlite3.connect("data/data.db")
 		cursor = connect.cursor()
 		cursor.execute("""SELECT my_business_name, levels, earn_in_hour, type, all_moneys, capitalization, time FROM business""")
@@ -128,7 +133,7 @@ class ExportDB:
 		connect.close()
 
 	#получение данных своих активов
-	def get_actives(self):
+	def get_my_actives(self):
 		connect = sqlite3.connect("data/data.db")
 		cursor = connect.cursor()
 		cursor.execute("""SELECT name_actives, money_actives, amount_actives, profitability_actives FROM actives""")
@@ -136,6 +141,34 @@ class ExportDB:
 		for results in result:
 			return results
 		connect.close()
+
+	# Инвестиции
+	#получение криптовалюты
+	def get_crypto(self):
+		connect = sqlite3.connect("data/invest.db")
+		cursor = connect.cursor()
+		cursor.execute('SELECT name_crypto FROM crypto')
+		result = [row[0] for row in cursor.fetchall()]
+		connect.close()
+		return result
+
+	#получение недвижимости
+	def get_homes(self):
+		connect = sqlite3.connect("data/invest.db")
+		cursor = connect.cursor()
+		cursor.execute('SELECT name_homes FROM homes')
+		result = [row[0] for row in cursor.fetchall()]
+		connect.close()
+		return result
+
+	#получение активов
+	def get_actives(self):
+		connect = sqlite3.connect("data/invest.db")
+		cursor = connect.cursor()
+		cursor.execute('SELECT name_actives FROM actives')
+		result = [row[0] for row in cursor.fetchall()]
+		connect.close()
+		return result
 
 #класс для обновления в базе данных	
 class UpdateDB:

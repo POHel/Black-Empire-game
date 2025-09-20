@@ -470,13 +470,8 @@ class Dropdown:
             dropdown.hovered_index = -1
         cls.active_dropdown = None
 
-    # Глобальная функция для закрытия всех dropdown
-    #def close_all_dropdowns():
-        """Закрывает все выпадающие списки."""
-        #Dropdown.close_all_dropdowns()
-
     # Также добавьте эту функцию в основной цикл обработки событий:
-    def handle_global_events(cls, event, dropdowns):
+    def handle_global_events(self, event, dropdowns):
         """Обрабатывает глобальные события для dropdown."""
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             # Проверяем, был ли клик по любому dropdown
@@ -1200,25 +1195,25 @@ class Game:
         dropdown_width, dropdown_height = 200, 50
 
         self.theme_dropdown = Dropdown(
-            pygame.Rect(dropdown_theme_x, 240, dropdown_width, dropdown_height),
+            pygame.Rect(dropdown_theme_x, 230, dropdown_width, dropdown_height),
             self.theme_options,
             self.theme_options.index(self.settings["theme"])
         )
 
         self.resolution_dropdown = Dropdown(
-            pygame.Rect(dropdown_resolution_x, 240, dropdown_width, dropdown_height),
+            pygame.Rect(dropdown_resolution_x, 230, dropdown_width, dropdown_height),
             self.resolution_options,
             self.resolution_options.index(self.settings["resolution"])
         )
 
         self.fps_dropdown = Dropdown(
-            pygame.Rect(dropdown_fps_x, 490, dropdown_width, dropdown_height),
+            pygame.Rect(dropdown_fps_x, 410, dropdown_width, dropdown_height),
             self.fps_options,
             self.fps_options.index(self.settings["fps"])
         )
 
         self.language_dropdown = Dropdown(
-            pygame.Rect(dropdown_language_x, 490, dropdown_width, dropdown_height),
+            pygame.Rect(dropdown_language_x, 410, dropdown_width, dropdown_height),
             self.language_options,
             self.language_options.index(self.settings["language"])
         )
@@ -1437,10 +1432,10 @@ class Game:
         language_x = SCREEN_WIDTH//2 + 30
     
         options = [
-            ("Тема:", self.theme_dropdown, theme_x, 250),
-            ("Разрешение:", self.resolution_dropdown, resolution_x, 250),
-            ("FPS:", self.fps_dropdown, fps_x, 500),
-            ("Язык:", self.language_dropdown, language_x, 500)
+            ("Тема:", self.theme_dropdown, theme_x, 240),
+            ("Разрешение:", self.resolution_dropdown, resolution_x, 240),
+            ("FPS:", self.fps_dropdown, fps_x, 420),
+            ("Язык:", self.language_dropdown, language_x, 420)
         ]
         
         for label, dropdown, x_pos, y_pos in options:

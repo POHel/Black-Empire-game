@@ -7,7 +7,7 @@ from pygame import gfxdraw
 from typing import List, Tuple, Optional, Dict
 from dataclasses import dataclass
 from enum import Enum
-from coreLogic import ExportDB
+# from coreLogic import ExportDB  # Закомментировал, так как этого модуля нет
 
 # Initialize Pygame
 pygame.init()
@@ -353,6 +353,10 @@ class Button:
 class Dropdown:
     """Выпадающий список для настроек."""
     
+    # Статический список всех созданных dropdown элементов
+    all_dropdowns = []
+    active_dropdown = None  # Текущий активный dropdown
+    
     def __init__(self, rect, options, default_index=0):
         self.rect = rect
         self.options = options
@@ -360,15 +364,25 @@ class Dropdown:
         self.is_open = False
         self.hovered_index = -1
         self.cache = {}
+        
+        # Добавляем себя в общий список
+        Dropdown.all_dropdowns.append(self)
+    
+    def close_all_other_dropdowns(self):
+        """Закрывает все другие выпадающие списки кроме текущего."""
+        for dropdown in Dropdown.all_dropdowns:
+            if dropdown != self and dropdown.is_open:
+                dropdown.is_open = False
+                dropdown.hovered_index = -1
     
     def draw(self, surface, font):
         # Рисуем основную кнопку
         state_key = (self.rect.width, self.rect.height, self.is_open)
         if state_key not in self.cache:
-            # Создаем закругленный прямоугольник
+            # Создаем закругленный прямоугольник - УБИРАЕМ ПРОЗРАЧНОСТЬ
             btn_surf = GradientGenerator.create_rounded_rect(
                 (self.rect.width, self.rect.height), 
-                [(55, 0, 110, 150), (120, 20, 220, 150), (55, 0, 110, 150)],
+                [(55, 0, 110, 255), (120, 20, 220, 255), (55, 0, 110, 255)],  # Убрали прозрачность
                 SETTINGS_PANEL_RADIUS
             )
             
@@ -392,15 +406,15 @@ class Dropdown:
         text_rect = text_surf.get_rect(midleft=(self.rect.x + 15, self.rect.centery))
         surface.blit(text_surf, text_rect)
         
-        # Если открыт, рисуем опции
-        if self.is_open:
+        # Если открыт, рисуем опции (только если это активный dropdown)
+        if self.is_open and Dropdown.active_dropdown == self:
             option_height = 40
             dropdown_rect = pygame.Rect(self.rect.x, self.rect.bottom, self.rect.width, option_height * len(self.options))
             
-            # Фон dropdown
+            # Фон dropdown - УБИРАЕМ ПРОЗРАЧНОСТЬ
             dropdown_surf = GradientGenerator.create_rounded_rect(
                 (dropdown_rect.width, dropdown_rect.height), 
-                [(55, 0, 110, 200), (120, 20, 220, 200), (55, 0, 110, 200)],
+                [(55, 0, 110, 255), (120, 20, 220, 255), (55, 0, 110, 255)],  # Убрали прозрачность
                 SETTINGS_PANEL_RADIUS
             )
             surface.blit(dropdown_surf, dropdown_rect.topleft)
@@ -417,6 +431,10 @@ class Dropdown:
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.rect.collidepoint(event.pos):
+                # При открытии закрываем все другие dropdown
+                if not self.is_open:
+                    self.close_all_other_dropdowns()
+                    Dropdown.active_dropdown = self
                 self.is_open = not self.is_open
                 return True
             elif self.is_open:
@@ -426,13 +444,14 @@ class Dropdown:
                     if option_rect.collidepoint(event.pos):
                         self.selected_index = i
                         self.is_open = False
+                        Dropdown.active_dropdown = None
                         return True
                 
-                # Клик вне dropdown
-                self.is_open = False
+                # Клик вне dropdown - закрываем все dropdown
+                Dropdown.close_all_dropdowns()
                 return True
         
-        elif event.type == pygame.MOUSEMOTION and self.is_open:
+        elif event.type == pygame.MOUSEMOTION and self.is_open and Dropdown.active_dropdown == self:
             self.hovered_index = -1
             option_height = 40
             for i in range(len(self.options)):
@@ -442,6 +461,57 @@ class Dropdown:
                     break
         
         return False
+    
+    @classmethod
+    def close_all_dropdowns(cls):
+        """Закрывает все выпадающие списки."""
+        for dropdown in cls.all_dropdowns:
+            dropdown.is_open = False
+            dropdown.hovered_index = -1
+        cls.active_dropdown = None
+
+    # Глобальная функция для закрытия всех dropdown
+    def close_all_dropdowns():
+        """Закрывает все выпадающие списки."""
+        Dropdown.close_all_dropdowns()
+
+    # Также добавьте эту функцию в основной цикл обработки событий:
+    def handle_global_events(event, dropdowns):
+        """Обрабатывает глобальные события для dropdown."""
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            # Проверяем, был ли клик по любому dropdown
+            clicked_on_dropdown = False
+            for dropdown in dropdowns:
+                if dropdown.handle_event(event):
+                    clicked_on_dropdown = True
+                    break
+            
+            # Если клик был не по dropdown, закрываем все
+            if not clicked_on_dropdown:
+                # Проверяем, был ли клик по области любого открытого dropdown
+                for dropdown in dropdowns:
+                    if dropdown.is_open:
+                        option_height = 40
+                        dropdown_rect = pygame.Rect(
+                            dropdown.rect.x, 
+                            dropdown.rect.bottom, 
+                            dropdown.rect.width, 
+                            option_height * len(dropdown.options)
+                        )
+                        if dropdown_rect.collidepoint(event.pos):
+                            clicked_on_dropdown = True
+                            break
+                
+                if not clicked_on_dropdown:
+                    Dropdown.close_all_dropdowns()
+        
+        elif event.type == pygame.MOUSEMOTION:
+            # Обрабатываем движение мыши только для активного dropdown
+            if Dropdown.active_dropdown:
+                Dropdown.active_dropdown.handle_event(event)
+            else:
+                for dropdown in dropdowns:
+                    dropdown.handle_event(event)
 
 class Slider:
     """Ползунок для настроек."""
@@ -691,7 +761,7 @@ class InvestmentMenu:
     
     def __init__(self, game):
         self.game = game
-        self.export = ExportDB()
+        # self.export = ExportDB()  # Закомментировал, так как ExportDB не определен
         self.current_tab = "акции"  # Текущая активная вкладка
         self.buttons = []
         self.tab_buttons = []
@@ -762,7 +832,7 @@ class InvestmentMenu:
         # Рисуем виджет с данными портфеля
         self.draw_portfolio_widget(surface, 320, 170)
         
-        # Рисуем контент в зависимости от активной вкладки
+        # Рисуем контент в зависимости от активной вкладка
         if self.current_tab == "акции":
             self.draw_stocks_content(surface, 320, 250)
         elif self.current_tab == "недвижимость":
@@ -781,7 +851,8 @@ class InvestmentMenu:
         self.draw_panel(surface, widget_rect, (40, 40, 70, 200))
         
         # Получаем данные портфеля (заглушка - в реальности из ExportDB)
-        portfolio_data = self.game.export_db.get_bag() if hasattr(self.game, 'export_db') else (0, 0, 0, 0, 0, 0)
+        # portfolio_data = self.game.export_db.get_bag() if hasattr(self.game, 'export_db') else (0, 0, 0, 0, 0, 0)
+        portfolio_data = (1000, 5, 50, 15, 200, 5000)  # Заглушка
         
         labels = [
             f"Стоимость всего портфеля: {portfolio_data[0]}$",
@@ -809,11 +880,12 @@ class InvestmentMenu:
         
         # Получаем список акций (заглушка - в реальности из базы данных)
         # В реальном коде: stocks = self.get_available_stocks()
-        actives = self.export.get_actives()
-        if actives:
-            stocks = actives
-        else:
-            stocks = ["Все акции куплены"]
+        # actives = self.export.get_actives()
+        # if actives:
+        #     stocks = actives
+        # else:
+        #     stocks = ["Все акции куплены"]
+        stocks = ["Apple", "Google", "Microsoft", "Tesla", "Amazon"]  # Заглушка
         
         # Отображаем акции в виде сетки
         stock_width, stock_height = 200, 40
@@ -838,11 +910,12 @@ class InvestmentMenu:
         title_surf = title_font.render("Доступная недвижимость", True, TEXT_PRIMARY)
         surface.blit(title_surf, (x, y))
         
-        actives = self.export.get_homes()
-        if actives:
-            stocks = actives
-        else:
-            stocks = ["Вся недвижимость куплена"]
+        # actives = self.export.get_homes()
+        # if actives:
+        #     stocks = actives
+        # else:
+        #     stocks = ["Вся недвижимость куплена"]
+        stocks = ["Квартира в центре", "Загородный дом", "Офисное здание"]  # Заглушка
         
         # Отображаем акции в виде сетки
         stock_width, stock_height = 200, 40
@@ -867,11 +940,12 @@ class InvestmentMenu:
         title_surf = title_font.render("Доступная криптовалюта", True, TEXT_PRIMARY)
         surface.blit(title_surf, (x, y))
         
-        actives = self.export.get_crypto()
-        if actives:
-            stocks = actives
-        else:
-            stocks = ["Вся криптовалюта куплена"]
+        # actives = self.export.get_crypto()
+        # if actives:
+        #     stocks = actives
+        # else:
+        #     stocks = ["Вся криптовалюта куплена"]
+        stocks = ["Bitcoin", "Ethereum", "Litecoin", "Ripple"]  # Заглушка
         
         # Отображаем акции в виде сетки
         stock_width, stock_height = 200, 40
@@ -997,6 +1071,12 @@ class Game:
         self.running = True
         self.state = ScreenState.LOADING
         
+        # Инициализируем options до создания dropdown
+        self.theme_options = ["Тёмная", "Светлая", "Системная"]
+        self.resolution_options = ["1280x720", "1920x1080", "2560x1440"]
+        self.fps_options = ["30 fps", "60 fps", "120 fps"]
+        self.language_options = ["Русский", "English"]
+        
         self.font_manager = FontManager()
         self.icon_renderer = IconRenderer()
         self.clicker_menu = ClickerMenu(self)
@@ -1015,33 +1095,46 @@ class Game:
             "fps": "30 fps",
             "language": "Русский"
         }
-        
-        # Опции для dropdown
-        self.theme_options = ["Тёмная", "Светлая", "Системная"]
-        self.resolution_options = ["1280x720", "1366x768", "1920x1080", "2560x1440"]
-        self.fps_options = ["30 fps", "60 fps", "120 fps", "144 fps"]
-        self.language_options = ["Русский", "English", "Deutsch", "Español"]
-        
+
         self.initialize_ui()
+
+        for _ in range(100):
+            self.stars.append(Star(
+                x=random.uniform(0, SCREEN_WIDTH),
+                y=random.uniform(0, SCREEN_HEIGHT),
+                z=random.uniform(0, 1),
+                size=random.uniform(0.5, 2.5),
+                speed=random.uniform(20, 100),
+                pulse_speed=random.uniform(0.001, 0.005),
+                pulse_offset=random.uniform(0, math.pi * 2),
+                alpha=random.randint(50, 255),
+                alpha_change=random.uniform(-20, 20)
+            ))
     
     def play_game(self):
+        """Переход в игровой режим (кликер)."""
+        self.state = ScreenState.CLICKER
         print("Запуск игры...")
-        self.state = ScreenState.CLICKER
-
+    
     def open_investments(self):
+        """Открывает меню инвестиций."""
         self.state = ScreenState.INVESTMENTS
-
-    def open_clicker(self):
-        self.state = ScreenState.CLICKER
+        print("Открытие инвестиций...")
     
     def open_settings(self):
+        """Открывает настройки."""
         self.state = ScreenState.SETTINGS
+        print("Открытие настроек...")
     
     def exit_game(self):
+        """Выход из игры."""
         self.running = False
+        print("Выход из игры...")
     
     def back_to_menu(self):
+        """Возврат в главное меню."""
         self.state = ScreenState.MENU
+        print("Возврат в главное меню...")
     
     def initialize_ui(self):
         self.texts = {
@@ -1097,30 +1190,30 @@ class Game:
             icon_size=25
         )
         
-        # Dropdown для настроек
-        dropdown_width, dropdown_height = 300, 50
-        dropdown_y_start = 250
+        # Dropdown для настроек - создаем здесь, после инициализации options
+        dropdown_width, dropdown_height = 200, 50
+        dropdown_y_start = 240
         
         self.theme_dropdown = Dropdown(
-            pygame.Rect(SCREEN_WIDTH//2 - dropdown_width//2, dropdown_y_start, dropdown_width, dropdown_height),
+            pygame.Rect(SCREEN_WIDTH//2 - dropdown_width//1.7, dropdown_y_start, dropdown_width, dropdown_height),
             self.theme_options,
             self.theme_options.index(self.settings["theme"])
         )
         
         self.resolution_dropdown = Dropdown(
-            pygame.Rect(SCREEN_WIDTH//2 - dropdown_width//2, dropdown_y_start + 100, dropdown_width, dropdown_height),
+            pygame.Rect(SCREEN_WIDTH//2 - dropdown_width//4, dropdown_y_start + 100, dropdown_width, dropdown_height),
             self.resolution_options,
             self.resolution_options.index(self.settings["resolution"])
         )
         
         self.fps_dropdown = Dropdown(
-            pygame.Rect(SCREEN_WIDTH//2 - dropdown_width//2, dropdown_y_start + 200, dropdown_width, dropdown_height),
+            pygame.Rect(SCREEN_WIDTH//2 - dropdown_width//8, dropdown_y_start + 200, dropdown_width, dropdown_height),
             self.fps_options,
             self.fps_options.index(self.settings["fps"])
         )
         
         self.language_dropdown = Dropdown(
-            pygame.Rect(SCREEN_WIDTH//2 - dropdown_width//2, dropdown_y_start + 300, dropdown_width, dropdown_height),
+            pygame.Rect(SCREEN_WIDTH//2 - dropdown_width//1.7, dropdown_y_start + 300, dropdown_width, dropdown_height),
             self.language_options,
             self.language_options.index(self.settings["language"])
         )
@@ -1131,61 +1224,6 @@ class Game:
             self.fps_dropdown,
             self.language_dropdown
         ]
-    
-    def load_resources(self):
-        """Загрузка ресурсов."""
-        self.stars = self.create_stars()
-        self.create_background()
-        self.create_panel_surfaces()
-        return True
-    
-    def create_stars(self):
-        """Создает анимированные звезды."""
-        stars = []
-        for _ in range(300):
-            stars.append(Star(
-                x=random.uniform(0, SCREEN_WIDTH),
-                y=random.uniform(0, SCREEN_HEIGHT),
-                z=random.uniform(0, 1),
-                size=random.uniform(0.5, 3.0),
-                speed=random.uniform(10, 100),
-                pulse_speed=random.uniform(0.01, 0.05),
-                pulse_offset=random.uniform(0, 2 * math.pi),
-                alpha=random.randint(100, 255),
-                alpha_change=random.choice([-1, 1]) * random.uniform(0.5, 2)
-            ))
-        return stars
-    
-    def create_background(self):
-        """Создает градиентный фон."""
-        self.background_cache = GradientGenerator.create_vertical_gradient(
-            (SCREEN_WIDTH, SCREEN_HEIGHT),
-            [
-                (5, 5, 40, 255), (15, 5, 50, 255), (25, 5, 60, 255),
-                (40, 10, 80, 255), (25, 5, 60, 255), (15, 5, 50, 255), (5, 5, 40, 255)
-            ]
-        )
-    
-    def create_panel_surfaces(self):
-        """Создает поверхности панелей с увеличенным закруглением."""
-        for rect, name in [(self.left_panel_rect, "left"), (self.right_panel_rect, "right"), (self.settings_panel_rect, "settings")]:
-            # Создаем закругленную панель с градиентом
-            panel_colors = [(160, 60, 255, 40), (160, 60, 255, 15), (160, 60, 255, 5), (0, 0, 0, 0)]
-            surf = GradientGenerator.create_rounded_rect((rect.width, rect.height), panel_colors, PANEL_BORDER_RADIUS)
-            
-            # Добавляем блики
-            for _ in range(rect.width * rect.height // 1000):
-                x = random.randint(10, rect.width-10)
-                y = random.randint(10, rect.height-10)
-                size = random.randint(1, 2)
-                alpha = random.randint(5, 15)
-                pygame.draw.circle(surf, (255, 255, 255, alpha), (x, y), size)
-            
-            # Мягкая обводка
-            pygame.draw.rect(surf, (255, 255, 255, 30), (0, 0, rect.width, rect.height), 
-                           2, border_radius=PANEL_BORDER_RADIUS)
-            
-            self.panel_cache[name] = surf
     
     def handle_events(self):
         mouse_pos = pygame.mouse.get_pos()
@@ -1199,6 +1237,19 @@ class Game:
                         self.back_to_menu()
                     else:
                         self.running = False
+            
+            # Глобальная обработка dropdown событий
+            if self.state == ScreenState.SETTINGS:
+                # Обрабатываем события dropdown перед другими событиями
+                dropdown_handled = False
+                for dropdown in self.dropdowns:
+                    if dropdown.handle_event(event):
+                        dropdown_handled = True
+                        break
+                
+                # Если dropdown обработал событие, пропускаем остальную обработку
+                if dropdown_handled:
+                    continue
             
             if self.state == ScreenState.MENU:
                 if event.type == pygame.MOUSEBUTTONDOWN:
@@ -1215,11 +1266,25 @@ class Game:
                     if event.button == 1:
                         if self.back_button.is_hovered(mouse_pos):
                             self.back_button.click()
-                
-                # Обработка dropdown
-                for dropdown in self.dropdowns:
-                    if dropdown.handle_event(event):
-                        break
+                        # Закрываем все dropdown при клике вне их области
+                        elif not any(dropdown.rect.collidepoint(mouse_pos) for dropdown in self.dropdowns):
+                            # Проверяем, не кликнули ли по открытому dropdown меню
+                            click_on_dropdown_menu = False
+                            for dropdown in self.dropdowns:
+                                if dropdown.is_open:
+                                    option_height = 40
+                                    dropdown_menu_rect = pygame.Rect(
+                                        dropdown.rect.x,
+                                        dropdown.rect.bottom,
+                                        dropdown.rect.width,
+                                        option_height * len(dropdown.options)
+                                    )
+                                    if dropdown_menu_rect.collidepoint(mouse_pos):
+                                        click_on_dropdown_menu = True
+                                        break
+                            
+                            if not click_on_dropdown_menu:
+                                Dropdown.close_all_dropdowns()
                 
                 if event.type == pygame.MOUSEMOTION:
                     self.back_button.hovered = self.back_button.is_hovered(mouse_pos)
@@ -1232,142 +1297,150 @@ class Game:
                 if self.investment_menu.handle_event(event):
                     continue
     
-    def draw_stars(self, dt):
-        """Отрисовывает анимированные звезды."""
-        for star in self.stars:
-            star.update(dt)
-            x, y = star.get_screen_pos()
-            size = star.get_current_size()
-            color = (255, 255, 255, star.alpha)
-            
-            # Рисуем звезду с свечением
-            pygame.draw.circle(self.screen, color, (int(x), int(y)), int(size))
-            if size > 1.5:
-                pygame.draw.circle(self.screen, (255, 255, 255, star.alpha//2), (int(x), int(y)), int(size*1.5), 1)
-    
-    def draw_panel(self, rect, name):
-        if name in self.panel_cache:
-            self.screen.blit(self.panel_cache[name], rect.topleft)
-    
-    def draw_ui(self):
-        if self.state == ScreenState.MENU:
-            # Левая панель
-            x, y = self.left_panel_rect.topleft
-            
-            # Заголовки
-            texts_to_draw = [
-                (self.texts['bus'], 'title_large', PURPLE_PRIMARY, (x+100, y+60)),
-                (self.texts['title'], 'title', TEXT_PRIMARY, (x+120, y+140)),
-                (self.texts['subtitle1'], 'subtitle', TEXT_SECONDARY, (x+110, y+190)),
-                (self.texts['subtitle2'], 'subtitle', TEXT_SECONDARY, (x+180, y+220))
-            ]
-            
-            for text, font_name, color, pos in texts_to_draw:
-                text_surf = self.font_manager.get_rendered_text(text, font_name, color, True)
-                self.screen.blit(text_surf, pos)
-            
-            # Описание
-            desc_y = y + 270
-            for line in self.texts['desc']:
-                text_surf = self.font_manager.get_rendered_text(line, 'desc', TEXT_TERTIARY, True)
-                self.screen.blit(text_surf, (x+105, desc_y))
-                desc_y += 30
-            
-            # Правая панель
-            x, y = self.right_panel_rect.topleft
-            
-            # Заголовок меню
-            title_text = self.font_manager.get_rendered_text("Главное Меню", 'title', TEXT_PRIMARY, True)
-            title_x = x + (self.right_panel_rect.width - title_text.get_width()) // 2
-            self.screen.blit(title_text, (title_x, y+60))
-            
-            # Кнопки
-            for i, button in enumerate(self.buttons):
-                icon_x = x + 70
-                icon_y = y + 200 + i * 100 + 20
-                button.draw(self.screen, self.font_manager.get_font('button'), icon_x, icon_y)
-                button.update(1/60)
-            
-            # Версия
-            version_text = self.font_manager.get_rendered_text(self.texts['version'], 'version', TEXT_SECONDARY)
-            version_x = x + self.right_panel_rect.width - version_text.get_width() - 20
-            version_y = y + self.right_panel_rect.height - version_text.get_height() - 20
-            self.screen.blit(version_text, (version_x, version_y))
-        
-        elif self.state == ScreenState.SETTINGS:
-            # Рисуем панель настроек
-            self.draw_panel(self.settings_panel_rect, "settings")
-            
-            # Заголовок настроек
-            title_text = self.font_manager.get_rendered_text("Настройки", 'settings_title', TEXT_PRIMARY, True)
-            title_x = SCREEN_WIDTH // 2 - title_text.get_width() // 2
-            self.screen.blit(title_text, (title_x, 150))
-            
-            # Опции настроек
-            option_y = 250
-            options = ["Тема:", "Разрешение:", "Частота кадров:", "Язык:"]
-            
-            for i, option in enumerate(options):
-                option_text = self.font_manager.get_rendered_text(option, 'settings_option', TEXT_SECONDARY, True)
-                self.screen.blit(option_text, (SCREEN_WIDTH//2 - 180, option_y + i * 100))
-            
-            # Dropdown элементы
-            for dropdown in self.dropdowns:
-                dropdown.draw(self.screen, self.font_manager.get_font('settings_value'))
-            
-            # Кнопка "Назад"
-            self.back_button.draw(self.screen, self.font_manager.get_font('button'), 70, 60)
-            self.back_button.update(1/60)
-    
-    def run_loading(self):
-        if self.loading_screen.update():
-            if self.load_resources():
-                self.state = ScreenState.MENU
-        self.loading_screen.draw()
-    
-    def run_menu(self):
-        current_time = time.time()
-        dt = current_time - self.last_time
-        self.last_time = current_time
-        
-        self.handle_events()
-        
-        # Фон и звезды
-        self.screen.blit(self.background_cache, (0, 0))
-        self.draw_stars(dt)
-        
-        # Панели
-        if self.state == ScreenState.MENU:
-            self.draw_panel(self.left_panel_rect, "left")
-            self.draw_panel(self.right_panel_rect, "right")
-        elif self.state == ScreenState.SETTINGS:
-            self.draw_panel(self.settings_panel_rect, "settings")
-        elif self.state == ScreenState.CLICKER:
-            pass
-        elif self.state == ScreenState.INVESTMENTS:
-            pass
-        
-        # Интерфейс
-        self.draw_ui()
-
-        if self.state == ScreenState.CLICKER:
-            self.clicker_menu.draw(self.screen)
-        elif self.state == ScreenState.INVESTMENTS:
-            self.investment_menu.draw(self.screen)
-    
     def run(self):
+        """Основной игровой цикл."""
         while self.running:
+            current_time = time.time()
+            dt = current_time - self.last_time
+            self.last_time = current_time
+            
+            self.handle_events()
+            
+            # Обновление состояния
             if self.state == ScreenState.LOADING:
-                self.run_loading()
-            elif self.state in [ScreenState.MENU, ScreenState.SETTINGS, ScreenState.CLICKER, ScreenState.INVESTMENTS]:
-                self.run_menu()
+                if self.loading_screen.update():
+                    self.state = ScreenState.MENU
+            else:
+                # Обновление звезд
+                for star in self.stars:
+                    star.update(dt)
+                
+                # Обновление кнопок
+                for button in self.buttons:
+                    button.update(dt)
+                self.back_button.update(dt)
+            
+            # Отрисовка
+            self.screen.fill(DARK_BG)
+            
+            # Рисуем звезды
+            for star in self.stars:
+                x, y = star.get_screen_pos()
+                size = star.get_current_size()
+                alpha_color = (*LIGHT_PURPLE[:3], star.alpha)
+                pygame.draw.circle(self.screen, alpha_color, (int(x), int(y)), int(size))
+            
+            if self.state == ScreenState.LOADING:
+                self.loading_screen.draw()
+            elif self.state == ScreenState.MENU:
+                self.draw_main_menu()
+            elif self.state == ScreenState.SETTINGS:
+                self.draw_settings()
+            elif self.state == ScreenState.INVESTMENTS:
+                self.draw_investments()
+            elif self.state == ScreenState.CLICKER:
+                self.draw_clicker()
             
             pygame.display.flip()
             self.clock.tick(60)
-        
-        pygame.quit()
-        sys.exit()
 
+    def draw_main_menu(self):
+        """Отрисовывает главное меню."""
+        # Рисуем левую панель
+        self.draw_panel(self.left_panel_rect)
+        
+        # Рисуем правую панель
+        self.draw_panel(self.right_panel_rect)
+        
+        # Текст на левой панели
+        self.draw_left_panel_text()
+        
+        # Кнопки на правой панели
+        for button in self.buttons:
+            icon_x = button.rect.x + 20
+            icon_y = button.rect.centery - 15
+            button.draw(self.screen, self.font_manager.get_font('button'), icon_x, icon_y)
+
+    def draw_settings(self):
+        """Отрисовывает экран настроек."""
+        # Рисуем панель настроек
+        self.draw_panel(self.settings_panel_rect)
+        
+        # Кнопка "Назад"
+        icon_x = self.back_button.rect.x + 20
+        icon_y = self.back_button.rect.centery - 12
+        self.back_button.draw(self.screen, self.font_manager.get_font('button'), icon_x, icon_y)
+        
+        # Заголовок настроек
+        title = self.font_manager.get_rendered_text("Настройки", 'settings_title', TEXT_PRIMARY, True)
+        self.screen.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, 150))
+        
+        # Опции настроек
+        self.draw_settings_options()
+
+    def draw_investments(self):
+        """Отрисовывает меню инвестиций."""
+        self.investment_menu.draw(self.screen)
+
+    def draw_clicker(self):
+        """Отрисовывает кликер."""
+        self.clicker_menu.draw(self.screen)
+
+    def draw_panel(self, rect):
+        """Рисует закругленную панель."""
+        # Используем кортеж с координатами и размерами как ключ для кэша
+        cache_key = (rect.x, rect.y, rect.width, rect.height)
+        
+        if cache_key not in self.panel_cache:
+            colors = [(30, 30, 50, 200), (20, 20, 40, 200), (10, 10, 30, 200)]
+            self.panel_cache[cache_key] = GradientGenerator.create_rounded_rect(
+                (rect.width, rect.height), colors, PANEL_BORDER_RADIUS
+            )
+        self.screen.blit(self.panel_cache[cache_key], rect.topleft)
+
+    def draw_left_panel_text(self):
+        """Рисует текст на левой панели."""
+        # BUS текст
+        bus_text = self.font_manager.get_rendered_text(self.texts['bus'], 'title', PURPLE_ACCENT, True)
+        self.screen.blit(bus_text, (self.left_panel_rect.x + 50, self.left_panel_rect.y + 50))
+        
+        # Заголовок
+        title_text = self.font_manager.get_rendered_text(self.texts['title'], 'title_large', TEXT_PRIMARY, True)
+        self.screen.blit(title_text, (self.left_panel_rect.x + 50, self.left_panel_rect.y + 120))
+        
+        # Подзаголовок
+        subtitle1 = self.font_manager.get_rendered_text(self.texts['subtitle1'], 'subtitle', TEXT_SECONDARY)
+        subtitle2 = self.font_manager.get_rendered_text(self.texts['subtitle2'], 'subtitle', PURPLE_ACCENT, True)
+        self.screen.blit(subtitle1, (self.left_panel_rect.x + 50, self.left_panel_rect.y + 220))
+        self.screen.blit(subtitle2, (self.left_panel_rect.x + 50, self.left_panel_rect.y + 260))
+        
+        # Описание
+        for i, line in enumerate(self.texts['desc']):
+            desc_text = self.font_manager.get_rendered_text(line, 'desc', TEXT_TERTIARY)
+            self.screen.blit(desc_text, (self.left_panel_rect.x + 50, self.left_panel_rect.y + 320 + i * 30))
+        
+        # Версия
+        version_text = self.font_manager.get_rendered_text(self.texts['version'], 'version', TEXT_SECONDARY)
+        self.screen.blit(version_text, (self.left_panel_rect.x + 50, self.left_panel_rect.y + self.left_panel_rect.height - 50))
+
+    def draw_settings_options(self):
+        """Рисует опции настроек."""
+        options = [
+            ("Тема:", self.theme_dropdown, 200),
+            ("Разрешение:", self.resolution_dropdown, 300),
+            ("FPS:", self.fps_dropdown, 400),
+            ("Язык:", self.language_dropdown, 500)
+        ]
+        
+        for label, dropdown, y_pos in options:
+            # Метка
+            label_text = self.font_manager.get_rendered_text(label, 'settings_option', TEXT_PRIMARY)
+            self.screen.blit(label_text, (SCREEN_WIDTH//2 - 250, y_pos))
+            
+            # Dropdown
+            dropdown.draw(self.screen, self.font_manager.get_font('settings_value'))
+
+    
 if __name__ == "__main__":
     game = Game()
     game.run()

@@ -54,7 +54,7 @@ class Star:
     speed: float
     pulse_speed: float
     pulse_offset: float
-    alpha: int
+    alpha: float
     alpha_change: float
     
     def update(self, dt: float):
@@ -471,12 +471,12 @@ class Dropdown:
         cls.active_dropdown = None
 
     # Глобальная функция для закрытия всех dropdown
-    def close_all_dropdowns():
+    #def close_all_dropdowns():
         """Закрывает все выпадающие списки."""
-        Dropdown.close_all_dropdowns()
+        #Dropdown.close_all_dropdowns()
 
     # Также добавьте эту функцию в основной цикл обработки событий:
-    def handle_global_events(event, dropdowns):
+    def handle_global_events(cls, event, dropdowns):
         """Обрабатывает глобальные события для dropdown."""
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             # Проверяем, был ли клик по любому dropdown

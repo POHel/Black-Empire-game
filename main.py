@@ -1426,10 +1426,10 @@ class Game:
     def draw_settings_options(self):
         """Рисует опции настроек."""
         options = [
-            ("Тема:", self.theme_dropdown, 200),
-            ("Разрешение:", self.resolution_dropdown, 300),
-            ("FPS:", self.fps_dropdown, 400),
-            ("Язык:", self.language_dropdown, 500)
+            ("Тема:", self.theme_dropdown, 250),
+            ("Разрешение:", self.resolution_dropdown, 350),
+            ("FPS:", self.fps_dropdown, 450),
+            ("Язык:", self.language_dropdown, 550)
         ]
         
         for label, dropdown, y_pos in options:

@@ -1161,19 +1161,19 @@ class Game:
             Button(
                 pygame.Rect(self.right_panel_rect.x + 60, button_y_start, button_width, button_height),
                 "Играть", 
-                lambda s, x, y, size=30: self.icon_renderer.draw_play_icon(s, x, y, size), 
+                lambda surface, icon_x, icon_y, size=30: self.icon_renderer.draw_play_icon(surface, icon_x, icon_y, size), 
                 self.play_game
             ),
             Button(
                 pygame.Rect(self.right_panel_rect.x + 60, button_y_start + 100, button_width, button_height),
                 "Настройки", 
-                lambda s, x, y, size=40: self.icon_renderer.draw_settings_icon(s, x, y, size), 
+                lambda surface, icon_x, icon_y, size=40: self.icon_renderer.draw_settings_icon(surface, icon_x, icon_y, size), 
                 self.open_settings
             ),
             Button(
                 pygame.Rect(self.right_panel_rect.x + 60, button_y_start + 200, button_width, button_height),
                 "Выход", 
-                lambda s, x, y, size=30: self.icon_renderer.draw_exit_icon(s, x, y, size), 
+                lambda surface, icon_x, icon_y, size=30: self.icon_renderer.draw_exit_icon(surface, icon_x, icon_y, size), 
                 self.exit_game
             ),
         ]
@@ -1185,35 +1185,40 @@ class Game:
         self.back_button = Button(
             pygame.Rect(50, 50, 200, 60),
             "Назад",
-            lambda s, x, y, size=25: self.icon_renderer.draw_back_icon(s, x, y, size),
+            lambda surface, icon_x, icon_y, size=25: self.icon_renderer.draw_back_icon(surface, icon_x, icon_y, size),
             self.back_to_menu,
             icon_size=25
         )
         
         # Dropdown для настроек - создаем здесь, после инициализации options
+        # Dropdown позиции (правее надписей)
+        dropdown_theme_x = SCREEN_WIDTH//2 - 350 + 70
+        dropdown_resolution_x = SCREEN_WIDTH//2 + 30 + 135
+        dropdown_fps_x = SCREEN_WIDTH//2 - 350 + 60
+        dropdown_language_x = SCREEN_WIDTH//2 + 30 + 70
+
         dropdown_width, dropdown_height = 200, 50
-        dropdown_y_start = 240
-        
+
         self.theme_dropdown = Dropdown(
-            pygame.Rect(SCREEN_WIDTH//2 - dropdown_width//1.7, dropdown_y_start, dropdown_width, dropdown_height),
+            pygame.Rect(dropdown_theme_x, 240, dropdown_width, dropdown_height),
             self.theme_options,
             self.theme_options.index(self.settings["theme"])
         )
-        
+
         self.resolution_dropdown = Dropdown(
-            pygame.Rect(SCREEN_WIDTH//2 - dropdown_width//4, dropdown_y_start + 100, dropdown_width, dropdown_height),
+            pygame.Rect(dropdown_resolution_x, 240, dropdown_width, dropdown_height),
             self.resolution_options,
             self.resolution_options.index(self.settings["resolution"])
         )
-        
+
         self.fps_dropdown = Dropdown(
-            pygame.Rect(SCREEN_WIDTH//2 - dropdown_width//8, dropdown_y_start + 200, dropdown_width, dropdown_height),
+            pygame.Rect(dropdown_fps_x, 490, dropdown_width, dropdown_height),
             self.fps_options,
             self.fps_options.index(self.settings["fps"])
         )
-        
+
         self.language_dropdown = Dropdown(
-            pygame.Rect(SCREEN_WIDTH//2 - dropdown_width//1.7, dropdown_y_start + 300, dropdown_width, dropdown_height),
+            pygame.Rect(dropdown_language_x, 490, dropdown_width, dropdown_height),
             self.language_options,
             self.language_options.index(self.settings["language"])
         )
@@ -1424,23 +1429,28 @@ class Game:
         self.screen.blit(version_text, (self.left_panel_rect.x + 50, self.left_panel_rect.y + self.left_panel_rect.height - 50))
 
     def draw_settings_options(self):
-        """Рисует опции настроек."""
+    #"""Рисует опции настроек с индивидуальным позиционированием."""
+    # Индивидуальные позиции для каждой надписи
+        theme_x = SCREEN_WIDTH//2 - 350
+        resolution_x = SCREEN_WIDTH//2 + 30
+        fps_x = SCREEN_WIDTH//2 - 350
+        language_x = SCREEN_WIDTH//2 + 30
+    
         options = [
-            ("Тема:", self.theme_dropdown, 250),
-            ("Разрешение:", self.resolution_dropdown, 350),
-            ("FPS:", self.fps_dropdown, 450),
-            ("Язык:", self.language_dropdown, 550)
+            ("Тема:", self.theme_dropdown, theme_x, 250),
+            ("Разрешение:", self.resolution_dropdown, resolution_x, 250),
+            ("FPS:", self.fps_dropdown, fps_x, 500),
+            ("Язык:", self.language_dropdown, language_x, 500)
         ]
         
-        for label, dropdown, y_pos in options:
+        for label, dropdown, x_pos, y_pos in options:
             # Метка
             label_text = self.font_manager.get_rendered_text(label, 'settings_option', TEXT_PRIMARY)
-            self.screen.blit(label_text, (SCREEN_WIDTH//2 - 250, y_pos))
+            self.screen.blit(label_text, (x_pos, y_pos))
             
             # Dropdown
             dropdown.draw(self.screen, self.font_manager.get_font('settings_value'))
 
-    
 if __name__ == "__main__":
     game = Game()
     game.run()

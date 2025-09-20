@@ -5,8 +5,16 @@
             "720"
         ],
         [
+            "1366",
+            "768"
+        ],
+        [
             "1920",
             "1080"
+        ],
+        [
+            "2560",
+            "1440"
         ]
     ],
     "current_window_size": [
@@ -17,7 +25,7 @@
         "dark",
         "light"
     ],
-    "current_theme": "dark",
+    "current_theme": "light",
     "languages": [
         "ru",
         "en"
@@ -26,7 +34,8 @@
     "FPS": [
         "30",
         "60",
-        "120"
+        "120",
+        "144"
     ],
-    "current_fps": 60
+    "current_fps": 120
 }

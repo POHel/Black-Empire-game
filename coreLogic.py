@@ -190,40 +190,41 @@ class UpdateDB:
 
 class Settings:
 	def __init__(self):
-		self.get_current_theme()
-		self.get_current_window_size()
-		self.get_current_fps()
-		self.get_current_lang()
-		self.show_fps()
-		self.show_langs()
-		self.show_themes()
-		self.show_window_sizes()
+		# Сохраняем полученные значения в атрибуты объекта
+		self.current_theme = self.get_current_theme()
+		self.current_window_size = self.get_current_window_size()
+		self.current_fps = self.get_current_fps()
+		self.current_lang = self.get_current_lang()
+		self.themes = self.show_themes()
+		self.window_sizes = self.show_window_sizes()
+		self.fps_options = self.show_fps()
+		self.languages = self.show_langs()
 
 	#импортирование текущей темы
 	def get_current_theme(self):
 		with open("data/config.json", 'r', encoding='utf-8') as file:
 			config_current_theme = json.load(file)
 		return config_current_theme["current_theme"]
-	
-	#импортирование текущей размера экрана
+    
+    #импортирование текущей размера экрана
 	def get_current_window_size(self):
 		with open("data/config.json", 'r', encoding='utf-8') as file:
 			config_current_window_size = json.load(file)
 		return config_current_window_size["current_window_size"]
-	
-	#импортирование текущего фпс
+    
+    #импортирование текущего фпс
 	def get_current_fps(self):
 		with open("data/config.json", 'r', encoding='utf-8') as file:
 			config_current_fps = json.load(file)
 		return config_current_fps["current_fps"]
-	
-	#импортирование текущего языка
+    
+    #импортирование текущего языка
 	def get_current_lang(self):
 		with open("data/config.json", 'r', encoding='utf-8') as file:
 			config_current_lang = json.load(file)
 		return config_current_lang["current_lang"]
-	
-	#установка выбранной темы
+    
+    #установка выбранной темы
 	def set_current_theme(self, theme: str):
 		with open("data/config.json", "r+", encoding="utf-8") as file:
 			config = json.load(file)
@@ -231,9 +232,10 @@ class Settings:
 			file.seek(0)
 			json.dump(config, file, ensure_ascii=False, indent=4)
 			file.truncate()
+		self.current_theme = theme  # Обновляем текущее значение
 		return "Done"
 
-	#установка размера экрана
+    #установка размера экрана
 	def set_current_window_size(self, height: int, width: int):
 		with open("data/config.json", "r+", encoding="utf-8") as file:
 			config = json.load(file)
@@ -241,9 +243,10 @@ class Settings:
 			file.seek(0)
 			json.dump(config, file, ensure_ascii=False, indent=4)
 			file.truncate()
+		self.current_window_size = [height, width]  # Обновляем текущее значение
 		return "Done"
 
-	#установка фпс
+    #установка фпс
 	def set_current_fps(self, fps: int):
 		with open("data/config.json", "r+", encoding="utf-8") as file:
 			config = json.load(file)
@@ -251,9 +254,10 @@ class Settings:
 			file.seek(0)
 			json.dump(config, file, ensure_ascii=False, indent=4)
 			file.truncate()
+		self.current_fps = fps  # Обновляем текущее значение
 		return "Done"
 
-	#установка языка
+    #установка языка
 	def set_current_lang(self, lang: str):
 		with open("data/config.json", "r+", encoding="utf-8") as file:
 			config = json.load(file)
@@ -261,28 +265,33 @@ class Settings:
 			file.seek(0)
 			json.dump(config, file, ensure_ascii=False, indent=4)
 			file.truncate()
+		self.current_lang = lang  # Обновляем текущее значение
 		return "Done"
 
-	#показ всех тем
+    #показ всех тем
 	def show_themes(self):
 		with open("data/config.json", 'r', encoding='utf-8') as file:
 			config_themes = json.load(file)
-		return config_themes["themes"]
+			result_themes = config_themes["themes"]
+		return result_themes
 
-	#показ всех размеров экрана
+    #показ всех размеров экрана
 	def show_window_sizes(self):
 		with open("data/config.json", 'r', encoding='utf-8') as file:
 			config_window_sizes = json.load(file)
-		return config_window_sizes["window_size"]
+			result_W_S = config_window_sizes["window_size"]
+		return result_W_S
 
-	#показ всех фпс
+    #показ всех фпс
 	def show_fps(self):
 		with open("data/config.json", 'r', encoding='utf-8') as file:
 			config_fps = json.load(file)
-		return config_fps["FPS"]
-
-	#показ всех языков
+			result_fps = config_fps["FPS"]
+		return result_fps
+    
+    #показ всех языков
 	def show_langs(self):
 		with open("data/config.json", 'r', encoding='utf-8') as file:
 			config_langs = json.load(file)
-		return config_langs["languages"]
+			result_langs = config_langs["languages"]
+		return result_langs

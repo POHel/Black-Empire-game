@@ -1,3 +1,5 @@
+import sqlite3
+import json
 import pygame
 import sys
 import math
@@ -7,7 +9,8 @@ from pygame import gfxdraw
 from typing import List, Tuple, Optional, Dict
 from dataclasses import dataclass
 from enum import Enum
-# from coreLogic import ExportDB  # Закомментировал, так как этого модуля нет
+from coreLogic import Settings, ExportDB
+
 
 # Initialize Pygame
 pygame.init()
@@ -283,6 +286,23 @@ class IconRenderer:
         
         surface.blit(self.icon_cache[cache_key], (x, y))
 
+    def draw_apply_icon(self, surface, x, y, size=25):
+        """Рисует иконку применения (галочку)."""
+        cache_key = ("apply", size)
+        if cache_key not in self.icon_cache:
+            icon_surf = pygame.Surface((size, size), pygame.SRCALPHA)
+            # Рисуем галочку
+            margin = size // 4
+            points = [
+                (margin, size // 2),
+                (size // 2 - 2, size - margin),
+                (size - margin, margin)
+            ]
+            pygame.draw.lines(icon_surf, TEXT_PRIMARY, False, points, 3)
+            self.icon_cache[cache_key] = icon_surf
+        
+        surface.blit(self.icon_cache[cache_key], (x, y))
+
 class Button:
     """Интерактивная кнопка с увеличенным закруглением."""
     
@@ -301,9 +321,9 @@ class Button:
         if state_key not in self.cache:
             # Создаем закругленную кнопку с градиентом
             if self.hovered:
-                colors = [(180, 60, 255, 200), (120, 20, 220, 200), (55, 0, 110, 200)]
+                colors = [(180, 60, 255, 150), (120, 20, 220, 150), (55, 0, 110, 150)]
             else:
-                colors = [(55, 0, 110, 150), (120, 20, 220, 150), (55, 0, 110, 150)]
+                colors = [(55, 0, 110, 100), (120, 20, 220, 100), (55, 0, 110, 100)]
             
             btn_surf = GradientGenerator.create_rounded_rect(
                 (self.rect.width, self.rect.height), colors, BUTTON_BORDER_RADIUS
@@ -382,7 +402,7 @@ class Dropdown:
             # Создаем закругленный прямоугольник - УБИРАЕМ ПРОЗРАЧНОСТЬ
             btn_surf = GradientGenerator.create_rounded_rect(
                 (self.rect.width, self.rect.height), 
-                [(55, 0, 110, 255), (120, 20, 220, 255), (55, 0, 110, 255)],  # Убрали прозрачность
+                [(55, 0, 110, 100), (120, 20, 220, 100), (55, 0, 110, 100)],
                 SETTINGS_PANEL_RADIUS
             )
             
@@ -414,7 +434,7 @@ class Dropdown:
             # Фон dropdown - УБИРАЕМ ПРОЗРАЧНОСТЬ
             dropdown_surf = GradientGenerator.create_rounded_rect(
                 (dropdown_rect.width, dropdown_rect.height), 
-                [(55, 0, 110, 255), (120, 20, 220, 255), (55, 0, 110, 255)],  # Убрали прозрачность
+                [(55, 0, 110, 100), (120, 20, 220, 100), (55, 0, 110, 100)],
                 SETTINGS_PANEL_RADIUS
             )
             surface.blit(dropdown_surf, dropdown_rect.topleft)
@@ -567,7 +587,7 @@ class LoadingScreen:
         self.font_manager = font_manager
         self.progress = 0.0
         self.start_time = time.time()
-        self.loading_duration = 5.0  # 5 секунд загрузки
+        self.loading_duration = 1.0  # 5 секунд загрузки
         self.dots = 0
         self.last_dot_time = 0
         self.rotation_angle = 0
@@ -1065,12 +1085,28 @@ class Game:
         self.clock = pygame.time.Clock()
         self.running = True
         self.state = ScreenState.LOADING
+
+        self.settings_manager = Settings()
         
-        # Инициализируем options до создания dropdown
-        self.theme_options = ["Тёмная", "Светлая", "Системная"]
-        self.resolution_options = ["1280x720", "1920x1080", "2560x1440"]
-        self.fps_options = ["30 fps", "60 fps", "120 fps"]
-        self.language_options = ["Русский", "English"]
+        # Получаем доступные опции из config.json
+        self.theme_options = self.settings_manager.show_themes()
+        self.resolution_options = [f"{size[0]}x{size[1]}" for size in self.settings_manager.show_window_sizes()]
+        self.fps_options = [f"{fps} fps" for fps in self.settings_manager.show_fps()]
+        self.language_options = self.settings_manager.show_langs()
+        self.quality_options = ["Низкое", "Среднее", "Высокое"]
+        
+        # Получаем текущие настройки из config.json и преобразуем в нужный формат
+        current_resolution = self.settings_manager.get_current_window_size()
+        resolution_str = f"{current_resolution[0]}x{current_resolution[1]}"
+        fps_str = f"{self.settings_manager.get_current_fps()} fps"
+        
+        self.current_settings = {
+            "theme": self.settings_manager.get_current_theme(),
+            "resolution": resolution_str,  # Строка "widthxheight"
+            "fps": fps_str,  # Строка "fps fps"
+            "language": self.settings_manager.get_current_lang(),
+            "quality": "Среднее"
+        }
         
         self.font_manager = FontManager()
         self.icon_renderer = IconRenderer()
@@ -1083,16 +1119,10 @@ class Game:
         self.panel_cache = {}
         self.last_time = time.time()
         
-        # Настройки игры
-        self.settings = {
-            "theme": "Тёмная",
-            "resolution": "1280x720",
-            "fps": "30 fps",
-            "language": "Русский"
-        }
-
+        # Инициализируем UI
         self.initialize_ui()
 
+        # Создаем звезды
         for _ in range(100):
             self.stars.append(Star(
                 x=random.uniform(0, SCREEN_WIDTH),
@@ -1105,6 +1135,60 @@ class Game:
                 alpha=random.randint(50, 255),
                 alpha_change=random.uniform(-20, 20)
             ))
+    def apply_settings(self):
+    #"""Применяет текущие настройки и сохраняет в config.json."""
+        try:
+            # Получаем выбранные значения из dropdown
+            selected_theme = self.theme_dropdown.options[self.theme_dropdown.selected_index]
+            selected_resolution = self.resolution_dropdown.options[self.resolution_dropdown.selected_index]
+            selected_fps = self.fps_dropdown.options[self.fps_dropdown.selected_index]
+            selected_language = self.language_dropdown.options[self.language_dropdown.selected_index]
+            selected_quality = self.quality_dropdown.options[self.quality_dropdown.selected_index]
+            
+            # Применяем настройки через Settings класс
+            self.settings_manager.set_current_theme(selected_theme)
+            
+            # Парсим разрешение (формат "1280x720" -> [1280, 720])
+            width, height = map(int, selected_resolution.split('x'))
+            self.settings_manager.set_current_window_size(width, height)
+            
+            # Парсим FPS (формат "60 fps" -> 60)
+            fps_value = int(selected_fps.split(' ')[0])
+            self.settings_manager.set_current_fps(fps_value)
+            
+            self.settings_manager.set_current_lang(selected_language)
+            
+            # Обновляем текущие настройки
+            self.current_settings = {
+                "theme": selected_theme,
+                "resolution": selected_resolution,  # ← Сохраняем как строку
+                "fps": selected_fps,
+                "language": selected_language,
+                "quality": selected_quality
+            }
+            
+            print("Настройки успешно применены и сохранены:")
+            for key, value in self.current_settings.items():
+                print(f"  {key}: {value}")
+                
+            # Применяем настройки в реальном времени
+            self.apply_settings_in_realtime()
+            
+        except Exception as e:
+            print(f"Ошибка при применении настроек: {e}")
+    
+    def apply_settings_in_realtime(self):
+        """Применяет настройки в реальном времени."""
+        # Применяем FPS
+        fps_value = int(self.current_settings["fps"].split(' ')[0])
+        pygame.display.set_caption(f'Black Empire - {fps_value} FPS')
+        
+        # Здесь можно добавить смену разрешения (требует пересоздания окна)
+        # width, height = map(int, self.current_settings["resolution"].split('x'))
+        # self.screen = pygame.display.set_mode((width, height))
+        
+        print("Настройки применены в реальном времени")
+
     
     def play_game(self):
         """Переход в игровой режим (кликер)."""
@@ -1184,6 +1268,15 @@ class Game:
             self.back_to_menu,
             icon_size=25
         )
+
+        # Новая кнопка "Применить"
+        self.apply_button = Button(
+            pygame.Rect(270, 50, 250, 60),  # Справа от кнопки "Назад"
+            "Применить",
+            lambda surface, icon_x, icon_y, size=25: self.icon_renderer.draw_apply_icon(surface, icon_x, icon_y, size),
+            self.apply_settings,
+            icon_size=25
+        )
         
         # Dropdown для настроек - создаем здесь, после инициализации options
         # Dropdown позиции (правее надписей)
@@ -1191,38 +1284,46 @@ class Game:
         dropdown_resolution_x = SCREEN_WIDTH//2 + 30 + 135
         dropdown_fps_x = SCREEN_WIDTH//2 - 350 + 60
         dropdown_language_x = SCREEN_WIDTH//2 + 30 + 70
+        dropdown_quality_x = SCREEN_WIDTH//2 - 350 + 107
+
 
         dropdown_width, dropdown_height = 200, 50
 
         self.theme_dropdown = Dropdown(
             pygame.Rect(dropdown_theme_x, 230, dropdown_width, dropdown_height),
             self.theme_options,
-            self.theme_options.index(self.settings["theme"])
+            self.theme_options.index(self.current_settings["theme"])
         )
 
         self.resolution_dropdown = Dropdown(
             pygame.Rect(dropdown_resolution_x, 230, dropdown_width, dropdown_height),
             self.resolution_options,
-            self.resolution_options.index(self.settings["resolution"])
+            self.resolution_options.index(self.current_settings["resolution"])
         )
 
         self.fps_dropdown = Dropdown(
             pygame.Rect(dropdown_fps_x, 410, dropdown_width, dropdown_height),
             self.fps_options,
-            self.fps_options.index(self.settings["fps"])
+            self.fps_options.index(self.current_settings["fps"])
         )
 
         self.language_dropdown = Dropdown(
             pygame.Rect(dropdown_language_x, 410, dropdown_width, dropdown_height),
             self.language_options,
-            self.language_options.index(self.settings["language"])
+            self.language_options.index(self.current_settings["language"])
+        )
+        self.quality_dropdown = Dropdown(
+            pygame.Rect(dropdown_quality_x, 590, dropdown_width, dropdown_height),
+            self.quality_options,
+            self.quality_options.index(self.current_settings["quality"])
         )
         
         self.dropdowns = [
             self.theme_dropdown,
             self.resolution_dropdown,
             self.fps_dropdown,
-            self.language_dropdown
+            self.language_dropdown,
+            self.quality_dropdown
         ]
     
     def handle_events(self):
@@ -1264,8 +1365,13 @@ class Game:
             elif self.state == ScreenState.SETTINGS:
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:
+                        mouse_pos = pygame.mouse.get_pos()
+                        
+                        # Проверяем клики по кнопкам
                         if self.back_button.is_hovered(mouse_pos):
                             self.back_button.click()
+                        elif self.apply_button.is_hovered(mouse_pos):
+                            self.apply_button.click()
                         # Закрываем все dropdown при клике вне их области
                         elif not any(dropdown.rect.collidepoint(mouse_pos) for dropdown in self.dropdowns):
                             # Проверяем, не кликнули ли по открытому dropdown меню
@@ -1287,7 +1393,9 @@ class Game:
                                 Dropdown.close_all_dropdowns()
                 
                 if event.type == pygame.MOUSEMOTION:
+                    mouse_pos = pygame.mouse.get_pos()
                     self.back_button.hovered = self.back_button.is_hovered(mouse_pos)
+                    self.apply_button.hovered = self.apply_button.is_hovered(mouse_pos)
             
             elif self.state == ScreenState.CLICKER:
                 if self.clicker_menu.handle_event(event):
@@ -1319,6 +1427,7 @@ class Game:
                 for button in self.buttons:
                     button.update(dt)
                 self.back_button.update(dt)
+                self.apply_button.update(dt)
             
             # Отрисовка
             self.screen.fill(DARK_BG)
@@ -1367,9 +1476,14 @@ class Game:
         self.draw_panel(self.settings_panel_rect)
         
         # Кнопка "Назад"
-        icon_x = self.back_button.rect.x + 20
-        icon_y = self.back_button.rect.centery - 12
-        self.back_button.draw(self.screen, self.font_manager.get_font('button'), icon_x, icon_y)
+        back_icon_x = self.back_button.rect.x + 20
+        back_icon_y = self.back_button.rect.centery - 12
+        self.back_button.draw(self.screen, self.font_manager.get_font('button'), back_icon_x, back_icon_y)
+        
+        # Кнопка "Применить"
+        apply_icon_x = self.apply_button.rect.x + 15
+        apply_icon_y = self.apply_button.rect.centery - 12
+        self.apply_button.draw(self.screen, self.font_manager.get_font('button'), apply_icon_x, apply_icon_y)
         
         # Заголовок настроек
         title = self.font_manager.get_rendered_text("Настройки", 'settings_title', TEXT_PRIMARY, True)
@@ -1430,12 +1544,14 @@ class Game:
         resolution_x = SCREEN_WIDTH//2 + 30
         fps_x = SCREEN_WIDTH//2 - 350
         language_x = SCREEN_WIDTH//2 + 30
+        quality_x = SCREEN_WIDTH//2 - 350
     
         options = [
             ("Тема:", self.theme_dropdown, theme_x, 240),
             ("Разрешение:", self.resolution_dropdown, resolution_x, 240),
             ("FPS:", self.fps_dropdown, fps_x, 420),
-            ("Язык:", self.language_dropdown, language_x, 420)
+            ("Язык:", self.language_dropdown, language_x, 420),
+            ("Качество:", self.quality_dropdown, quality_x, 600)
         ]
         
         for label, dropdown, x_pos, y_pos in options:
@@ -1446,6 +1562,15 @@ class Game:
             # Dropdown
             dropdown.draw(self.screen, self.font_manager.get_font('settings_value'))
 
+    def change_resolution(self, width, height):
+        """Изменяет разрешение экрана."""
+        global SCREEN_WIDTH, SCREEN_HEIGHT
+        SCREEN_WIDTH, SCREEN_HEIGHT = width, height
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        print(f"Разрешение изменено на {width}x{height}")
+        
+        # Пересоздаем UI элементы для нового разрешения
+        self.initialize_ui()
 if __name__ == "__main__":
     game = Game()
     game.run()

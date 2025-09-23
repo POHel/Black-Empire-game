@@ -677,102 +677,89 @@ class LoadingScreen:
             pygame.draw.circle(self.screen, (255, 255, 255, 100), (x, y), int(size))
 
 class ClickerMenu:
-    """Простая временная версия кликера."""
-    
+    """Исправленная версия кликера с использованием общей палитры цветов."""
+
     def __init__(self, game):
         self.game = game
         self.balance = 0
         self.click_value = 1
+        self.total_clicks = 0
         self.initialize_ui()
-    
+
     def initialize_ui(self):
         """Инициализация UI кликера."""
-        # Кнопки левой панели навигации
         self.nav_buttons = []
         nav_options = [
             ("Кликер", lambda: None, True),  # Активная кнопка
-            ("Магазины", lambda: self.game.open_shop_selection(), False),
+            ("Магазины", lambda: print("Магазины"), False),
             ("Инвестиции", lambda: self.game.open_investments(), False),
             ("Бизнесы", lambda: print("Бизнесы"), False),
             ("Профиль", lambda: print("Профиль"), False)
         ]
-        
+
         button_width, button_height = 200, 60
-        button_x = 50
-        button_y_start = 150
-        
+        button_x, button_y_start = 50, 150
+
         for i, (text, action, is_active) in enumerate(nav_options):
             rect = pygame.Rect(button_x, button_y_start + i * 70, button_width, button_height)
             self.nav_buttons.append(NavButton(rect, text, action, is_active))
-    
+
+        # Кнопка клика
+        self.click_button_rect = pygame.Rect(700, 400, 300, 100)
+
     def draw(self, surface):
-        """Отрисовывает кликер."""
-        # Рисуем левую панель навигации
+        """Отрисовка кликера."""
+        # Левая панель
         nav_panel_rect = pygame.Rect(30, 120, 240, 500)
-        self.draw_panel(surface, nav_panel_rect, (30, 30, 50, 200))
-        
-        # Рисуем правую панель с кликером
+        self.draw_panel(surface, nav_panel_rect)
+
+        # Правая панель
         content_panel_rect = pygame.Rect(300, 120, 1100, 600)
-        self.draw_panel(surface, content_panel_rect, (30, 30, 50, 200))
-        
-        # Рисуем кнопки навигации
+        self.draw_panel(surface, content_panel_rect)
+
+        # Кнопки навигации
         for button in self.nav_buttons:
             button.draw(surface, self.game.font_manager.get_font('button'))
-        
-        # Рисуем интерфейс кликера
-        self.draw_clicker_interface(surface, 350, 200)
-    
-    def draw_panel(self, surface, rect, color):
-        """Рисует панель с закругленными углами."""
-        pygame.draw.rect(surface, color, rect, border_radius=15)
-        pygame.draw.rect(surface, (100, 100, 150, 255), rect, width=2, border_radius=15)
-    
-    def draw_clicker_interface(self, surface, x, y):
-        """Рисует интерфейс кликера."""
-        # Баланс
-        balance_font = self.game.font_manager.get_font('title')
-        balance_text = f"Баланс: {self.balance}$"
-        balance_surf = balance_font.render(balance_text, True, TEXT_PRIMARY)
-        surface.blit(balance_surf, (x, y))
-        
-        # Кнопка для клика
-        click_button_rect = pygame.Rect(x, y + 100, 200, 200)
-        pygame.draw.circle(surface, PURPLE_PRIMARY, click_button_rect.center, 100)
-        pygame.draw.circle(surface, LIGHT_PURPLE, click_button_rect.center, 100, 5)
-        
-        click_font = self.game.font_manager.get_font('button')
-        click_text = "КЛИК!"
-        click_surf = click_font.render(click_text, True, TEXT_PRIMARY)
-        click_rect = click_surf.get_rect(center=click_button_rect.center)
-        surface.blit(click_surf, click_rect)
-        
-        # Значение клика
-        value_font = self.game.font_manager.get_font('desc')
-        value_text = f"+{self.click_value}$ за клик"
-        value_surf = value_font.render(value_text, True, TEXT_SECONDARY)
-        surface.blit(value_surf, (x + 250, y + 150))
-    
-    def handle_click(self):
-        """Обрабатывает клик по кнопке."""
-        self.balance += self.click_value
-    
+
+        # Статистика
+        self.draw_stats(surface, 350, 180)
+
+        # Кнопка клика
+        self.draw_click_button(surface)
+
+    def draw_panel(self, surface, rect):
+        """Панель с цветом из палитры."""
+        pygame.draw.rect(surface, PANEL_BG, rect, border_radius=15)
+        pygame.draw.rect(surface, BAR_HIGHLIGHT, rect, width=2, border_radius=15)
+
+    def draw_stats(self, surface, x, y):
+        """Отрисовка статистики кликера."""
+        font_big = self.game.font_manager.get_font('title')
+        font_small = self.game.font_manager.get_font('desc')
+
+        balance_text = font_big.render(f"{self.balance}$", True, TEXT_PRIMARY)
+        clicks_text = font_small.render(f"Всего кликов: {self.total_clicks}", True, TEXT_SECONDARY)
+
+        surface.blit(balance_text, (x, y))
+        surface.blit(clicks_text, (x, y + 50))
+
+    def draw_click_button(self, surface):
+        """Рисует кнопку для клика."""
+        pygame.draw.rect(surface, PURPLE_PRIMARY, self.click_button_rect, border_radius=20)
+        pygame.draw.rect(surface, LIGHT_PURPLE, self.click_button_rect, 3, border_radius=20)
+
+        font = self.game.font_manager.get_font('button')
+        text = font.render("Клик!", True, TEXT_PRIMARY)
+        text_rect = text.get_rect(center=self.click_button_rect.center)
+        surface.blit(text, text_rect)
+
     def handle_event(self, event):
-        """Обрабатывает события кликера."""
+        """Обработка кликов по кнопке."""
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            mouse_pos = pygame.mouse.get_pos()
-            
-            # Проверяем клики по кнопкам навигации
-            for button in self.nav_buttons:
-                if button.rect.collidepoint(mouse_pos):
-                    button.click()
-                    return True
-            
-            # Проверяем клик по кнопке кликера
-            click_button_rect = pygame.Rect(350, 300, 200, 200)
-            if click_button_rect.collidepoint(mouse_pos):
-                self.handle_click()
+            if self.click_button_rect.collidepoint(event.pos):
+                self.balance += self.click_value
+                self.total_clicks += 1
                 return True
-        
         return False
 
 #вкладка Инвестиции

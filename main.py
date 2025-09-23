@@ -496,42 +496,42 @@ class Dropdown:
         cls.active_dropdown = None
 
     # Также добавьте эту функцию в основной цикл обработки событий:
-    def handle_global_events(self, event, dropdowns):
-        """Обрабатывает глобальные события для dropdown."""
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            # Проверяем, был ли клик по любому dropdown
-            clicked_on_dropdown = False
-            for dropdown in dropdowns:
-                if dropdown.handle_event(event):
-                    clicked_on_dropdown = True
-                    break
+    # def handle_global_events(self, event, dropdowns):
+    #     """Обрабатывает глобальные события для dropdown."""
+    #     if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+    #         # Проверяем, был ли клик по любому dropdown
+    #         clicked_on_dropdown = False
+    #         for dropdown in dropdowns:
+    #             if dropdown.handle_event(event):
+    #                 clicked_on_dropdown = True
+    #                 break
             
-            # Если клик был не по dropdown, закрываем все
-            if not clicked_on_dropdown:
-                # Проверяем, был ли клик по области любого открытого dropdown
-                for dropdown in dropdowns:
-                    if dropdown.is_open:
-                        option_height = 40
-                        dropdown_rect = pygame.Rect(
-                            dropdown.rect.x, 
-                            dropdown.rect.bottom, 
-                            dropdown.rect.width, 
-                            option_height * len(dropdown.options)
-                        )
-                        if dropdown_rect.collidepoint(event.pos):
-                            clicked_on_dropdown = True
-                            break
+    #         # Если клик был не по dropdown, закрываем все
+    #         if not clicked_on_dropdown:
+    #             # Проверяем, был ли клик по области любого открытого dropdown
+    #             for dropdown in dropdowns:
+    #                 if dropdown.is_open:
+    #                     option_height = 40
+    #                     dropdown_rect = pygame.Rect(
+    #                         dropdown.rect.x, 
+    #                         dropdown.rect.bottom, 
+    #                         dropdown.rect.width, 
+    #                         option_height * len(dropdown.options)
+    #                     )
+    #                     if dropdown_rect.collidepoint(event.pos):
+    #                         clicked_on_dropdown = True
+    #                         break
                 
-                if not clicked_on_dropdown:
-                    Dropdown.close_all_dropdowns()
+    #             if not clicked_on_dropdown:
+    #                 Dropdown.close_all_dropdowns()
         
-        elif event.type == pygame.MOUSEMOTION:
-            # Обрабатываем движение мыши только для активного dropdown
-            if Dropdown.active_dropdown:
-                Dropdown.active_dropdown.handle_event(event)
-            else:
-                for dropdown in dropdowns:
-                    dropdown.handle_event(event)
+    #     elif event.type == pygame.MOUSEMOTION:
+    #         # Обрабатываем движение мыши только для активного dropdown
+    #         if Dropdown.active_dropdown:
+    #             Dropdown.active_dropdown.handle_event(event)
+    #         else:
+    #             for dropdown in dropdowns:
+    #                 dropdown.handle_event(event)
 
 class Slider:
     """Ползунок для настроек."""
@@ -691,7 +691,7 @@ class ClickerMenu:
         self.nav_buttons = []
         nav_options = [
             ("Кликер", lambda: None, True),  # Активная кнопка
-            ("Магазины", lambda: print("Магазины"), False),
+            ("Магазины", lambda: self.game.open_shop_selection(), False),
             ("Инвестиции", lambda: self.game.open_investments(), False),
             ("Бизнесы", lambda: print("Бизнесы"), False),
             ("Профиль", lambda: print("Профиль"), False)
@@ -768,7 +768,7 @@ class InvestmentMenu:
     
     def __init__(self, game):
         self.game = game
-        # self.export = ExportDB()  # Закомментировал, так как ExportDB не определен
+        self.export = ExportDB()  # Закомментировал, так как ExportDB не определен
         self.current_tab = "акции"  # Текущая активная вкладка
         self.buttons = []
         self.tab_buttons = []
@@ -989,24 +989,23 @@ class InvestmentMenu:
             for button in self.buttons:
                 if button.rect.collidepoint(mouse_pos):
                     button.click()
+                    # Обновляем состояние кнопок
+                    for btn in self.buttons:
+                        btn.is_active = (btn.text == button.text)
                     return True
             
-            # Проверяем клики по кнопкам вкладок
+            # Проверяем клики по кнопкам вкладок (ДОБАВЛЕНО)
             for button in self.tab_buttons:
                 if button.rect.collidepoint(mouse_pos):
                     button.click()
+                    # Обновляем состояние кнопок вкладок
+                    for btn in self.tab_buttons:
+                        btn.is_active = (btn.text.lower() == self.current_tab)
                     return True
-            
-            # Проверяем клики по акциям/недвижимости/крипте
-            if self.current_tab == "акции":
-                # Логика обработки кликов по акциям
-                pass
-            
-            # Аналогично для других вкладок
-        
+                
         return False
 
-
+# Добавить в начало файла после других импортов
 class NavButton:
     """Кнопка навигации в левой панели."""
     
@@ -1244,19 +1243,19 @@ class ShopSelectionMenu:
         center_y = SCREEN_HEIGHT // 2
         
         self.buttons = [
-            Button(
-                pygame.Rect(center_x - 350, center_y - 50, button_width, button_height),
-                "Светлый рынок",
-                None,
-                lambda: self.game.open_light_shop()  # Исправлено: обращаемся к game
-            ),
-            Button(
-                pygame.Rect(center_x + 50, center_y - 50, button_width, button_height),
-                "Тёмный рынок", 
-                None,
-                lambda: self.game.open_black_market()  # Исправлено: обращаемся к game
-            )
-        ]
+                Button(
+                    pygame.Rect(center_x - 350, center_y - 50, button_width, button_height),
+                    "Светлый рынок",
+                    None,
+                    lambda: game.open_light_shop()  # Убрано self.
+                ),
+                Button(
+                    pygame.Rect(center_x + 50, center_y - 50, button_width, button_height),
+                    "Тёмный рынок", 
+                    None,
+                    lambda: game.open_black_market()  # Убрано self.
+                )
+            ]
 
     def open_light_shop(self):
         self.game.state = ScreenState.SHOP
@@ -1306,6 +1305,9 @@ class ShopSelectionMenu:
             for button in self.nav_buttons:
                 if button.rect.collidepoint(mouse_pos):
                     button.click()
+                    # Обновляем состояние кнопок
+                    for btn in self.nav_buttons:
+                        btn.is_active = (btn.text == button.text)
                     return True
             
             # Проверяем клики по основным кнопкам
@@ -1920,21 +1922,25 @@ class Game:
                 alpha_change=random.uniform(-20, 20)
             ))
     def apply_settings(self):
-    #"""Применяет текущие настройки и сохраняет в config.json."""
         try:
+            # ДОБАВЛЯЕМ проверку существования dropdown атрибутов:
+            if not hasattr(self, 'theme_dropdown') or not hasattr(self, 'resolution_dropdown'):
+                print("Dropdown элементы еще не инициализированы")
+                return
+                
             # Получаем выбранные значения из dropdown
             selected_theme = self.theme_dropdown.options[self.theme_dropdown.selected_index]
             selected_resolution = self.resolution_dropdown.options[self.resolution_dropdown.selected_index]
             selected_fps = self.fps_dropdown.options[self.fps_dropdown.selected_index]
             selected_language = self.language_dropdown.options[self.language_dropdown.selected_index]
             selected_quality = self.quality_dropdown.options[self.quality_dropdown.selected_index]
-            
+                
             # Применяем настройки через Settings класс
             self.settings_manager.set_current_theme(selected_theme)
             
             # Парсим разрешение (формат "1280x720" -> [1280, 720])
             width, height = map(int, selected_resolution.split('x'))
-            self.settings_manager.set_current_window_size(width, height)
+            self.current_settings["resolution"] = (width, height)  # кортеж
             
             # Парсим FPS (формат "60 fps" -> 60)
             fps_value = int(selected_fps.split(' ')[0])
@@ -1974,43 +1980,69 @@ class Game:
         print("Настройки применены в реальном времени")
 
     
+    def update_navigation_state(self, active_button_text):
+        """Обновляет состояние кнопок навигации во всех меню"""
+        # Добавляем проверки на существование атрибутов:
+        menus_to_update = [
+            (getattr(self, 'clicker_menu', None), 'nav_buttons'),
+            (getattr(self, 'investment_menu', None), 'buttons'),
+            (getattr(self, 'shop_selection_menu', None), 'nav_buttons'),
+            (getattr(self, 'light_shop_menu', None), 'nav_buttons'),
+            (getattr(self, 'black_market_menu', None), 'nav_buttons')
+        ]
+        
+        for menu, attr_name in menus_to_update:
+            if menu and hasattr(menu, attr_name):
+                buttons = getattr(menu, attr_name)
+                for button in buttons:
+                    if hasattr(button, 'text') and hasattr(button, 'is_active'):
+                        button.is_active = (button.text == active_button_text)
+
     def play_game(self):
-        """Переход в игровой режим (кликер)."""
-        self.state = ScreenState.CLICKER
-        print("Запуск игры...")
-    
+            """Переход в игровой режим (кликер)."""
+            self.state = ScreenState.CLICKER
+            self.update_navigation_state("Кликер")
+            print("Запуск игры...")
+
     def open_investments(self):
-        """Открывает меню инвестиций."""
-        self.state = ScreenState.INVESTMENTS
-        print("Открытие инвестиций...")
+            """Открывает меню инвестиций."""
+            self.state = ScreenState.INVESTMENTS
+            self.update_navigation_state("Инвестиции")
+            print("Открытие инвестиций...")
 
     def open_shop_selection(self):
-        """Открывает выбор магазина"""
-        self.state = ScreenState.SHOP_SELECTION
+            """Открывает выбор магазина"""
+            self.state = ScreenState.SHOP_SELECTION
+            self.update_navigation_state("Магазины")
+            print("Открытие выбора магазина...")
 
     def open_light_shop(self):
-        """Открывает светлый магазин"""
-        self.state = ScreenState.SHOP
-    
+            """Открывает светлый магазин"""
+            self.state = ScreenState.SHOP
+            self.update_navigation_state("Магазины")
+            print("Открытие светлого магазина...")
+
     def open_black_market(self):
-        """Открывает черный рынок"""
-        self.state = ScreenState.BLACK_MARKET
-    
+            """Открывает черный рынок"""
+            self.state = ScreenState.BLACK_MARKET
+            self.update_navigation_state("Магазины")
+            print("Открытие черного рынка...")
+
     def open_settings(self):
-        """Открывает настройки."""
+        """Открывает меню настроек."""
         self.state = ScreenState.SETTINGS
         print("Открытие настроек...")
-    
+
     def exit_game(self):
         """Выход из игры."""
         self.running = False
         print("Выход из игры...")
-    
+
     def back_to_menu(self):
         """Возврат в главное меню."""
         self.state = ScreenState.MENU
         print("Возврат в главное меню...")
-    
+        
     def initialize_ui(self):
         self.texts = {
             'bus': "SKATT", 'title': "Black Empire",
@@ -2036,21 +2068,21 @@ class Game:
             Button(
                 pygame.Rect(self.right_panel_rect.x + 60, button_y_start, button_width, button_height),
                 "Играть", 
-                lambda surface, icon_x, icon_y, size=30: self.icon_renderer.draw_play_icon(surface, icon_x, icon_y, size), 
+                icon_renderer=lambda surface, icon_x, icon_y, size=30: self.icon_renderer.draw_play_icon(surface, icon_x, icon_y, size), 
                 self.play_game
-            ),
+                ),
             Button(
                 pygame.Rect(self.right_panel_rect.x + 60, button_y_start + 100, button_width, button_height),
                 "Настройки", 
-                lambda surface, icon_x, icon_y, size=40: self.icon_renderer.draw_settings_icon(surface, icon_x, icon_y, size), 
+                icon_renderer=lambda surface, icon_x, icon_y, size=40: self.icon_renderer.draw_settings_icon(surface, icon_x, icon_y, size), 
                 self.open_settings
-            ),
+                ),
             Button(
                 pygame.Rect(self.right_panel_rect.x + 60, button_y_start + 200, button_width, button_height),
                 "Выход", 
-                lambda surface, icon_x, icon_y, size=30: self.icon_renderer.draw_exit_icon(surface, icon_x, icon_y, size), 
+                icon_renderer=lambda surface, icon_x, icon_y, size=30: self.icon_renderer.draw_exit_icon(surface, icon_x, icon_y, size), 
                 self.exit_game
-            ),
+                )
         ]
         
         # Панель настроек
@@ -2060,7 +2092,7 @@ class Game:
         self.back_button = Button(
             pygame.Rect(50, 50, 200, 60),
             "Назад",
-            lambda surface, icon_x, icon_y, size=25: self.icon_renderer.draw_back_icon(surface, icon_x, icon_y, size),
+            icon_renderer=lambda surface, icon_x, icon_y, size=25: self.icon_renderer.draw_back_icon(surface, icon_x, icon_y, size),
             self.back_to_menu,
             icon_size=25
         )
@@ -2069,13 +2101,12 @@ class Game:
         self.apply_button = Button(
             pygame.Rect(270, 50, 250, 60),  # Справа от кнопки "Назад"
             "Применить",
-            lambda surface, icon_x, icon_y, size=25: self.icon_renderer.draw_apply_icon(surface, icon_x, icon_y, size),
+            icon_renderer=lambda surface, icon_x, icon_y, size=25: self.icon_renderer.draw_apply_icon(surface, icon_x, icon_y, size),
             self.apply_settings,
             icon_size=25
         )
         
         # Dropdown для настроек - создаем здесь, после инициализации options
-        # Dropdown позиции (правее надписей)
         dropdown_theme_x = SCREEN_WIDTH//2 - 350 + 70
         dropdown_resolution_x = SCREEN_WIDTH//2 + 30 + 135
         dropdown_fps_x = SCREEN_WIDTH//2 - 350 + 60
@@ -2155,77 +2186,73 @@ class Game:
     
     def handle_events(self):
         mouse_pos = pygame.mouse.get_pos()
-    
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    # Обработка ESC в зависимости от текущего состояния
                     if self.state == ScreenState.MENU:
-                        # В главном меню - выход из игры
                         self.running = False
                     elif self.state in [ScreenState.SETTINGS, ScreenState.CLICKER, ScreenState.INVESTMENTS, 
                                     ScreenState.SHOP_SELECTION, ScreenState.SHOP, ScreenState.SHOP_CATEGORY,
                                     ScreenState.BLACK_MARKET, ScreenState.BLACK_MARKET_CATEGORY]:
-                        # Во всех остальных состояниях - возврат в главное меню
                         self.back_to_menu()
                     else:
-                        # Для всех остальных состояний (например, LOADING) - выход
                         self.running = False
             
-            # Глобальная обработка dropdown событий
+            # ИСПРАВЛЯЕМ порядок обработки событий:
+            # Сначала обрабатываем специфичные для состояния события
+            if self.state == ScreenState.CLICKER:
+                if self.clicker_menu.handle_event(event):
+                    continue
+                    
+            elif self.state == ScreenState.INVESTMENTS:
+                if self.investment_menu.handle_event(event):
+                    continue
+                    
+            elif self.state in [ScreenState.SHOP_SELECTION, ScreenState.SHOP, ScreenState.SHOP_CATEGORY, 
+                            ScreenState.BLACK_MARKET, ScreenState.BLACK_MARKET_CATEGORY]:
+                if self.handle_shop_events(event, mouse_pos):
+                    continue
+            
+            # Затем обрабатываем dropdown события (только для настроек)
             if self.state == ScreenState.SETTINGS:
-                # Обрабатываем события dropdown перед другими событиями
-                dropdown_handled = False
+                # Обрабатываем dropdown события
                 for dropdown in self.dropdowns:
                     if dropdown.handle_event(event):
-                        dropdown_handled = True
                         break
                 
-                # Если dropdown обработал событие, пропускаем остальную обработку
                 if dropdown_handled:
                     continue
             
+            # Обработка главного меню
             if self.state == ScreenState.MENU:
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1:  # Левая кнопка мыши
-                        for button in self.buttons:
-                            if button.is_hovered(mouse_pos):
-                                button.click()
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    for button in self.buttons:
+                        if button.is_hovered(mouse_pos):
+                            button.click()
                 elif event.type == pygame.MOUSEMOTION:
                     for button in self.buttons:
                         button.hovered = button.is_hovered(mouse_pos)
             
+            # Обработка настроек
             elif self.state == ScreenState.SETTINGS:
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1:
-                        mouse_pos = pygame.mouse.get_pos()
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if self.back_button.is_hovered(mouse_pos):
+                        self.back_button.click()
+                    elif self.apply_button.is_hovered(mouse_pos):
+                        self.apply_button.click()
+                    else:
+                        # Логика закрытия dropdown
+                        click_on_dropdown = False
+                        for dropdown in self.dropdowns:
+                            if dropdown.rect.collidepoint(mouse_pos):
+                                click_on_dropdown = True
+                                break
                         
-                        # Проверяем клики по кнопкам
-                        if self.back_button.is_hovered(mouse_pos):
-                            self.back_button.click()
-                        elif self.apply_button.is_hovered(mouse_pos):
-                            self.apply_button.click()
-                        # Закрываем все dropdown при клике вне их области
-                        elif not any(dropdown.rect.collidepoint(mouse_pos) for dropdown in self.dropdowns):
-                            # Проверяем, не кликнули ли по открытому dropdown меню
-                            click_on_dropdown_menu = False
-                            for dropdown in self.dropdowns:
-                                if dropdown.is_open:
-                                    option_height = 40
-                                    dropdown_menu_rect = pygame.Rect(
-                                        dropdown.rect.x,
-                                        dropdown.rect.bottom,
-                                        dropdown.rect.width,
-                                        option_height * len(dropdown.options)
-                                    )
-                                    if dropdown_menu_rect.collidepoint(mouse_pos):
-                                        click_on_dropdown_menu = True
-                                        break
-                            
-                            if not click_on_dropdown_menu:
-                                Dropdown.close_all_dropdowns()
+                        if not click_on_dropdown:
+                            Dropdown.close_all_dropdowns()
                 
                 if event.type == pygame.MOUSEMOTION:
                     mouse_pos = pygame.mouse.get_pos()

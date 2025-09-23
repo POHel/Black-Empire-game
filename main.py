@@ -46,6 +46,11 @@ class ScreenState(Enum):
     SETTINGS = 2
     INVESTMENTS = 3
     CLICKER = 4
+    SHOP_SELECTION = 5
+    SHOP = 6
+    SHOP_CATEGORY = 7
+    BLACK_MARKET = 8
+    BLACK_MARKET_CATEGORY = 9
 
 @dataclass
 class Star:
@@ -686,7 +691,7 @@ class ClickerMenu:
         self.nav_buttons = []
         nav_options = [
             ("Кликер", lambda: None, True),  # Активная кнопка
-            ("Магазины", lambda: print("Магазины"), False),
+            ("Магазины", lambda: self.game.open_shop_selection(), False),
             ("Инвестиции", lambda: self.game.open_investments(), False),
             ("Бизнесы", lambda: print("Бизнесы"), False),
             ("Профиль", lambda: print("Профиль"), False)
@@ -786,9 +791,9 @@ class InvestmentMenu:
         """Инициализация UI элементов меню инвестиций."""
         # Кнопки левой панели навигации
         nav_buttons = [
-            ("Кликер", lambda: print("Переход в кликер")),
-            ("Магазины", lambda: print("Переход в магазины")),
-            ("Инвестиции", lambda: None),  # Активная кнопка
+            ("Кликер", lambda: self.game.play_game()),
+            ("Магазины", lambda: self.game.open_shop_selection()),
+            ("Инвестиции", lambda: None),
             ("Бизнесы", lambda: print("Переход в бизнесы")),
             ("Профиль", lambda: print("Переход в профиль"))
         ]
@@ -1076,6 +1081,791 @@ class TabButton:
         if self.action:
             self.action()
 
+
+# Магазины
+class ShopCategory(Enum):
+    CARS = "Машины"
+    PLANES = "Самолёты"
+    BOOSTERS = "Бустеры"
+    UNIQUE_ITEMS = "Уникальные предметы"
+    RESIDENCE = "Резиденция"
+    JEWELRY = "Драгоценности"
+    ISLANDS = "Острова"
+    BUSINESS = "Бизнес"
+    CLICKER = "Кликер"
+
+class BlackMarketCategory(Enum):
+    WEAPONS = "Оружия"
+    SUBSTANCES = "Вещества"
+    PREPARATIONS = "Препараты"
+    CONTRABAND = "Контрабанда"
+    DANGEROUS_SERVICES = "Опасные услуги"
+    CYBERIMPLANTS = "Кибермипланты"
+    GAMBLING = "Азарт"
+    EXOTICS = "Экзотика"
+    RARITIES = "Редкости"
+    LEGENDARIES = "Легендарки"
+
+class Product:
+    def __init__(self, id, name, price, description, category, stats=None):
+        self.id = id
+        self.name = name
+        self.price = price
+        self.description = description
+        self.category = category
+        self.stats = stats or {}
+
+class ShopSystem:
+    def __init__(self, game):
+        self.game = game
+        self.current_shop = None
+        self.current_category = None
+        self.products = []
+        self.search_query = ""
+        
+    def load_products(self, category):
+        """Загрузка продуктов из существующих таблиц базы данных"""
+        try:
+            # Используем существующее подключение к data.db
+            connect = sqlite3.connect('data/data.db')
+            cursor = connect.cursor()
+            
+            # Очищаем предыдущие продукты
+            self.products = []
+            
+            if self.current_shop == "light":
+                # Для светлого рынка - используем существующие таблицы
+                if category == ShopCategory.CARS:
+                    cursor.execute('SELECT id, name, price, description, type, max_speed FROM cars')
+                    for row in cursor.fetchall():
+                        stats = {"type": row[4], "max_speed": row[5]}
+                        self.products.append(Product(row[0], row[1], row[2], row[3], category.value, stats))
+                
+                elif category == ShopCategory.BUSINESS:
+                    cursor.execute('SELECT id, name, price, description, type, income FROM business')
+                    for row in cursor.fetchall():
+                        stats = {"type": row[4], "income": row[5]}
+                        self.products.append(Product(row[0], row[1], row[2], row[3], category.value, stats))
+                
+                # Добавьте другие категории по аналогии
+                else:
+                    # Если таблицы не существует, используем демо-данные
+                    print(f"Таблица для категории {category.value} не найдена, используем демо-данные")
+                    self.load_demo_products(category)
+                        
+            else:  # Черный рынок
+                # ВАЖНО: Проверяем существование таблицы перед запросом
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='black_market'")
+                table_exists = cursor.fetchone() is not None
+                
+                if table_exists:
+                    cursor.execute('SELECT id, name, price, description, category, danger_level FROM black_market')
+                    for row in cursor.fetchall():
+                        if row[4] == category.value:  # Фильтруем по категории
+                            stats = {"danger_level": row[5]}
+                            self.products.append(Product(row[0], row[1], row[2], row[3], category.value, stats))
+                else:
+                    # Если таблицы не существует, используем демо-данные
+                    print("Таблица black_market не найдена, используем демо-данные")
+                    self.load_demo_products(category)
+                        
+            connect.close()
+            print(f"Загружено {len(self.products)} товаров для категории {category.value}")
+            
+        except Exception as e:
+            print(f"Error loading products: {e}")
+            # В случае ошибки загружаем демо-данные
+            self.load_demo_products(category)
+    
+    def load_demo_products(self, category):
+        """Демо-данные если база недоступна"""
+        self.products = []
+        
+        if self.current_shop == "light":
+            if category == ShopCategory.CARS:
+                demo_cars = [
+                    (1, "Sprint ZX", 12000, "Спортивный седан", {"type": "Седан", "max_speed": 220}),
+                    (2, "Titan V8", 28000, "Мощный внедорожник", {"type": "Внедорожник", "max_speed": 260}),
+                    (3, "Mercury Van", 18000, "Вместительный фургон", {"type": "Фургон", "max_speed": 180}),
+                ]
+                for car in demo_cars:
+                    self.products.append(Product(car[0], car[1], car[2], car[3], category.value, car[4]))
+        
+        else:  # Черный рынок
+            if category == BlackMarketCategory.WEAPONS:
+                demo_weapons = [
+                    (1, "Пистолет 'Тишина'", 5000, "Бесшумное оружие", {"danger": "Высокий", "type": "Огнестрел"}),
+                    (2, "Боевой нож", 2000, "Острое лезвие", {"danger": "Средний", "type": "Холодное"}),
+                ]
+                for weapon in demo_weapons:
+                    self.products.append(Product(weapon[0], weapon[1], weapon[2], weapon[3], category.value, weapon[4]))
+
+    def buy_product(self, product_id):
+        """Покупка товара с проверкой баланса"""
+        product = next((p for p in self.products if p.id == product_id), None)
+        if not product:
+            return False
+            
+        # Проверяем баланс через ExportDB
+        try:
+            from coreLogic import ExportDB
+            export_db = ExportDB()
+            balance = export_db.balance()
+            
+            if balance >= product.price:
+                # Логика покупки - обновляем баланс
+                # В реальной реализации здесь будет вызов UpdateDB
+                print(f"Покупка {product.name} за {product.price}$")
+                return True
+            else:
+                print("Недостаточно средств")
+                return False
+                
+        except Exception as e:
+            print(f"Ошибка при покупке: {e}")
+            return False
+
+class ShopSelectionMenu:
+    def __init__(self, game):
+        self.game = game
+        self.buttons = []
+        self.nav_buttons = []  # Добавляем навигационные кнопки
+        self.initialize_ui()
+    
+    def initialize_ui(self):
+        # Кнопки левой панели навигации
+        nav_buttons = [
+            ("Кликер", lambda: self.game.play_game(), False),
+            ("Магазины", lambda: None, True),  # Активная кнопка
+            ("Инвестиции", lambda: self.game.open_investments(), False),
+            ("Бизнесы", lambda: print("Переход в бизнесы"), False),
+            ("Профиль", lambda: print("Переход в профиль"), False)
+        ]
+        
+        # Создаем кнопки навигации
+        button_width, button_height = 200, 60
+        button_x = 50
+        button_y_start = 150
+        
+        for i, (text, action, is_active) in enumerate(nav_buttons):
+            rect = pygame.Rect(button_x, button_y_start + i * 70, button_width, button_height)
+            self.nav_buttons.append(NavButton(rect, text, action, is_active))
+        
+        # Основные кнопки выбора магазина
+        button_width, button_height = 300, 80
+        center_x = SCREEN_WIDTH // 2
+        center_y = SCREEN_HEIGHT // 2
+        
+        self.buttons = [
+            Button(
+                pygame.Rect(center_x - 350, center_y - 50, button_width, button_height),
+                "Светлый рынок",
+                None,
+                lambda: self.game.open_light_shop()  # Исправлено: обращаемся к game
+            ),
+            Button(
+                pygame.Rect(center_x + 50, center_y - 50, button_width, button_height),
+                "Тёмный рынок", 
+                None,
+                lambda: self.game.open_black_market()  # Исправлено: обращаемся к game
+            )
+        ]
+
+    def open_light_shop(self):
+        self.game.state = ScreenState.SHOP
+    
+    def open_black_market(self):
+        self.game.state = ScreenState.BLACK_MARKET
+    
+    def draw(self, surface):
+        # Рисуем левую панель навигации
+        nav_panel_rect = pygame.Rect(30, 120, 240, 500)
+        self.draw_panel(surface, nav_panel_rect, (30, 30, 50, 200))
+        
+        # Рисуем правую панель с контентом
+        content_panel_rect = pygame.Rect(300, 120, 1100, 600)
+        self.draw_panel(surface, content_panel_rect, (30, 30, 50, 200))
+        
+        # Рисуем кнопки навигации
+        for button in self.nav_buttons:
+            button.draw(surface, self.game.font_manager.get_font('button'))
+        
+        # Заголовок
+        title = self.game.font_manager.get_rendered_text("Магазины", 'title', TEXT_PRIMARY, True)
+        surface.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, 180))
+        
+        # Кнопки выбора магазина
+        for button in self.buttons:
+            icon_x = button.rect.x + 30
+            icon_y = button.rect.centery - 25
+            button.draw(surface, self.game.font_manager.get_font('button'), icon_x, icon_y)
+        
+        # Описание
+        desc_text = "Выберите магазин для покупок"
+        desc = self.game.font_manager.get_rendered_text(desc_text, 'subtitle', TEXT_SECONDARY)
+        surface.blit(desc, (SCREEN_WIDTH//2 - desc.get_width()//2, 350))
+    
+    def draw_panel(self, surface, rect, color):
+        """Рисует панель с закругленными углами."""
+        pygame.draw.rect(surface, color, rect, border_radius=15)
+        pygame.draw.rect(surface, (100, 100, 150, 255), rect, width=2, border_radius=15)
+
+    def handle_event(self, event):
+        """Обрабатывает события меню выбора магазина."""
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mouse_pos = pygame.mouse.get_pos()
+            
+            # Проверяем клики по кнопкам навигации
+            for button in self.nav_buttons:
+                if button.rect.collidepoint(mouse_pos):
+                    button.click()
+                    return True
+            
+            # Проверяем клики по основным кнопкам
+            for button in self.buttons:
+                if button.rect.collidepoint(mouse_pos):
+                    button.click()
+                    return True
+        
+        return False
+
+class LightShopMenu:
+    def __init__(self, game):
+        self.game = game
+        self.category_buttons = []
+        self.nav_buttons = []
+        self.initialize_ui() 
+    
+    def initialize_ui(self):
+        # Кнопки левой панели навигации
+        nav_buttons = [
+            ("Кликер", lambda: self.game.play_game(), False),
+            ("Магазины", lambda: self.game.open_shop_selection(), True),  # Активная кнопка
+            ("Инвестиции", lambda: self.game.open_investments(), False),
+            ("Бизнесы", lambda: print("Переход в бизнесы"), False),
+            ("Профиль", lambda: print("Переход в профиль"), False)
+        ]
+        
+        # Создаем кнопки навигации
+        button_width, button_height = 200, 60
+        button_x = 50
+        button_y_start = 150
+        
+        for i, (text, action, is_active) in enumerate(nav_buttons):
+            rect = pygame.Rect(button_x, button_y_start + i * 70, button_width, button_height)
+            self.nav_buttons.append(NavButton(rect, text, action, is_active))
+        
+        # Кнопка назад
+        self.back_button = Button(pygame.Rect(300, 50, 200, 60),"Назад в магазины",None, lambda: setattr(self.game, 'state', ScreenState.SHOP_SELECTION))
+        
+        # Кнопки категорий
+        categories = list(ShopCategory)
+        button_width, button_height = 250, 80
+        start_x = 300
+        start_y = 200
+        spacing = 30
+        
+        for i, category in enumerate(categories):
+            row = i // 3
+            col = i % 3
+            x = start_x + col * (button_width + spacing)
+            y = start_y + row * (button_height + spacing)
+            
+            self.category_buttons.append(
+                Button(
+                    pygame.Rect(x, y, button_width, button_height),
+                    category.value,
+                    None,
+                    lambda cat=category: self.open_category(cat)
+                )
+            )
+    
+    def open_category(self, category):
+        self.game.shop_system.current_shop = "light"  # Устанавливаем магазин
+        self.game.shop_system.current_category = category
+        self.game.shop_system.load_products(category)
+        self.game.state = ScreenState.SHOP_CATEGORY
+    
+    def draw(self, surface):
+        # Рисуем левую панель навигации
+        nav_panel_rect = pygame.Rect(30, 120, 240, 500)
+        self.draw_panel(surface, nav_panel_rect, (30, 30, 50, 200))
+        
+        # Рисуем правую панель с контентом
+        content_panel_rect = pygame.Rect(300, 120, 1100, 600)
+        self.draw_panel(surface, content_panel_rect, (30, 30, 50, 200))
+        
+        # Рисуем кнопки навигации
+        for button in self.nav_buttons:
+            button.draw(surface, self.game.font_manager.get_font('button'))
+        
+        # Кнопка назад
+        if self.back_button:
+            icon_x = self.back_button.rect.x + 20
+            icon_y = self.back_button.rect.centery - 12
+            # Используем icon_renderer из game для отрисовки иконки
+            self.game.icon_renderer.draw_back_icon(surface, icon_x, icon_y, 25)
+            self.back_button.draw(surface, self.game.font_manager.get_font('button'), icon_x, icon_y)
+        
+        # Заголовок
+        title = self.game.font_manager.get_rendered_text("Светлый рынок", 'title', (200, 200, 255), True)
+        surface.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, 150))
+        
+        # Кнопки категорий
+        for button in self.category_buttons:
+            button.draw(surface, self.game.font_manager.get_font('button'), button.rect.x + 20, button.rect.centery - 15)
+        
+        # Инструкция
+        instruction = self.game.font_manager.get_rendered_text("Выберите категорию товаров", 'subtitle', TEXT_SECONDARY)
+        surface.blit(instruction, (SCREEN_WIDTH//2 - instruction.get_width()//2, 550))
+    
+    def draw_panel(self, surface, rect, color):
+        """Рисует панель с закругленными углами."""
+        pygame.draw.rect(surface, color, rect, border_radius=15)
+        pygame.draw.rect(surface, (100, 100, 150, 255), rect, width=2, border_radius=15)
+
+    def handle_event(self, event):
+        """Обрабатывает события светлого магазина."""
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mouse_pos = pygame.mouse.get_pos()
+            
+            # Проверяем клики по кнопкам навигации
+            for button in self.nav_buttons:
+                if button.rect.collidepoint(mouse_pos):
+                    button.click()
+                    return True
+            
+            # Проверяем клики по кнопке назад (только если она существует)
+            if self.back_button and self.back_button.rect.collidepoint(mouse_pos):
+                self.back_button.click()
+                return True
+            
+            # Проверяем клики по кнопкам категорий
+            for button in self.category_buttons:
+                if button.rect.collidepoint(mouse_pos):
+                    button.click()
+                    return True
+        
+        return False
+
+class LightCategoryProductsMenu:
+    def __init__(self, game):
+        self.game = game
+        self.nav_buttons = []
+        self.product_buttons = []
+        self.search_box = pygame.Rect(300, 180, 400, 40)
+        self.search_active = False
+        self.search_text = ""
+        self.initialize_ui()
+    
+    def initialize_ui(self):
+        # Кнопки левой панели навигации
+        nav_buttons = [
+            ("Кликер", lambda: self.game.play_game(), False),
+            ("Магазины", lambda: self.game.open_shop_selection(), True),
+            ("Инвестиции", lambda: self.game.open_investments(), False),
+            ("Бизнесы", lambda: print("Переход в бизнесы"), False),
+            ("Профиль", lambda: print("Переход в профиль"), False)
+        ]
+        
+        # Создаем кнопки навигации
+        button_width, button_height = 200, 60
+        button_x = 50
+        button_y_start = 150
+        
+        for i, (text, action, is_active) in enumerate(nav_buttons):
+            rect = pygame.Rect(button_x, button_y_start + i * 70, button_width, button_height)
+            self.nav_buttons.append(NavButton(rect, text, action, is_active))
+
+        # Кнопка назад - возврат в СВЕТЛЫЙ магазин
+        self.back_button = Button(
+            pygame.Rect(300, 50, 200, 60),
+            "Назад",
+            None,
+            lambda: setattr(self.game, 'state', ScreenState.SHOP)
+        )
+    
+    def update_products(self):
+        """Обновляет кнопки товаров на основе загруженных продуктов"""
+        self.product_buttons = []
+        
+        if not self.game.shop_system.products:
+            # Если товаров нет, создаем сообщение
+            return
+        
+        # Создаем кнопки для каждого товара
+        product_width, product_height = 300, 80
+        start_x = 320
+        start_y = 250
+        spacing = 20
+        
+        for i, product in enumerate(self.game.shop_system.products):
+            # Фильтрация по поисковому запросу
+            if self.search_text and self.search_text.lower() not in product.name.lower():
+                continue
+                
+            row = i // 3
+            col = i % 3
+            x = start_x + col * (product_width + spacing)
+            y = start_y + row * (product_height + spacing)
+            
+            # Если товаров слишком много, добавляем прокрутку
+            if y > 600:  # Максимальная высота
+                continue
+                
+            self.product_buttons.append(
+                ProductButton(
+                    pygame.Rect(x, y, product_width, product_height),
+                    product,
+                    lambda p=product: self.buy_product(p.id)
+                )
+            )
+    
+    def buy_product(self, product_id):
+        """Покупка товара"""
+        if self.game.shop_system.buy_product(product_id):
+            print("Товар куплен!")
+            # Обновляем отображение
+            self.update_products()
+    
+    def draw(self, surface):
+        # Рисуем левую панель навигации
+        nav_panel_rect = pygame.Rect(30, 120, 240, 500)
+        self.draw_panel(surface, nav_panel_rect, (30, 30, 50, 200))
+        
+        # Рисуем правую панель с контентом
+        content_panel_rect = pygame.Rect(300, 120, 1100, 600)
+        self.draw_panel(surface, content_panel_rect, (30, 30, 50, 200))
+        
+        # Рисуем кнопки навигации
+        for button in self.nav_buttons:
+            button.draw(surface, self.game.font_manager.get_font('button'))
+        
+        # Кнопка назад
+        if self.back_button:
+            icon_x = self.back_button.rect.x + 20
+            icon_y = self.back_button.rect.centery - 12
+            self.game.icon_renderer.draw_back_icon(surface, icon_x, icon_y, 25)
+            self.back_button.draw(surface, self.game.font_manager.get_font('button'), icon_x, icon_y)
+        
+        # Заголовок категории
+        category_name = self.game.shop_system.current_category.value if self.game.shop_system.current_category else "Категория"
+        title = self.game.font_manager.get_rendered_text(category_name, 'title', TEXT_PRIMARY, True)
+        surface.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, 150))
+        
+        # Поле поиска
+        self.draw_search_box(surface)
+        
+        # Обновляем и рисуем товары
+        self.update_products()
+        for button in self.product_buttons:
+            button.draw(surface, self.game.font_manager.get_font('desc'))
+        
+        # Сообщение если товаров нет
+        if not self.product_buttons and not self.search_text:
+            no_products_text = "Товары не найдены"
+            text_surf = self.game.font_manager.get_rendered_text(no_products_text, 'subtitle', TEXT_SECONDARY)
+            surface.blit(text_surf, (SCREEN_WIDTH//2 - text_surf.get_width()//2, 300))
+    
+    def draw_search_box(self, surface):
+        """Рисует поле поиска"""
+        # Фон поля поиска
+        pygame.draw.rect(surface, (40, 40, 70, 255), self.search_box, border_radius=10)
+        pygame.draw.rect(surface, (100, 100, 150, 255), self.search_box, width=1, border_radius=10)
+        
+        # Текст поиска
+        search_font = self.game.font_manager.get_font('desc')
+        search_surf = search_font.render(self.search_text + ("|" if self.search_active else ""), True, TEXT_PRIMARY)
+        surface.blit(search_surf, (self.search_box.x + 10, self.search_box.y + 10))
+        
+        # Подсказка
+        if not self.search_text and not self.search_active:
+            hint_surf = search_font.render("Поиск...", True, TEXT_TERTIARY)
+            surface.blit(hint_surf, (self.search_box.x + 10, self.search_box.y + 10))
+    
+    def draw_panel(self, surface, rect, color):
+        """Рисует панель с закругленными углами"""
+        pygame.draw.rect(surface, color, rect, border_radius=15)
+        pygame.draw.rect(surface, (100, 100, 150, 255), rect, width=2, border_radius=15)
+
+    def handle_event(self, event):
+        """Обрабатывает события категории товаров СВЕТЛОГО магазина"""
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mouse_pos = pygame.mouse.get_pos()
+            
+            # Проверяем клики по кнопкам навигации
+            for button in self.nav_buttons:
+                if button.rect.collidepoint(mouse_pos):
+                    button.click()
+                    return True
+            
+            # Проверяем клики по кнопке назад
+            if self.back_button.rect.collidepoint(mouse_pos):
+                self.back_button.click()
+                return True
+            
+            # Проверяем клики по товарам
+            for button in self.product_buttons:
+                if button.rect.collidepoint(mouse_pos):
+                    button.click()
+                    return True
+            
+            # Активация поля поиска
+            if self.search_box.collidepoint(mouse_pos):
+                self.search_active = True
+            else:
+                self.search_active = False
+                
+        elif event.type == pygame.KEYDOWN and self.search_active:
+            if event.key == pygame.K_BACKSPACE:
+                self.search_text = self.search_text[:-1]
+            elif event.key == pygame.K_RETURN:
+                self.search_active = False
+            else:
+                # Добавляем символ (ограничиваем длину)
+                if len(self.search_text) < 30:
+                    self.search_text += event.unicode
+        
+        return False
+
+class ProductButton:
+    """Кнопка товара"""
+    
+    def __init__(self, rect, product, action):
+        self.rect = rect
+        self.product = product
+        self.action = action
+        self.hovered = False
+    
+    def draw(self, surface, font):
+        """Рисует кнопку товара"""
+        # Фон товара
+        color = (60, 60, 100, 255) if self.hovered else (40, 40, 70, 255)
+        pygame.draw.rect(surface, color, self.rect, border_radius=10)
+        pygame.draw.rect(surface, (100, 100, 150, 255), self.rect, width=1, border_radius=10)
+        
+        # Название товара
+        name_surf = font.render(self.product.name, True, TEXT_PRIMARY)
+        surface.blit(name_surf, (self.rect.x + 10, self.rect.y + 10))
+        
+        # Цена
+        price_surf = font.render(f"{self.product.price}$", True, PURPLE_ACCENT)
+        surface.blit(price_surf, (self.rect.x + 10, self.rect.y + 40))
+        
+        # Описание (если помещается)
+        if len(self.product.description) < 30:
+            desc_surf = font.render(self.product.description, True, TEXT_SECONDARY)
+            surface.blit(desc_surf, (self.rect.x + 150, self.rect.y + 25))
+    
+    def click(self):
+        """Обрабатывает клик по товару"""
+        if self.action:
+            self.action()
+
+class BlackMarketCategoryProductsMenu(LightCategoryProductsMenu):
+    """Категория товаров черного рынка (наследуется от светлой версии)"""
+    
+    def __init__(self, game):
+        super().__init__(game)
+        # Переопределяем кнопку назад для черного рынка
+        self.back_button = Button(
+            pygame.Rect(300, 50, 200, 60),
+            "Назад",
+            None,
+            lambda: setattr(self.game, 'state', ScreenState.BLACK_MARKET)
+        )
+    
+    def draw(self, surface):
+        # Темный стиль для черного рынка
+        nav_panel_rect = pygame.Rect(30, 120, 240, 500)
+        self.draw_panel(surface, nav_panel_rect, (30, 30, 50, 200))
+        
+        # Темная панель для контента
+        content_panel_rect = pygame.Rect(300, 120, 1100, 600)
+        dark_panel = GradientGenerator.create_rounded_rect(
+            (content_panel_rect.width, content_panel_rect.height), 
+            [(20, 5, 10, 200), (15, 2, 8, 200), (10, 1, 5, 200)], 
+            PANEL_BORDER_RADIUS
+        )
+        surface.blit(dark_panel, content_panel_rect.topleft)
+        pygame.draw.rect(surface, (100, 20, 20, 255), content_panel_rect, width=2, border_radius=15)
+        
+        # Остальная отрисовка как в родительском классе
+        for button in self.nav_buttons:
+            button.draw(surface, self.game.font_manager.get_font('button'))
+        
+        if self.back_button:
+            icon_x = self.back_button.rect.x + 20
+            icon_y = self.back_button.rect.centery - 12
+            self.game.icon_renderer.draw_back_icon(surface, icon_x, icon_y, 25)
+            self.back_button.draw(surface, self.game.font_manager.get_font('button'), icon_x, icon_y)
+        
+        # Красный заголовок для черного рынка
+        category_name = self.game.shop_system.current_category.value if self.game.shop_system.current_category else "Категория"
+        title = self.game.font_manager.get_rendered_text(category_name, 'title', (220, 20, 20), True)
+        surface.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, 150))
+        
+        self.draw_search_box(surface)
+        self.update_products()
+        
+        for button in self.product_buttons:
+            # Темный стиль для кнопок товаров
+            self.draw_dark_product_button(surface, button)
+        
+        if not self.product_buttons and not self.search_text:
+            no_products_text = "Товары не найдены"
+            text_surf = self.game.font_manager.get_rendered_text(no_products_text, 'subtitle', (200, 100, 100))
+            surface.blit(text_surf, (SCREEN_WIDTH//2 - text_surf.get_width()//2, 300))
+    
+    def draw_dark_product_button(self, surface, button):
+        """Рисует кнопку товара в темном стиле"""
+        color = (80, 20, 20, 255) if button.hovered else (50, 10, 10, 255)
+        pygame.draw.rect(surface, color, button.rect, border_radius=10)
+        pygame.draw.rect(surface, (150, 50, 50, 255), button.rect, width=1, border_radius=10)
+        
+        font = self.game.font_manager.get_font('desc')
+        name_surf = font.render(button.product.name, True, (255, 200, 200))
+        surface.blit(name_surf, (button.rect.x + 10, button.rect.y + 10))
+        
+        price_surf = font.render(f"{button.product.price}$", True, (255, 100, 100))
+        surface.blit(price_surf, (button.rect.x + 10, button.rect.y + 40))
+        
+        if len(button.product.description) < 30:
+            desc_surf = font.render(button.product.description, True, (200, 150, 150))
+            surface.blit(desc_surf, (button.rect.x + 150, button.rect.y + 25))
+
+# Аналогичный класс для черного рынка с темным стилем
+class BlackMarketMenu:
+    def __init__(self, game):
+        self.game = game
+        self.category_buttons = []
+        self.nav_buttons = []
+        self.initialize_ui()
+    
+    def initialize_ui(self):
+        # Кнопки левой панели навигации
+        nav_buttons = [
+            ("Кликер", lambda: self.game.play_game(), False),
+            ("Магазины", lambda: self.game.open_shop_selection(), True),  # Активная кнопка
+            ("Инвестиции", lambda: self.game.open_investments(), False),
+            ("Бизнесы", lambda: print("Переход в бизнесы"), False),
+            ("Профиль", lambda: print("Переход в профиль"), False)
+        ]
+        
+        # Создаем кнопки навигации
+        button_width, button_height = 200, 60
+        button_x = 50
+        button_y_start = 150
+        
+        for i, (text, action, is_active) in enumerate(nav_buttons):
+            rect = pygame.Rect(button_x, button_y_start + i * 70, button_width, button_height)
+            self.nav_buttons.append(NavButton(rect, text, action, is_active))
+        
+        # Кнопка назад
+        self.back_button = Button(pygame.Rect(300, 50, 200, 60),"Назад в магазины",None, lambda: setattr(self.game, 'state', ScreenState.SHOP_SELECTION))
+        
+        # Кнопки категорий черного рынка
+        categories = list(BlackMarketCategory)
+        button_width, button_height = 280, 70
+        start_x = 250
+        start_y = 180
+        spacing = 20
+        
+        for i, category in enumerate(categories):
+            row = i // 3
+            col = i % 3
+            x = start_x + col * (button_width + spacing)
+            y = start_y + row * (button_height + spacing)
+            
+            self.category_buttons.append(
+                Button(
+                    pygame.Rect(x, y, button_width, button_height),
+                    category.value,
+                    None,
+                    lambda cat=category: self.open_category(cat)
+                )
+            )
+
+    def open_category(self, category):
+        self.game.shop_system.current_shop = "black"  # Устанавливаем рынок
+        self.game.shop_system.current_category = category
+        self.game.shop_system.load_products(category)
+        self.game.state = ScreenState.BLACK_MARKET_CATEGORY
+    
+    def draw(self, surface):
+        # Рисуем левую панель навигации
+        nav_panel_rect = pygame.Rect(30, 120, 240, 500)
+        self.draw_panel(surface, nav_panel_rect, (30, 30, 50, 200))
+        
+        # Темная панель для черного рынка
+        dark_panel_rect = pygame.Rect(300, 120, 1100, 600)
+        dark_panel = GradientGenerator.create_rounded_rect(
+            (dark_panel_rect.width, dark_panel_rect.height), 
+            [(20, 5, 10, 200), (15, 2, 8, 200), (10, 1, 5, 200)], 
+            PANEL_BORDER_RADIUS
+        )
+        surface.blit(dark_panel, dark_panel_rect.topleft)
+        pygame.draw.rect(surface, (100, 20, 20, 255), dark_panel_rect, width=2, border_radius=15)
+        
+        # Рисуем кнопки навигации
+        for button in self.nav_buttons:
+            button.draw(surface, self.game.font_manager.get_font('button'))
+        
+        # Кнопка назад
+        icon_x = self.back_button.rect.x + 20
+        icon_y = self.back_button.rect.centery - 12
+        self.back_button.draw(surface, self.game.font_manager.get_font('button'), icon_x, icon_y)
+        
+        # Заголовок с красным акцентом
+        title = self.game.font_manager.get_rendered_text("Чёрный рынок", 'title', (220, 20, 20), True)
+        surface.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, 150))
+        
+        # Кнопки категорий
+        for button in self.category_buttons:
+            button.draw(surface, self.game.font_manager.get_font('button'), button.rect.x + 20, button.rect.centery - 15)
+    
+    def draw_panel(self, surface, rect, color):
+        """Рисует панель с закругленными углами."""
+        pygame.draw.rect(surface, color, rect, border_radius=15)
+        pygame.draw.rect(surface, (100, 100, 150, 255), rect, width=2, border_radius=15)
+
+    def handle_event(self, event):
+        """Обрабатывает события черного рынка."""
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mouse_pos = pygame.mouse.get_pos()
+            
+            # Проверяем клики по кнопкам навигации
+            for button in self.nav_buttons:
+                if button.rect.collidepoint(mouse_pos):
+                    button.click()
+                    return True
+            
+            # Проверяем клики по кнопке назад (с обработкой исключений)
+            if self.back_button.rect.collidepoint(mouse_pos):
+                try:
+                    self.back_button.click()
+                    return True
+                except Exception as e:
+                    print(f"Ошибка при возврате из черного рынка: {e}")
+                    # Принудительно возвращаемся в меню выбора магазина
+                    self.game.state = ScreenState.SHOP_SELECTION
+                    return True
+            
+            # Проверяем клики по кнопкам категорий (с обработкой исключений)
+            for button in self.category_buttons:
+                if button.rect.collidepoint(mouse_pos):
+                    try:
+                        button.click()
+                        return True
+                    except Exception as e:
+                        print(f"Ошибка при открытии категории черного рынка: {e}")
+                        # Загружаем демо-данные при ошибке
+                        self.game.shop_system.load_demo_products(button.text)
+                        self.game.state = ScreenState.BLACK_MARKET_CATEGORY
+                        return True
+        
+        return False
+
 class Game:
     """Основной класс игры."""
     
@@ -1085,8 +1875,15 @@ class Game:
         self.clock = pygame.time.Clock()
         self.running = True
         self.state = ScreenState.LOADING
-
         self.settings_manager = Settings()
+
+        self.shop_system = ShopSystem(self)
+        self.shop_selection_menu = ShopSelectionMenu(self)
+        self.light_shop_menu = LightShopMenu(self)
+        self.light_category_products_menu = LightCategoryProductsMenu(self)
+        self.black_market_category_products_menu = BlackMarketCategoryProductsMenu(self)
+        self.black_market_menu = BlackMarketMenu(self)
+        
         
         # Получаем доступные опции из config.json
         self.theme_options = self.settings_manager.show_themes()
@@ -1199,6 +1996,18 @@ class Game:
         """Открывает меню инвестиций."""
         self.state = ScreenState.INVESTMENTS
         print("Открытие инвестиций...")
+
+    def open_shop_selection(self):
+        """Открывает выбор магазина"""
+        self.state = ScreenState.SHOP_SELECTION
+
+    def open_light_shop(self):
+        """Открывает светлый магазин"""
+        self.state = ScreenState.SHOP
+    
+    def open_black_market(self):
+        """Открывает черный рынок"""
+        self.state = ScreenState.BLACK_MARKET
     
     def open_settings(self):
         """Открывает настройки."""
@@ -1325,18 +2134,57 @@ class Game:
             self.language_dropdown,
             self.quality_dropdown
         ]
+
+    def handle_shop_events(self, event, mouse_pos):
+        """Обработка событий магазинов с обработкой исключений"""
+        try:
+            if self.state == ScreenState.SHOP_SELECTION:
+                if self.shop_selection_menu.handle_event(event):
+                    return True
+            
+            elif self.state == ScreenState.SHOP:
+                if self.light_shop_menu.handle_event(event):
+                    return True
+            
+            elif self.state == ScreenState.SHOP_CATEGORY:
+                if self.light_category_products_menu.handle_event(event):
+                    return True
+            
+            elif self.state == ScreenState.BLACK_MARKET:
+                if self.black_market_menu.handle_event(event):
+                    return True
+                    
+            elif self.state == ScreenState.BLACK_MARKET_CATEGORY:
+                if self.black_market_category_products_menu.handle_event(event):
+                    return True
+                    
+        except Exception as e:
+            print(f"Ошибка в обработке событий магазина: {e}")
+            # При ошибке возвращаемся в главное меню
+            self.state = ScreenState.CLICKER
+            return True
+            
+        return False
     
     def handle_events(self):
         mouse_pos = pygame.mouse.get_pos()
-        
+    
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    if self.state in [ScreenState.SETTINGS, ScreenState.CLICKER, ScreenState.INVESTMENTS]:
+                    # Обработка ESC в зависимости от текущего состояния
+                    if self.state == ScreenState.MENU:
+                        # В главном меню - выход из игры
+                        self.running = False
+                    elif self.state in [ScreenState.SETTINGS, ScreenState.CLICKER, ScreenState.INVESTMENTS, 
+                                    ScreenState.SHOP_SELECTION, ScreenState.SHOP, ScreenState.SHOP_CATEGORY,
+                                    ScreenState.BLACK_MARKET, ScreenState.BLACK_MARKET_CATEGORY]:
+                        # Во всех остальных состояниях - возврат в главное меню
                         self.back_to_menu()
                     else:
+                        # Для всех остальных состояний (например, LOADING) - выход
                         self.running = False
             
             # Глобальная обработка dropdown событий
@@ -1404,7 +2252,13 @@ class Game:
             elif self.state == ScreenState.INVESTMENTS:
                 if self.investment_menu.handle_event(event):
                     continue
-    
+
+            # Обработка магазинов
+            elif self.state in [ScreenState.SHOP_SELECTION, ScreenState.SHOP, ScreenState.SHOP_CATEGORY, ScreenState.BLACK_MARKET, ScreenState.BLACK_MARKET_CATEGORY]:
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    mouse_pos = pygame.mouse.get_pos()
+                    self.handle_shop_events(event, mouse_pos)
+        
     def run(self):
         """Основной игровой цикл."""
         while self.running:
@@ -1449,6 +2303,16 @@ class Game:
                 self.draw_investments()
             elif self.state == ScreenState.CLICKER:
                 self.draw_clicker()
+            elif self.state == ScreenState.SHOP_SELECTION:
+                self.shop_selection_menu.draw(self.screen)
+            elif self.state == ScreenState.SHOP:
+                self.light_shop_menu.draw(self.screen)
+            elif self.state == ScreenState.SHOP_CATEGORY:
+                self.light_category_products_menu.draw(self.screen)
+            elif self.state == ScreenState.BLACK_MARKET:
+                self.black_market_menu.draw(self.screen)
+            elif self.state == ScreenState.BLACK_MARKET_CATEGORY:
+                self.black_market_category_products_menu.draw(self.screen)
             
             pygame.display.flip()
             self.clock.tick(60)

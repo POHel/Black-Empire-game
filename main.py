@@ -52,6 +52,37 @@ class ScreenState(Enum):
     BLACK_MARKET = 8
     BLACK_MARKET_CATEGORY = 9
 
+# Добавить в начало файла после других импортов
+class NavButton:
+    """Кнопка навигации в левой панели."""
+    
+    def __init__(self, rect, text, action, is_active=False):
+        self.rect = rect
+        self.text = text
+        self.action = action
+        self.is_active = is_active
+    
+    def draw(self, surface, font):
+        """Рисует кнопку навигации."""
+        if self.is_active:
+            color = (80, 80, 140, 255)  # Активный цвет
+            text_color = (255, 255, 255, 255)
+        else:
+            color = (50, 50, 90, 255)  # Неактивный цвет
+            text_color = (200, 200, 200, 255)
+        
+        pygame.draw.rect(surface, color, self.rect, border_radius=10)
+        pygame.draw.rect(surface, (100, 100, 150, 255), self.rect, width=1, border_radius=10)
+        
+        text_surf = font.render(self.text, True, text_color)
+        text_rect = text_surf.get_rect(center=self.rect.center)
+        surface.blit(text_surf, text_rect)
+    
+    def click(self):
+        """Выполняет действие при клике."""
+        if self.action:
+            self.action()
+
 @dataclass
 class Star:
     """Класс для анимированных звезд."""
@@ -690,7 +721,7 @@ class ClickerMenu:
         """Инициализация UI кликера."""
         self.nav_buttons = []
         nav_options = [
-            ("Кликер", lambda: None, True),  # Активная кнопка
+            ("Кликер", lambda: self.game.play_game(), True),  # Активная кнопка
             ("Магазины", lambda: self.game.open_shop_selection(), False),
             ("Инвестиции", lambda: self.game.open_investments(), False),
             ("Бизнесы", lambda: print("Бизнесы"), False),
@@ -754,12 +785,25 @@ class ClickerMenu:
         surface.blit(text, text_rect)
 
     def handle_event(self, event):
-        """Обработка кликов по кнопке."""
+        """Обработка кликов по кнопке и навигации."""
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.click_button_rect.collidepoint(event.pos):
+            mouse_pos = pygame.mouse.get_pos()
+            
+            # Проверяем навигационные кнопки
+            for button in self.nav_buttons:
+                if button.rect.collidepoint(mouse_pos):
+                    button.click()
+                    # Обновляем активное состояние
+                    for btn in self.nav_buttons:
+                        btn.is_active = (btn.text == button.text)
+                    return True
+            
+            # Проверяем кнопку клика
+            if self.click_button_rect.collidepoint(mouse_pos):
                 self.balance += self.click_value
                 self.total_clicks += 1
                 return True
+        
         return False
 
 #вкладка Инвестиции
@@ -981,61 +1025,26 @@ class InvestmentMenu:
         surface.blit(text_surf, text_rect)
     
     def handle_event(self, event):
-        """Обрабатывает события меню инвестиций."""
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mouse_pos = pygame.mouse.get_pos()
             
-            # Проверяем клики по кнопкам навигации
             for button in self.buttons:
                 if button.rect.collidepoint(mouse_pos):
                     button.click()
-                    # Обновляем состояние кнопок
-                    for btn in self.buttons:
-                        btn.is_active = (btn.text == button.text)
+                    # ВМЕСТО этого:
+                    # for btn in self.buttons:
+                    #     btn.is_active = (btn.text == button.text)
+                    # ИСПОЛЬЗУЕМ это:
+                    self.game.update_navigation_state(button.text)
                     return True
             
-            # Проверяем клики по кнопкам вкладок (ДОБАВЛЕНО)
             for button in self.tab_buttons:
                 if button.rect.collidepoint(mouse_pos):
                     button.click()
-                    # Обновляем состояние кнопок вкладок
                     for btn in self.tab_buttons:
                         btn.is_active = (btn.text.lower() == self.current_tab)
                     return True
-                
         return False
-
-# Добавить в начало файла после других импортов
-class NavButton:
-    """Кнопка навигации в левой панели."""
-    
-    def __init__(self, rect, text, action, is_active=False):
-        self.rect = rect
-        self.text = text
-        self.action = action
-        self.is_active = is_active
-    
-    def draw(self, surface, font):
-        """Рисует кнопку навигации."""
-        if self.is_active:
-            color = (80, 80, 140, 255)  # Активный цвет
-            text_color = (255, 255, 255, 255)
-        else:
-            color = (50, 50, 90, 255)  # Неактивный цвет
-            text_color = (200, 200, 200, 255)
-        
-        pygame.draw.rect(surface, color, self.rect, border_radius=10)
-        pygame.draw.rect(surface, (100, 100, 150, 255), self.rect, width=1, border_radius=10)
-        
-        text_surf = font.render(self.text, True, text_color)
-        text_rect = text_surf.get_rect(center=self.rect.center)
-        surface.blit(text_surf, text_rect)
-    
-    def click(self):
-        """Выполняет действие при клике."""
-        if self.action:
-            self.action()
-
 
 class TabButton:
     """Кнопка вкладки (акции, недвижимость, криптовалюта)."""
@@ -1242,20 +1251,21 @@ class ShopSelectionMenu:
         center_x = SCREEN_WIDTH // 2
         center_y = SCREEN_HEIGHT // 2
         
+        # ПРАВИЛЬНО:
         self.buttons = [
-                Button(
-                    pygame.Rect(center_x - 350, center_y - 50, button_width, button_height),
-                    "Светлый рынок",
-                    None,
-                    lambda: game.open_light_shop()  # Убрано self.
-                ),
-                Button(
-                    pygame.Rect(center_x + 50, center_y - 50, button_width, button_height),
-                    "Тёмный рынок", 
-                    None,
-                    lambda: game.open_black_market()  # Убрано self.
-                )
-            ]
+            Button(
+                pygame.Rect(center_x - 350, center_y - 50, button_width, button_height),
+                "Светлый рынок",
+                None,
+                lambda: self.game.open_light_shop()  # Используем self.game
+            ),
+            Button(
+                pygame.Rect(center_x + 50, center_y - 50, button_width, button_height),
+                "Тёмный рынок", 
+                None,
+                lambda: self.game.open_black_market()  # Используем self.game
+            )
+        ]
 
     def open_light_shop(self):
         self.game.state = ScreenState.SHOP
@@ -1982,21 +1992,28 @@ class Game:
     
     def update_navigation_state(self, active_button_text):
         """Обновляет состояние кнопок навигации во всех меню"""
-        # Добавляем проверки на существование атрибутов:
-        menus_to_update = [
-            (getattr(self, 'clicker_menu', None), 'nav_buttons'),
-            (getattr(self, 'investment_menu', None), 'buttons'),
-            (getattr(self, 'shop_selection_menu', None), 'nav_buttons'),
-            (getattr(self, 'light_shop_menu', None), 'nav_buttons'),
-            (getattr(self, 'black_market_menu', None), 'nav_buttons')
+        menus = [
+            getattr(self, 'clicker_menu', None),
+            getattr(self, 'investment_menu', None),
+            getattr(self, 'shop_selection_menu', None),
+            getattr(self, 'light_shop_menu', None),
+            getattr(self, 'black_market_menu', None)
         ]
         
-        for menu, attr_name in menus_to_update:
-            if menu and hasattr(menu, attr_name):
-                buttons = getattr(menu, attr_name)
-                for button in buttons:
-                    if hasattr(button, 'text') and hasattr(button, 'is_active'):
-                        button.is_active = (button.text == active_button_text)
+        for menu in menus:
+            if menu is not None:
+                # Пытаемся получить кнопки из разных возможных атрибутов
+                buttons = None
+                for attr_name in ['nav_buttons', 'buttons', 'navigation_buttons']:
+                    if hasattr(menu, attr_name):
+                        buttons = getattr(menu, attr_name)
+                        break
+                
+                if buttons:
+                    for button in buttons:
+                        if (hasattr(button, 'text') and hasattr(button, 'is_active') and 
+                            hasattr(button, 'is_active')):
+                            button.is_active = (button.text == active_button_text)
 
     def play_game(self):
             """Переход в игровой режим (кликер)."""
@@ -2063,26 +2080,26 @@ class Game:
         button_width, button_height = 460, 65
         button_y_start = self.right_panel_rect.y + 200
         
-        # Исправляем лямбда-функции - убираем лишние параметры
+        # Исправленные кнопки
         self.buttons = [
             Button(
                 pygame.Rect(self.right_panel_rect.x + 60, button_y_start, button_width, button_height),
                 "Играть", 
-                icon_renderer=lambda surface, icon_x, icon_y, size=30: self.icon_renderer.draw_play_icon(surface, icon_x, icon_y, size), 
+                lambda surface, icon_x, icon_y, size=30: self.icon_renderer.draw_play_icon(surface, icon_x, icon_y, size), 
                 self.play_game
-                ),
+            ),
             Button(
                 pygame.Rect(self.right_panel_rect.x + 60, button_y_start + 100, button_width, button_height),
                 "Настройки", 
-                icon_renderer=lambda surface, icon_x, icon_y, size=40: self.icon_renderer.draw_settings_icon(surface, icon_x, icon_y, size), 
+                lambda surface, icon_x, icon_y, size=40: self.icon_renderer.draw_settings_icon(surface, icon_x, icon_y, size), 
                 self.open_settings
-                ),
+            ),
             Button(
                 pygame.Rect(self.right_panel_rect.x + 60, button_y_start + 200, button_width, button_height),
                 "Выход", 
-                icon_renderer=lambda surface, icon_x, icon_y, size=30: self.icon_renderer.draw_exit_icon(surface, icon_x, icon_y, size), 
+                lambda surface, icon_x, icon_y, size=30: self.icon_renderer.draw_exit_icon(surface, icon_x, icon_y, size), 
                 self.exit_game
-                )
+            )
         ]
         
         # Панель настроек
@@ -2092,7 +2109,7 @@ class Game:
         self.back_button = Button(
             pygame.Rect(50, 50, 200, 60),
             "Назад",
-            icon_renderer=lambda surface, icon_x, icon_y, size=25: self.icon_renderer.draw_back_icon(surface, icon_x, icon_y, size),
+            lambda surface, icon_x, icon_y, size=25: self.icon_renderer.draw_back_icon(surface, icon_x, icon_y, size),
             self.back_to_menu,
             icon_size=25
         )
@@ -2101,7 +2118,7 @@ class Game:
         self.apply_button = Button(
             pygame.Rect(270, 50, 250, 60),  # Справа от кнопки "Назад"
             "Применить",
-            icon_renderer=lambda surface, icon_x, icon_y, size=25: self.icon_renderer.draw_apply_icon(surface, icon_x, icon_y, size),
+            lambda surface, icon_x, icon_y, size=25: self.icon_renderer.draw_apply_icon(surface, icon_x, icon_y, size),
             self.apply_settings,
             icon_size=25
         )
@@ -2201,6 +2218,9 @@ class Game:
                     else:
                         self.running = False
             
+            # Флаг для отслеживания обработки dropdown событий
+            dropdown_handled = False
+            
             # ИСПРАВЛЯЕМ порядок обработки событий:
             # Сначала обрабатываем специфичные для состояния события
             if self.state == ScreenState.CLICKER:
@@ -2221,6 +2241,7 @@ class Game:
                 # Обрабатываем dropdown события
                 for dropdown in self.dropdowns:
                     if dropdown.handle_event(event):
+                        dropdown_handled = True
                         break
                 
                 if dropdown_handled:
@@ -2258,14 +2279,14 @@ class Game:
                     mouse_pos = pygame.mouse.get_pos()
                     self.back_button.hovered = self.back_button.is_hovered(mouse_pos)
                     self.apply_button.hovered = self.apply_button.is_hovered(mouse_pos)
-            
-            elif self.state == ScreenState.CLICKER:
-                if self.clicker_menu.handle_event(event):
-                    continue
+                
+                elif self.state == ScreenState.CLICKER:
+                    if self.clicker_menu.handle_event(event):
+                        continue
 
-            elif self.state == ScreenState.INVESTMENTS:
-                if self.investment_menu.handle_event(event):
-                    continue
+                elif self.state == ScreenState.INVESTMENTS:
+                    if self.investment_menu.handle_event(event):
+                        continue
 
             # Обработка магазинов
             elif self.state in [ScreenState.SHOP_SELECTION, ScreenState.SHOP, ScreenState.SHOP_CATEGORY, ScreenState.BLACK_MARKET, ScreenState.BLACK_MARKET_CATEGORY]:

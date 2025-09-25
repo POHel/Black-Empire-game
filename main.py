@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 from coreLogic import Settings, ExportDB
 
+GAME_VERSION = "0.0.1"
 
 # Initialize Pygame
 pygame.init()
@@ -51,6 +52,15 @@ class ScreenState(Enum):
     SHOP_CATEGORY = 7
     BLACK_MARKET = 8
     BLACK_MARKET_CATEGORY = 9
+    BUSINESSES = 10  # Новое состояние для бизнесов
+    BUSINESS_CATEGORY = 11
+    PROFILE = 12
+
+# Добавляем классы для категорий бизнесов
+class BusinessCategory(Enum):
+    LIGHT = "Светлые бизнесы"
+    DARK = "Тёмные бизнесы"
+    MERGE = "Слияние бизнесов"
 
 # Добавить в начало файла после других импортов
 class NavButton:
@@ -232,7 +242,7 @@ class GradientGenerator:
             surface.fill(colors[0])
             return surface
         
-        for y in range(height):
+        for y in range(int(height)):
             pos = y / max(height - 1, 1)
             color_index = pos * (len(colors) - 1)
             idx1 = min(int(color_index), len(colors) - 2)
@@ -272,6 +282,72 @@ class IconRenderer:
     
     def __init__(self):
         self.icon_cache = {}
+        self.play_icon_img = None
+        self.settings_icon_img = None
+        self.load_image_icons()
+
+    def load_image_icons(self):
+        """Загружает иконки из файлов с правильной обработкой ошибок."""
+        try:
+            # Пытаемся загрузить изображения
+            # Используем полный путь или проверяем существование файла
+            import os
+            if os.path.exists('images/play_icon.png'):
+                self.play_icon_img = pygame.image.load('images/play_icon.png').convert_alpha()
+                self.play_icon_img = pygame.transform.scale(self.play_icon_img, (30, 30))
+            else:
+                print("Файл images/play_icon.png не найден, используем векторные иконки")
+                self.play_icon_img = None
+                
+            if os.path.exists('images/settings_icon.png'):
+                self.settings_icon_img = pygame.image.load('images/settings_icon.png').convert_alpha()
+                self.settings_icon_img = pygame.transform.scale(self.settings_icon_img, (30, 30))
+            else:
+                print("Файл images/settings_icon.png не найден, используем векторные иконки")
+                self.settings_icon_img = None
+                
+        except pygame.error as e:
+            print(f"Ошибка загрузки иконок: {e}")
+            self.play_icon_img = None
+            self.settings_icon_img = None
+        except Exception as e:
+            print(f"Общая ошибка при загрузке иконок: {e}")
+            self.play_icon_img = None
+            self.settings_icon_img = None
+    
+    def draw_play_image_icon(self, surface, x, y, size=30):
+        """Рисует иконку игры из изображения."""
+        if self.play_icon_img is not None:
+            try:
+                if size != 30:
+                    scaled_icon = pygame.transform.scale(self.play_icon_img, (size, size))
+                    surface.blit(scaled_icon, (x, y))
+                else:
+                    surface.blit(self.play_icon_img, (x, y))
+                return True
+            except Exception as e:
+                print(f"Ошибка отрисовки изображения play: {e}")
+        
+        # Fallback на векторную иконку
+        self.draw_play_icon(surface, x, y, size)
+        return False
+    
+    def draw_settings_image_icon(self, surface, x, y, size=30):
+        """Рисует иконку настроек из изображения."""
+        if self.settings_icon_img is not None:
+            try:
+                if size != 30:
+                    scaled_icon = pygame.transform.scale(self.settings_icon_img, (size, size))
+                    surface.blit(scaled_icon, (x, y))
+                else:
+                    surface.blit(self.settings_icon_img, (x, y))
+                return True
+            except Exception as e:
+                print(f"Ошибка отрисовки изображения settings: {e}")
+        
+        # Fallback на векторную иконку
+        self.draw_settings_icon(surface, x, y, size)
+        return False
     
     def draw_play_icon(self, surface, x, y, size=30):
         cache_key = ("play", size)
@@ -724,8 +800,8 @@ class ClickerMenu:
             ("Кликер", lambda: self.game.play_game(), True),  # Активная кнопка
             ("Магазины", lambda: self.game.open_shop_selection(), False),
             ("Инвестиции", lambda: self.game.open_investments(), False),
-            ("Бизнесы", lambda: print("Бизнесы"), False),
-            ("Профиль", lambda: print("Профиль"), False)
+            ("Бизнесы", lambda: self.game.open_businesses(), False),
+            ("Профиль", lambda: self.game.open_profile(), False)
         ]
 
         button_width, button_height = 200, 60
@@ -825,8 +901,8 @@ class InvestmentMenu:
             ("Кликер", lambda: self.game.play_game()),
             ("Магазины", lambda: self.game.open_shop_selection()),
             ("Инвестиции", lambda: None),
-            ("Бизнесы", lambda: print("Переход в бизнесы")),
-            ("Профиль", lambda: print("Переход в профиль"))
+            ("Бизнесы", lambda: self.game.open_businesses()),
+            ("Профиль", lambda: self.game.open_profile())
         ]
         
         # Создаем кнопки навигации
@@ -1233,8 +1309,8 @@ class ShopSelectionMenu:
             ("Кликер", lambda: self.game.play_game(), False),
             ("Магазины", lambda: None, True),  # Активная кнопка
             ("Инвестиции", lambda: self.game.open_investments(), False),
-            ("Бизнесы", lambda: print("Переход в бизнесы"), False),
-            ("Профиль", lambda: print("Переход в профиль"), False)
+            ("Бизнесы", lambda: self.game.open_businesses(), False),
+            ("Профиль", lambda: self.game.open_profile(), False)
         ]
         
         # Создаем кнопки навигации
@@ -1341,8 +1417,8 @@ class LightShopMenu:
             ("Кликер", lambda: self.game.play_game(), False),
             ("Магазины", lambda: self.game.open_shop_selection(), True),  # Активная кнопка
             ("Инвестиции", lambda: self.game.open_investments(), False),
-            ("Бизнесы", lambda: print("Переход в бизнесы"), False),
-            ("Профиль", lambda: print("Переход в профиль"), False)
+            ("Бизнесы", lambda: self.game.open_businesses(), False),
+            ("Профиль", lambda: self.game.open_profile(), False)
         ]
         
         # Создаем кнопки навигации
@@ -1463,8 +1539,8 @@ class LightCategoryProductsMenu:
             ("Кликер", lambda: self.game.play_game(), False),
             ("Магазины", lambda: self.game.open_shop_selection(), True),
             ("Инвестиции", lambda: self.game.open_investments(), False),
-            ("Бизнесы", lambda: print("Переход в бизнесы"), False),
-            ("Профиль", lambda: print("Переход в профиль"), False)
+            ("Бизнесы", lambda: self.game.open_businesses(), False),
+            ("Профиль", lambda: self.game.open_profile(), False)
         ]
         
         # Создаем кнопки навигации
@@ -1747,8 +1823,8 @@ class BlackMarketMenu:
             ("Кликер", lambda: self.game.play_game(), False),
             ("Магазины", lambda: self.game.open_shop_selection(), True),  # Активная кнопка
             ("Инвестиции", lambda: self.game.open_investments(), False),
-            ("Бизнесы", lambda: print("Переход в бизнесы"), False),
-            ("Профиль", lambda: print("Переход в профиль"), False)
+            ("Бизнесы", lambda: self.game.open_businesses(), False),
+            ("Профиль", lambda: self.game.open_profile(), False)
         ]
         
         # Создаем кнопки навигации
@@ -1862,8 +1938,798 @@ class BlackMarketMenu:
                         self.game.shop_system.load_demo_products(button.text)
                         self.game.state = ScreenState.BLACK_MARKET_CATEGORY
                         return True
+        return False
+    
+# Класс для представления бизнеса
+class Business:
+    def __init__(self, id, name, price, income, description, category, level=1, max_level=10):
+        self.id = id
+        self.name = name
+        self.price = price
+        self.income = income
+        self.description = description
+        self.category = category
+        self.level = level
+        self.max_level = max_level
+        self.is_owned = False
+
+# Класс для кнопки бизнеса
+class BusinessButton:
+    def __init__(self, rect, business, action):
+        self.rect = rect
+        self.business = business
+        self.action = action
+        self.hovered = False
+    
+    def draw(self, surface, font):
+        """Рисует кнопку бизнеса"""
+        # Фон в зависимости от владения и категории
+        if self.business.is_owned:
+            if self.business.category == BusinessCategory.LIGHT:
+                color = (60, 100, 60, 255) if self.hovered else (40, 80, 40, 255)  # Зеленый для светлых
+            else:
+                color = (100, 60, 60, 255) if self.hovered else (80, 40, 40, 255)  # Красный для темных
+        else:
+            color = (60, 60, 100, 255) if self.hovered else (40, 40, 70, 255)  # Синий для недоступных
+        
+        pygame.draw.rect(surface, color, self.rect, border_radius=10)
+        pygame.draw.rect(surface, (100, 100, 150, 255), self.rect, width=1, border_radius=10)
+        
+        # Название бизнеса
+        name_font = pygame.font.Font(None, 24)
+        name_surf = name_font.render(self.business.name, True, TEXT_PRIMARY)
+        surface.blit(name_surf, (self.rect.x + 10, self.rect.y + 10))
+        
+        # Цена/доход
+        info_font = pygame.font.Font(None, 18)
+        if self.business.is_owned:
+            info_text = f"Доход: {self.business.income}$/сек"
+            color = (100, 255, 100, 255)  # Зеленый для дохода
+        else:
+            info_text = f"Цена: {self.business.price}$"
+            color = (255, 200, 100, 255)  # Желтый для цены
+        
+        info_surf = info_font.render(info_text, True, color)
+        surface.blit(info_surf, (self.rect.x + 10, self.rect.y + 40))
+        
+        # Уровень (если владеем)
+        if self.business.is_owned:
+            level_text = f"Ур. {self.business.level}/{self.business.max_level}"
+            level_surf = info_font.render(level_text, True, TEXT_SECONDARY)
+            surface.blit(level_surf, (self.rect.x + self.rect.width - 80, self.rect.y + 10))
+    
+    def click(self):
+        """Обрабатывает клик по бизнесу"""
+        if self.action:
+            self.action(self.business)
+
+# Основной класс для меню бизнесов
+class BusinessMenu:
+    def __init__(self, game):
+        self.game = game
+        self.current_category = BusinessCategory.LIGHT
+        self.businesses = []
+        self.business_buttons = []
+        self.category_buttons = []
+        self.nav_buttons = []
+        self.modal_businesses = []  # Для модального окна
+        self.show_modal = False
+        self.modal_title = ""
+        self.initialize_ui()
+        self.load_businesses()
+    
+    def initialize_ui(self):
+        """Инициализация UI элементов"""
+        # Кнопки левой панели навигации
+        nav_buttons = [
+            ("Кликер", lambda: self.game.play_game(), False),
+            ("Магазины", lambda: self.game.open_shop_selection(), False),
+            ("Инвестиции", lambda: self.game.open_investments(), False),
+            ("Бизнесы", lambda: None, True),  # Активная кнопка
+            ("Профиль", lambda: self.game.open_profile(), False)
+        ]
+        
+        # Создаем кнопки навигации
+        button_width, button_height = 200, 60
+        button_x = 50
+        button_y_start = 150
+        
+        for i, (text, action, is_active) in enumerate(nav_buttons):
+            rect = pygame.Rect(button_x, button_y_start + i * 70, button_width, button_height)
+            self.nav_buttons.append(NavButton(rect, text, action, is_active))
+        
+        # Кнопки категорий бизнесов (как в HTML)
+        category_button_width, category_button_height = 250, 60
+        category_start_x = 320
+        category_start_y = 100
+        
+        categories = [
+            (BusinessCategory.LIGHT, "Светлые бизнесы"),
+            (BusinessCategory.DARK, "Тёмные бизнесы"), 
+            (BusinessCategory.MERGE, "Слияние бизнесов"),
+        ]
+        
+        for i, (category, text) in enumerate(categories):
+            rect = pygame.Rect(
+                category_start_x + i * (category_button_width + 20),
+                category_start_y,
+                category_button_width,
+                category_button_height
+            )
+            self.category_buttons.append(
+                Button(rect, text, None, lambda cat=category: self.set_category(cat))
+            )
+        
+        # Кнопка назад
+        self.back_button = Button(
+            pygame.Rect(300, 50, 200, 60),
+            "Назад",
+            None,
+            lambda: self.game.back_to_menu()
+        )
+    
+    def load_businesses(self):
+        """Загрузка бизнесов из базы данных или создание демо-данных"""
+        try:
+            # Попытка загрузки из базы данных
+            self.load_businesses_from_db()
+        except:
+            # Демо-данные если база недоступна
+            self.load_demo_businesses()
+    
+    def load_businesses_from_db(self):
+        """Загрузка бизнесов из базы данных"""
+        try:
+            connect = sqlite3.connect('data/data.db')
+            cursor = connect.cursor()
+            
+            # Светлые бизнесы
+            cursor.execute("SELECT id, name, price, income, description FROM businesses WHERE type='light'")
+            light_businesses = []
+            for row in cursor.fetchall():
+                light_businesses.append(Business(
+                    row[0], row[1], row[2], row[3], row[4], BusinessCategory.LIGHT
+                ))
+            
+            # Тёмные бизнесы  
+            cursor.execute("SELECT id, name, price, income, description FROM businesses WHERE type='dark'")
+            dark_businesses = []
+            for row in cursor.fetchall():
+                dark_businesses.append(Business(
+                    row[0], row[1], row[2], row[3], row[4], BusinessCategory.DARK
+                ))
+            
+            connect.close()
+            
+            # Объединяем все бизнесы
+            self.all_businesses = light_businesses + dark_businesses
+            
+        except Exception as e:
+            print(f"Ошибка загрузки бизнесов из БД: {e}")
+            self.load_demo_businesses()
+    
+    def load_demo_businesses(self):
+        """Демо-данные бизнесов (как в HTML)"""
+        light_businesses_data = [
+            ("Продажа", 10000, 100, "Торговый бизнес"),
+            ("Строительство", 50000, 500, "Строительная компания"),
+            ("IT-стартап", 100000, 1000, "Технологический стартап"),
+            ("Электросетевая компания", 500000, 5000, "Энергетика"),
+            ("Сеть кофеен", 1000000, 10000, "Франшиза общепита"),
+            ("Биотех Лаборатория", 5000000, 50000, "Научные исследования"),
+            ("Образовательная платформа", 10000000, 100000, "Онлайн образование"),
+            ("Технопарк", 50000000, 500000, "Технологический парк"),
+            ("Автопром", 100000000, 1000000, "Автомобилестроение"),
+            ("Кибербезопасность", 500000000, 5000000, "Защита информации"),
+            ("Медицинский центр", 1000000000, 10000000, "Медицинские услуги"),
+            ("Робототехника", 5000000000, 50000000, "Роботостроение"),
+            ("Космический туризм", 10000000000, 100000000, "Космические полеты"),
+            ("AI разработки", 50000000000, 500000000, "Искусственный интеллект"),
+            ("Банк", 100000000000, 1000000000, "Финансовый институт"),
+            ("Нефтегазовая компания", 500000000000, 5000000000, "Добыча ресурсов")
+        ]
+        
+        dark_businesses_data = [
+            ("Кибер-мошенничество", 15000, 150, "Нелегальные онлайн схемы"),
+            ("Теневой банкинг", 75000, 750, "Незаконные финансовые операции"),
+            ("Контрабанда", 150000, 1500, "Нелегальная перевозка товаров"),
+            ("Пиратское ПО", 750000, 7500, "Распространение пиратского софта"),
+            ("Нелегальные ставки", 1500000, 15000, "Подпольные тотализаторы"),
+            ("Фальшивые документы", 7500000, 75000, "Подделка документов"),
+            ("Нелегальный импорт/экспорт", 15000000, 150000, "Контрабанда товаров"),
+            ("Теневой майнинг", 75000000, 750000, "Незаконная добыча криптовалюты"),
+            ("Поддельные лекарства", 150000000, 1500000, "Фальсификация медикаментов"),
+            ("Отмывание денег", 750000000, 7500000, "Легализация незаконных доходов"),
+            ("Теневой трейдинг", 1500000000, 15000000, "Незаконная торговля"),
+            ("Подпольный хостинг", 7500000000, 75000000, "Нелегальные серверы"),
+            ("Нелегальный аутсорсинг", 15000000000, 150000000, "Теневой найм"),
+            ("Темный арбитраж", 75000000000, 750000000, "Незаконные посреднические услуги")
+        ]
+        
+        self.all_businesses = []
+        
+        # Создаем светлые бизнесы
+        for i, (name, price, income, desc) in enumerate(light_businesses_data):
+            self.all_businesses.append(Business(
+                i + 1, name, price, income, desc, BusinessCategory.LIGHT
+            ))
+        
+        # Создаем тёмные бизнесы
+        for i, (name, price, income, desc) in enumerate(dark_businesses_data):
+            self.all_businesses.append(Business(
+                i + 100, name, price, income, desc, BusinessCategory.DARK
+            ))
+        
+        # Помечаем несколько бизнесов как купленные для демо
+        for i in range(min(3, len(self.all_businesses))):
+            self.all_businesses[i].is_owned = True
+            self.all_businesses[i].level = random.randint(1, 5)
+    
+    def set_category(self, category):
+        """Установка активной категории"""
+        self.current_category = category
+        
+        # Для модальных категорий открываем модальное окно
+        if category == BusinessCategory.MERGE:  # Только для слияния
+            self.open_modal(category)
+        else:
+            self.show_modal = False
+            self.update_business_buttons()
+    
+    def open_modal(self, category):
+        """Открытие модального окна для специальных категорий"""
+        self.show_modal = True
+        self.modal_title = category.value
+        
+        # Заполняем модальное окно в зависимости от категории
+        if category == BusinessCategory.MERGE:
+            self.modal_businesses = ["Бизнес 1 + Бизнес 2", "Премиум слияние", "Мега-корпорация"]
+    
+    def update_business_buttons(self):
+        """Обновление кнопок бизнесов для текущей категории"""
+        self.business_buttons = []
+        
+        # Фильтруем бизнесы по категории
+        category_businesses = [b for b in self.all_businesses if b.category == self.current_category]
+        
+        # Сетка для отображения
+        business_width, business_height = 300, 80
+        start_x = 320
+        start_y = 180
+        spacing = 20
+        columns = 3
+        
+        for i, business in enumerate(category_businesses):
+            row = i // columns
+            col = i % columns
+            
+            x = start_x + col * (business_width + spacing)
+            y = start_y + row * (business_height + spacing)
+            
+            # Прокрутка если бизнесов много
+            if y > 600:
+                continue
+                
+            rect = pygame.Rect(x, y, business_width, business_height)
+            self.business_buttons.append(
+                BusinessButton(rect, business, self.buy_or_upgrade_business)
+            )
+    
+    def buy_or_upgrade_business(self, business):
+        """Покупка или улучшение бизнеса"""
+        try:
+            from coreLogic import ExportDB
+            export_db = ExportDB()
+            balance = export_db.balance()
+            
+            if not business.is_owned:
+                # Покупка бизнеса
+                if balance >= business.price:
+                    # Логика покупки
+                    business.is_owned = True
+                    print(f"Куплен бизнес: {business.name}")
+                    self.update_business_buttons()
+                else:
+                    print("Недостаточно средств для покупки бизнеса")
+            else:
+                # Улучшение бизнеса
+                upgrade_cost = business.price * (business.level * 0.5)
+                if balance >= upgrade_cost and business.level < business.max_level:
+                    # Логика улучшения
+                    business.level += 1
+                    business.income *= 1.5  # Увеличиваем доход
+                    print(f"Улучшен бизнес: {business.name} до уровня {business.level}")
+                    self.update_business_buttons()
+                elif business.level >= business.max_level:
+                    print("Бизнес достиг максимального уровня")
+                else:
+                    print("Недостаточно средств для улучшения")
+                    
+        except Exception as e:
+            print(f"Ошибка при операции с бизнесом: {e}")
+    
+    def draw(self, surface):
+        """Отрисовка меню бизнесов"""
+        # Левая панель навигации
+        nav_panel_rect = pygame.Rect(30, 120, 240, 500)
+        self.draw_panel(surface, nav_panel_rect, (30, 30, 50, 200))
+        
+        # Правая панель с контентом
+        content_panel_rect = pygame.Rect(300, 120, 1100, 600)
+        self.draw_panel(surface, content_panel_rect, (30, 30, 50, 200))
+        
+        # Кнопки навигации
+        for button in self.nav_buttons:
+            button.draw(surface, self.game.font_manager.get_font('button'))
+        
+        # Кнопка назад
+        if self.back_button:
+            icon_x = self.back_button.rect.x + 20
+            icon_y = self.back_button.rect.centery - 12
+            self.game.icon_renderer.draw_back_icon(surface, icon_x, icon_y, 25)
+            self.back_button.draw(surface, self.game.font_manager.get_font('button'), icon_x, icon_y)
+        
+        # Кнопки категорий
+        for button in self.category_buttons:
+            # Подсвечиваем активную категорию
+            button_text = button.text
+            is_active = False
+            for cat in BusinessCategory:
+                if cat.value == button_text and cat == self.current_category:
+                    is_active = True
+                    break
+            
+            # Временно изменяем цвет для активной кнопки
+            original_color = button.hovered
+            if is_active:
+                button.hovered = True  # Визуальное выделение
+                
+            button.draw(surface, self.game.font_manager.get_font('button'), 
+                       button.rect.x + 20, button.rect.centery - 15)
+            
+            if is_active:
+                button.hovered = original_color  # Возвращаем исходное состояние
+        
+        # Заголовок
+        title = self.game.font_manager.get_rendered_text("Бизнесы", 'title', TEXT_PRIMARY, True)
+        surface.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, 150))
+        
+        # Контент в зависимости от категории
+        if not self.show_modal:
+            # Обычное отображение бизнесов
+            if self.current_category in [BusinessCategory.LIGHT, BusinessCategory.DARK]:
+                self.draw_businesses_content(surface)
+            else:
+                self.draw_special_content(surface)
+        else:
+            # Модальное окно
+            self.draw_modal(surface)
+    
+    def draw_businesses_content(self, surface):
+        """Отрисовка списка бизнесов"""
+        # Статистика
+        owned_count = sum(1 for b in self.all_businesses if b.is_owned and b.category == self.current_category)
+        total_count = sum(1 for b in self.all_businesses if b.category == self.current_category)
+        total_income = sum(b.income for b in self.all_businesses if b.is_owned and b.category == self.current_category)
+        
+        stats_text = f"Владеете: {owned_count}/{total_count} | Общий доход: {total_income}$/сек"
+        stats_surf = self.game.font_manager.get_rendered_text(stats_text, 'subtitle', TEXT_SECONDARY)
+        surface.blit(stats_surf, (320, 160))
+        
+        # Список бизнесов
+        for button in self.business_buttons:
+            button.draw(surface, self.game.font_manager.get_font('desc'))
+        
+        # Сообщение если бизнесов нет
+        if not self.business_buttons:
+            no_business_text = "Бизнесы не найдены"
+            text_surf = self.game.font_manager.get_rendered_text(no_business_text, 'subtitle', TEXT_SECONDARY)
+            surface.blit(text_surf, (SCREEN_WIDTH//2 - text_surf.get_width()//2, 300))
+    
+    def draw_special_content(self, surface):
+        """Отрисовка контента для специальных категорий"""
+        if self.current_category == BusinessCategory.MERGE:
+            content_text = "Объединяйте бизнесы для создания мощных корпораций"
+            text_surf = self.game.font_manager.get_rendered_text(content_text, 'subtitle', TEXT_SECONDARY)
+            surface.blit(text_surf, (SCREEN_WIDTH//2 - text_surf.get_width()//2, 200))
+            
+            # Кнопка для открытия модального окна
+            modal_button = Button(
+                pygame.Rect(SCREEN_WIDTH//2 - 100, 250, 200, 60),
+                "Открыть",
+                None,
+                lambda: self.open_modal(self.current_category)
+            )
+            modal_button.draw(surface, self.game.font_manager.get_font('button'), 
+                            SCREEN_WIDTH//2 - 70, 265)
+    
+    def draw_modal(self, surface):
+        """Отрисовка модального окна"""
+        # Затемнение фона
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        surface.blit(overlay, (0, 0))
+        
+        # Модальное окно
+        modal_width, modal_height = 600, 400
+        modal_x = (SCREEN_WIDTH - modal_width) // 2
+        modal_y = (SCREEN_HEIGHT - modal_height) // 2
+        
+        modal_rect = pygame.Rect(modal_x, modal_y, modal_width, modal_height)
+        self.draw_panel(surface, modal_rect, (40, 40, 70, 255))
+        
+        # Заголовок модального окна
+        title_surf = self.game.font_manager.get_rendered_text(self.modal_title, 'title', TEXT_PRIMARY, True)
+        surface.blit(title_surf, (modal_x + (modal_width - title_surf.get_width()) // 2, modal_y + 20))
+        
+        # Содержимое модального окна
+        content_start_y = modal_y + 80
+        for i, item in enumerate(self.modal_businesses):
+            item_rect = pygame.Rect(modal_x + 50, content_start_y + i * 50, modal_width - 100, 40)
+            
+            # Кнопка элемента
+            pygame.draw.rect(surface, (60, 60, 100, 255), item_rect, border_radius=8)
+            pygame.draw.rect(surface, (100, 100, 150, 255), item_rect, width=1, border_radius=8)
+            
+            # Текст элемента
+            item_surf = self.game.font_manager.get_rendered_text(item, 'desc', TEXT_PRIMARY)
+            surface.blit(item_surf, (item_rect.x + 10, item_rect.y + 10))
+        
+        # Кнопка закрытия
+        close_button = Button(
+            pygame.Rect(modal_x + modal_width - 120, modal_y + modal_height - 60, 100, 40),
+            "Закрыть",
+            None,
+            lambda: setattr(self, 'show_modal', False)
+        )
+        close_button.draw(surface, self.game.font_manager.get_font('button'), 
+                         modal_x + modal_width - 90, modal_y + modal_height - 45)
+    
+    def draw_panel(self, surface, rect, color):
+        """Рисует панель с закругленными углами"""
+        pygame.draw.rect(surface, color, rect, border_radius=15)
+        pygame.draw.rect(surface, (100, 100, 150, 255), rect, width=2, border_radius=15)
+    
+    def handle_event(self, event):
+        """Обработка событий меню бизнесов"""
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mouse_pos = pygame.mouse.get_pos()
+            
+            # Обработка модального окна
+            if self.show_modal:
+                # Проверяем клик по кнопке закрытия
+                modal_width, modal_height = 600, 400
+                modal_x = (SCREEN_WIDTH - modal_width) // 2
+                modal_y = (SCREEN_HEIGHT - modal_height) // 2
+                
+                close_rect = pygame.Rect(modal_x + modal_width - 120, modal_y + modal_height - 60, 100, 40)
+                if close_rect.collidepoint(mouse_pos):
+                    self.show_modal = False
+                    return True
+                
+                # Клик вне модального окна закрывает его
+                modal_rect = pygame.Rect(modal_x, modal_y, modal_width, modal_height)
+                if not modal_rect.collidepoint(mouse_pos):
+                    self.show_modal = False
+                    return True
+            
+            # Навигационные кнопки
+            for button in self.nav_buttons:
+                if button.rect.collidepoint(mouse_pos):
+                    button.click()
+                    self.game.update_navigation_state(button.text)
+                    return True
+            
+            # Кнопка назад
+            if self.back_button.rect.collidepoint(mouse_pos):
+                self.back_button.click()
+                return True
+            
+            # Кнопки категорий
+            for button in self.category_buttons:
+                if button.rect.collidepoint(mouse_pos):
+                    button.click()
+                    return True
+            
+            # Кнопки бизнесов (только если не открыто модальное окно)
+            if not self.show_modal and self.current_category in [BusinessCategory.LIGHT, BusinessCategory.DARK]:
+                for button in self.business_buttons:
+                    if button.rect.collidepoint(mouse_pos):
+                        button.click()
+                        return True
+        
+        elif event.type == pygame.MOUSEMOTION:
+            mouse_pos = pygame.mouse.get_pos()
+            
+            # Обновление состояния наведения для кнопок бизнесов
+            for button in self.business_buttons:
+                button.hovered = button.rect.collidepoint(mouse_pos)
+            
+            # Обновление состояния наведения для категорий
+            for button in self.category_buttons:
+                button.hovered = button.rect.collidepoint(mouse_pos)
         
         return False
+    
+class ProfileMenu:
+    """Простое меню профиля без скролла."""
+    
+    def __init__(self, game):
+        self.game = game
+        self.nav_buttons = []
+        self.card_buttons = []  # Кнопки в карточках
+        self.initialize_ui()
+        
+        # Данные профиля
+        self.profile_data = {
+            "balance": "1,250,000$",
+            "level": 15,
+            "username": "Игрок123",
+            "daily_reward_available": True,
+            "tax_amount": "25,000$"
+        }
+    
+    def initialize_ui(self):
+        """Инициализация UI элементов профиля."""
+        # Кнопки левой панели навигации
+        nav_buttons = [
+            ("Кликер", lambda: self.game.play_game(), False),
+            ("Магазины", lambda: self.game.open_shop_selection(), False),
+            ("Инвестиции", lambda: self.game.open_investments(), False),
+            ("Бизнесы", lambda: self.game.open_businesses(), False),
+            ("Профиль", lambda: None, True)  # Активная кнопка
+        ]
+        
+        # Создаем кнопки навигации
+        button_width, button_height = 200, 60
+        button_x = 50
+        button_y_start = 150
+        
+        for i, (text, action, is_active) in enumerate(nav_buttons):
+            rect = pygame.Rect(button_x, button_y_start + i * 70, button_width, button_height)
+            self.nav_buttons.append(NavButton(rect, text, action, is_active))
+        
+        # Кнопка назад
+        self.back_button = Button(
+            pygame.Rect(300, 50, 200, 60),
+            "Назад",
+            None,
+            lambda: self.game.back_to_menu()
+        )
+    
+    def draw(self, surface):
+        """Отрисовка меню профиля."""
+        # Левая панель навигации
+        nav_panel_rect = pygame.Rect(30, 120, 240, 500)
+        self.draw_panel(surface, nav_panel_rect, (20, 25, 35, 255))
+        
+        # Основная область контента
+        content_panel_rect = pygame.Rect(300, 120, 1100, 600)
+        self.draw_panel(surface, content_panel_rect, (26, 34, 48, 255))
+        
+        # Кнопки навигации
+        for button in self.nav_buttons:
+            button.draw(surface, self.game.font_manager.get_font('button'))
+        
+        # Кнопка назад
+        if self.back_button:
+            icon_x = self.back_button.rect.x + 20
+            icon_y = self.back_button.rect.centery - 12
+            self.game.icon_renderer.draw_back_icon(surface, icon_x, icon_y, 25)
+            self.back_button.draw(surface, self.game.font_manager.get_font('button'), icon_x, icon_y)
+        
+        # Заголовок профиля
+        title = self.game.font_manager.get_rendered_text("Профиль Игрока", 'title', (255, 255, 255), True)
+        surface.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, 140))
+        
+        # Статистика профиля
+        self.draw_profile_stats(surface, 320, 180)
+        
+        # Карточки профиля (компактные, чтобы все поместилось)
+        self.draw_profile_cards(surface, 320, 250)
+    
+    def draw_panel(self, surface, rect, color):
+        """Рисует панель с градиентом."""
+        gradient = GradientGenerator.create_vertical_gradient(
+            (rect.width, rect.height), 
+            [(15, 20, 30, 255), (12, 18, 32, 255), (10, 15, 25, 255)]
+        )
+        surface.blit(gradient, rect.topleft)
+        pygame.draw.rect(surface, (40, 50, 70, 255), rect, width=2, border_radius=15)
+    
+    def draw_profile_stats(self, surface, x, y):
+        """Рисует статистику профиля."""
+        stats_rect = pygame.Rect(x, y, 1060, 60)
+        
+        # Фон статистики
+        stats_gradient = GradientGenerator.create_vertical_gradient(
+            (stats_rect.width, stats_rect.height),
+            [(0, 100, 200, 150), (0, 80, 180, 150), (0, 60, 160, 150)]
+        )
+        surface.blit(stats_gradient, stats_rect.topleft)
+        pygame.draw.rect(surface, (0, 150, 255, 255), stats_rect, width=2, border_radius=10)
+        
+        # Данные статистики
+        stats_font = self.game.font_manager.get_font('desc')
+        texts = [
+            f"Баланс: {self.profile_data['balance']}",
+            f"Уровень: {self.profile_data['level']}",
+            f"Игрок: {self.profile_data['username']}"
+        ]
+        
+        # Равномерное распределение текста
+        for i, text in enumerate(texts):
+            text_surf = stats_font.render(text, True, (255, 255, 255))
+            text_x = x + 20 + i * (1060 // len(texts))
+            surface.blit(text_surf, (text_x, y + 20))
+    
+    def draw_profile_cards(self, surface, x, y):
+        """Рисует компактные карточки профиля."""
+        cards_data = self.get_cards_data()
+        card_width = 1060
+        card_height = 80  # Компактная высота
+        spacing = 15      # Уменьшенный отступ
+        
+        self.card_buttons = []  # Очищаем старые кнопки
+        
+        for i, card_data in enumerate(cards_data):
+            card_y = y + i * (card_height + spacing)
+            card_rect = pygame.Rect(x, card_y, card_width, card_height)
+            
+            # Рисуем карточку
+            self.draw_profile_card(surface, card_rect, card_data, i)
+    
+    def draw_profile_card(self, surface, rect, card_data, card_index):
+        """Рисует одну карточку профиля."""
+        # Фон карточки
+        card_gradient = GradientGenerator.create_vertical_gradient(
+            (rect.width, rect.height),
+            [(40, 45, 60, 255), (35, 40, 55, 255), (30, 35, 50, 255)]
+        )
+        surface.blit(card_gradient, rect.topleft)
+        
+        # Тень
+        shadow = pygame.Surface((rect.width + 6, rect.height + 6), pygame.SRCALPHA)
+        pygame.draw.rect(shadow, (0, 0, 0, 80), (3, 3, rect.width, rect.height), border_radius=10)
+        surface.blit(shadow, (rect.x - 3, rect.y - 3))
+        
+        # Рамка
+        pygame.draw.rect(surface, (70, 90, 130, 255), rect, width=1, border_radius=10)
+        
+        # Заголовок карточки
+        title_font = self.game.font_manager.get_font('desc')
+        title_surf = title_font.render(card_data["title"], True, (255, 255, 255))
+        surface.blit(title_surf, (rect.x + 15, rect.y + 10))
+        
+        # Содержимое карточки (укороченное)
+        content_text = card_data["content"][0] if card_data["content"] else ""
+        if len(content_text) > 60:  # Обрезаем длинный текст
+            content_text = content_text[:57] + "..."
+        
+        content_font = self.game.font_manager.get_font('desc')
+        content_surf = content_font.render(content_text, True, (200, 200, 200))
+        surface.blit(content_surf, (rect.x + 15, rect.y + 35))
+        
+        # Кнопка если есть (компактная)
+        if "button" in card_data:
+            button_rect = pygame.Rect(rect.x + rect.width - 200, rect.y + 20, 180, 40)
+            
+            # Сохраняем кнопку для обработки кликов
+            self.card_buttons.append({
+                "rect": button_rect,
+                "action": card_data["button"]["action"],
+                "text": card_data["button"]["text"]
+            })
+            
+            # Рисуем кнопку
+            self.draw_card_button(surface, button_rect, card_data["button"]["text"])
+    
+    def draw_card_button(self, surface, rect, button_text):
+        """Рисует компактную кнопку в карточке."""
+        # Градиент кнопки
+        button_gradient = GradientGenerator.create_vertical_gradient(
+            (rect.width, rect.height),
+            [(0, 150, 255, 200), (0, 120, 220, 200), (0, 100, 200, 200)]
+        )
+        surface.blit(button_gradient, rect.topleft)
+        
+        # Рамка кнопки
+        pygame.draw.rect(surface, (0, 200, 255, 255), rect, width=1, border_radius=8)
+        
+        # Текст кнопки (уменьшенный)
+        button_font = pygame.font.Font(None, 20)  # Уменьшенный шрифт
+        button_surf = button_font.render(button_text, True, (255, 255, 255))
+        button_rect_center = button_surf.get_rect(center=rect.center)
+        surface.blit(button_surf, button_rect_center)
+    
+    def get_cards_data(self):
+        """Возвращает данные для компактных карточек профиля."""
+        return [
+            {
+                "title": "🎁 Ежедневная награда",
+                "content": ["Готово к получению! Награда: 10,000$"],
+                "button": {"text": "Получить", "action": self.claim_daily_reward}
+            },
+            {
+                "title": "💼 Налоги и сборы", 
+                "content": [f"Общая сумма: {self.profile_data['tax_amount']}"],
+                "button": {"text": "Оплатить", "action": self.pay_all_taxes}
+            },
+            {
+                "title": "🏠 Резиденция",
+                "content": ["Пентхаус Уровень 5 | Доход: 5,000$/день"],
+                "button": {"text": "Управление", "action": self.open_residence_management}
+            },
+            {
+                "title": "🎒 Инвентарь",
+                "content": ["4 категории | 16 предметов"],
+                "button": {"text": "Просмотр", "action": self.show_inventory}
+            },
+            {
+                "title": "📊 Достижения",
+                "content": ["15/20 завершено | 65% прогресс"],
+                "button": {"text": "Подробнее", "action": self.show_achievements}
+            },
+            {
+                "title": "⚙️ Настройки",
+                "content": ["Персонализация и управление"],
+                "button": {"text": "Настроить", "action": self.open_settings}
+            }
+        ]
+    
+    def handle_event(self, event):
+        """Обработка событий меню профиля."""
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mouse_pos = pygame.mouse.get_pos()
+            
+            # Навигационные кнопки
+            for button in self.nav_buttons:
+                if button.rect.collidepoint(mouse_pos):
+                    button.click()
+                    self.game.update_navigation_state(button.text)
+                    return True
+            
+            # Кнопка назад
+            if self.back_button.rect.collidepoint(mouse_pos):
+                self.back_button.click()
+                return True
+            
+            # Кнопки в карточках
+            for button_data in self.card_buttons:
+                if button_data["rect"].collidepoint(mouse_pos):
+                    try:
+                        button_data["action"]()
+                        return True
+                    except Exception as e:
+                        print(f"Ошибка при выполнении действия: {e}")
+                        return True
+        
+        return False
+    
+    # Методы действий кнопок
+    def claim_daily_reward(self):
+        print("🎁 Ежедневная награда получена!")
+        # Здесь можно добавить логику выдачи награды
+    
+    def pay_all_taxes(self):
+        print("💼 Налоги оплачены!")
+        # Логика оплаты налогов
+    
+    def open_residence_management(self):
+        print("🏠 Управление резиденцией открыто!")
+        # Переход к управлению резиденцией
+    
+    def show_inventory(self):
+        print("🎒 Инвентарь открыт!")
+        # Просмотр инвентаря
+    
+    def show_achievements(self):
+        print("📊 Достижения открыты!")
+        # Просмотр достижений
+    
+    def open_settings(self):
+        print("⚙️ Настройки открыты!")
+        self.game.open_settings()  # Переход в настройки игры
 
 class Game:
     """Основной класс игры."""
@@ -1882,6 +2748,8 @@ class Game:
         self.light_category_products_menu = LightCategoryProductsMenu(self)
         self.black_market_category_products_menu = BlackMarketCategoryProductsMenu(self)
         self.black_market_menu = BlackMarketMenu(self)
+        self.business_menu = BusinessMenu(self)
+        self.profile_menu = ProfileMenu(self)
         
         
         # Получаем доступные опции из config.json
@@ -1997,7 +2865,8 @@ class Game:
             getattr(self, 'investment_menu', None),
             getattr(self, 'shop_selection_menu', None),
             getattr(self, 'light_shop_menu', None),
-            getattr(self, 'black_market_menu', None)
+            getattr(self, 'black_market_menu', None),
+            getattr(self, 'business_menu', None)  # ДОБАВИТЬ бизнес-меню
         ]
         
         for menu in menus:
@@ -2011,8 +2880,7 @@ class Game:
                 
                 if buttons:
                     for button in buttons:
-                        if (hasattr(button, 'text') and hasattr(button, 'is_active') and 
-                            hasattr(button, 'is_active')):
+                        if (hasattr(button, 'text') and hasattr(button, 'is_active')):
                             button.is_active = (button.text == active_button_text)
 
     def play_game(self):
@@ -2045,6 +2913,18 @@ class Game:
             self.update_navigation_state("Магазины")
             print("Открытие черного рынка...")
 
+    def open_businesses(self):
+        """Открывает меню бизнесов."""
+        self.state = ScreenState.BUSINESSES
+        self.update_navigation_state("Бизнесы")
+        print("Открытие бизнесов...")
+
+    def open_profile(self):
+        """Открывает меню профиля."""
+        self.state = ScreenState.PROFILE
+        self.update_navigation_state("Профиль")
+        print("Открытие профиля...")
+
     def open_settings(self):
         """Открывает меню настроек."""
         self.state = ScreenState.SETTINGS
@@ -2070,7 +2950,7 @@ class Game:
                 "своего бизнеса. Пройди — это вызов —",
                 "старте."
             ],
-            'version': "v0.0.1"
+            'version': "v" + GAME_VERSION
         }
         
         # Панели главного меню
@@ -2080,18 +2960,18 @@ class Game:
         button_width, button_height = 460, 65
         button_y_start = self.right_panel_rect.y + 200
         
-        # Исправленные кнопки
+        # ОБНОВЛЕННЫЕ кнопки с изображениями
         self.buttons = [
             Button(
                 pygame.Rect(self.right_panel_rect.x + 60, button_y_start, button_width, button_height),
                 "Играть", 
-                lambda surface, icon_x, icon_y, size=30: self.icon_renderer.draw_play_icon(surface, icon_x, icon_y, size), 
+                lambda surface, icon_x, icon_y, size=30: self.icon_renderer.draw_play_image_icon(surface, icon_x, icon_y, size), 
                 self.play_game
             ),
             Button(
                 pygame.Rect(self.right_panel_rect.x + 60, button_y_start + 100, button_width, button_height),
                 "Настройки", 
-                lambda surface, icon_x, icon_y, size=40: self.icon_renderer.draw_settings_icon(surface, icon_x, icon_y, size), 
+                lambda surface, icon_x, icon_y, size=30: self.icon_renderer.draw_settings_image_icon(surface, icon_x, icon_y, size), 
                 self.open_settings
             ),
             Button(
@@ -2213,7 +3093,8 @@ class Game:
                         self.running = False
                     elif self.state in [ScreenState.SETTINGS, ScreenState.CLICKER, ScreenState.INVESTMENTS, 
                                     ScreenState.SHOP_SELECTION, ScreenState.SHOP, ScreenState.SHOP_CATEGORY,
-                                    ScreenState.BLACK_MARKET, ScreenState.BLACK_MARKET_CATEGORY]:
+                                    ScreenState.BLACK_MARKET, ScreenState.BLACK_MARKET_CATEGORY,
+                                    ScreenState.BUSINESSES]:  # ДОБАВИТЬ BUSINESSES
                         self.back_to_menu()
                     else:
                         self.running = False
@@ -2221,7 +3102,6 @@ class Game:
             # Флаг для отслеживания обработки dropdown событий
             dropdown_handled = False
             
-            # ИСПРАВЛЯЕМ порядок обработки событий:
             # Сначала обрабатываем специфичные для состояния события
             if self.state == ScreenState.CLICKER:
                 if self.clicker_menu.handle_event(event):
@@ -2234,6 +3114,14 @@ class Game:
             elif self.state in [ScreenState.SHOP_SELECTION, ScreenState.SHOP, ScreenState.SHOP_CATEGORY, 
                             ScreenState.BLACK_MARKET, ScreenState.BLACK_MARKET_CATEGORY]:
                 if self.handle_shop_events(event, mouse_pos):
+                    continue
+            
+            # ДОБАВИТЬ обработку для BUSINESSES
+            elif self.state == ScreenState.BUSINESSES:
+                if self.business_menu.handle_event(event):
+                    continue
+            elif self.state == ScreenState.PROFILE:
+                if self.profile_menu.handle_event(event):
                     continue
             
             # Затем обрабатываем dropdown события (только для настроек)
@@ -2275,24 +3163,10 @@ class Game:
                         if not click_on_dropdown:
                             Dropdown.close_all_dropdowns()
                 
-                if event.type == pygame.MOUSEMOTION:
+                elif event.type == pygame.MOUSEMOTION:
                     mouse_pos = pygame.mouse.get_pos()
                     self.back_button.hovered = self.back_button.is_hovered(mouse_pos)
                     self.apply_button.hovered = self.apply_button.is_hovered(mouse_pos)
-                
-                elif self.state == ScreenState.CLICKER:
-                    if self.clicker_menu.handle_event(event):
-                        continue
-
-                elif self.state == ScreenState.INVESTMENTS:
-                    if self.investment_menu.handle_event(event):
-                        continue
-
-            # Обработка магазинов
-            elif self.state in [ScreenState.SHOP_SELECTION, ScreenState.SHOP, ScreenState.SHOP_CATEGORY, ScreenState.BLACK_MARKET, ScreenState.BLACK_MARKET_CATEGORY]:
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    mouse_pos = pygame.mouse.get_pos()
-                    self.handle_shop_events(event, mouse_pos)
         
     def run(self):
         """Основной игровой цикл."""
@@ -2348,6 +3222,10 @@ class Game:
                 self.black_market_menu.draw(self.screen)
             elif self.state == ScreenState.BLACK_MARKET_CATEGORY:
                 self.black_market_category_products_menu.draw(self.screen)
+            elif self.state == ScreenState.BUSINESSES:
+                self.business_menu.draw(self.screen)
+            elif self.state == ScreenState.PROFILE:
+                self.profile_menu.draw(self.screen)
             
             pygame.display.flip()
             self.clock.tick(60)

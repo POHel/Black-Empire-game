@@ -96,7 +96,7 @@ class ExportDB:
 	def get_bag(self):
 		connect = sqlite3.connect("data/data.db")
 		cursor = connect.cursor()
-		cursor.execute("""SELECT all_moneys_bag, dividend_yield, stable_income, growth_potential, rental_income FROM my_bag""")
+		cursor.execute('SELECT all_moneys_bag, dividend_yield, stable_income, growth_potential, rental_income FROM my_bag')
 		result = cursor.fetchall()
 		for results in result:
 			return results
@@ -169,6 +169,81 @@ class ExportDB:
 		result = [row[0] for row in cursor.fetchall()]
 		connect.close()
 		return result
+
+	# White shop
+	# получение островов для магазина
+	def get_shop_islands(self):
+		connect = sqlite3.connect("data/white_shop.db")
+		cursor = connect.cursor()
+		cursor.execute('SELECT id, name_island, price_island, description FROM island')
+		result = cursor.fetchall()
+		for results in result:
+			return results
+		connect.close()
+
+	# получение бустеров для магазина
+	def get_shop_boosters(self):
+		connect = sqlite3.connect("data/white_shop.db")
+		cursor = connect.cursor()
+		cursor.execute('SELECT id, name_boosters, price_boosters, description, time_boosters, increase_income FROM boosters')
+		result = cursor.fetchall()
+		for results in result:
+			return results
+		connect.close()
+
+	def get_shop_nft(self):
+		connect = sqlite3.connect("data/white_shop.db")
+		cursor = connect.cursor()
+		cursor.execute('SELECT id, name_NFT, price_NFT, description FROM NFT')
+		result = cursor.fetchall()
+		for results in result:
+			return results
+		connect.close()
+
+	def get_shop_cars(self):
+		connect = sqlite3.connect("data/white_shop.db")
+		cursor = connect.cursor()
+		cursor.execute('SELECT id, name_cars, price_cars, description, type, max_speed FROM cars')
+		result = cursor.fetchall()
+		for results in result:
+			return results
+		connect.close()
+	
+	def get_shop_u_items(self):
+		connect = sqlite3.connect("data/white_shop.db")
+		cursor = connect.cursor()
+		cursor.execute('SELECT id, name_unique_items, price_unique_items, description FROM unique_items')
+		result = cursor.fetchall()
+		for results in result:
+			return results
+		connect.close()
+
+	def get_shop_yachts(self):
+		connect = sqlite3.connect("data/white_shop.db")
+		cursor = connect.cursor()
+		cursor.execute('SELECT id, name_yacht, price_yacht, description FROM yacht')
+		result = cursor.fetchall()
+		for results in result:
+			return results
+		connect.close()
+		
+	def get_shop_planes(self):
+		connect = sqlite3.connect("data/white_shop.db")
+		cursor = connect.cursor()
+		cursor.execute('SELECT id, name_airplanes, price_airplanes, description FROM airplanes')
+		result = cursor.fetchall()
+		for results in result:
+			return results
+		connect.close()
+
+	def get_shop_jewelry(self):
+		connect = sqlite3.connect("data/white_shop.db")
+		cursor = connect.cursor()
+		cursor.execute('SELECT id, name_jewelry, price_jewelry, description FROM jewelry')
+		result = cursor.fetchall()
+		for results in result:
+			return results
+		connect.close()
 
 #класс для обновления в базе данных	
 class UpdateDB:

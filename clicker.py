@@ -59,15 +59,15 @@ class Particle:
         self.lifetime -= dt
         self.alive = self.lifetime > 0
     
-#    def draw(self, surface: pygame.Surface):
-#        alpha = int(255 * (self.lifetime / self.max_lifetime))
-#        
-#        # Создаем поверхность для частицы с альфа-каналом
-#        particle_surface = pygame.Surface((self.size * 2, self.size * 2), pygame.SRCALPHA)
-#        pygame.draw.circle(particle_surface, (self.color, alpha), (self.size, self.size), self.size)
+    def draw(self, surface: pygame.Surface):
+        alpha = int(255 * (self.lifetime / self.max_lifetime))
+        
+        # Создаем поверхность для частицы с альфа-каналом
+        particle_surface = pygame.Surface((self.size * 2, self.size * 2), pygame.SRCALPHA)
+        pygame.draw.circle(particle_surface, (self.color, alpha), (self.size, self.size), self.size)
         
         # Рисуем частицу на основной поверхности
-#        surface.blit(particle_surface, (int(self.x - self.size), int(self.y - self.size)))
+        surface.blit(particle_surface, (int(self.x - self.size), int(self.y - self.size)))
 
 # Всплывающий текст
 class FloatingText:
@@ -420,9 +420,6 @@ class CorporateClicker:
                         (self.config.screen_width // 2 - instruction_text.get_width() // 2, 
                          self.config.screen_height - 80))
         
-        # Отрисовываем частицы поверх всего
-#        for particle in self.particles:
-#            particle.draw(self.screen)
         
         # Отрисовываем всплывающий текст
         for text in self.floating_texts:

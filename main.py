@@ -2808,10 +2808,10 @@ class ModernBusinessMenu:
         ]
         
         # Кнопки открытия каталога
-        self.open_light_btn = ModernBusinessButton(pygame.Rect(820, 100, 150, 40), 
-                                                 "Открыть светлые", lambda: self.open_catalog("light"))
-        self.open_dark_btn = ModernBusinessButton(pygame.Rect(980, 100, 150, 40), 
-                                                "Открыть тёмные", lambda: self.open_catalog("dark"))
+        #self.open_light_btn = ModernBusinessButton(pygame.Rect(820, 100, 150, 40), 
+                                                 #"Открыть светлые", lambda: self.open_catalog("light"))
+        #self.open_dark_btn = ModernBusinessButton(pygame.Rect(980, 100, 150, 40), 
+                                                #"Открыть тёмные", lambda: self.open_catalog("dark"))
     
     def open_catalog(self, category: str):
         """Открытие каталога бизнесов"""
@@ -3024,9 +3024,9 @@ class ModernBusinessMenu:
             tab.draw(surface, None)
         
         # Кнопки каталога (только в режиме моих бизнесов)
-        if self.current_view == "mine":
-            self.open_light_btn.draw(surface, None)
-            self.open_dark_btn.draw(surface, None)
+        #if self.current_view == "mine":
+        #    self.open_light_btn.draw(surface, None)
+        #    self.open_dark_btn.draw(surface, None)
     
     def draw_my_businesses(self, surface):
         """Отрисовка моих бизнесов"""
@@ -3329,13 +3329,13 @@ class ModernBusinessMenu:
                     return
             
             # Кнопки открытия каталога
-            if self.current_view == "mine":
-                if self.open_light_btn.is_clicked(pos):
-                    self.open_light_btn.on_click()
-                    return
-                if self.open_dark_btn.is_clicked(pos):
-                    self.open_dark_btn.on_click()
-                    return
+            #if self.current_view == "mine":
+            #    if self.open_light_btn.is_clicked(pos):
+            #        self.open_light_btn.on_click()
+            #        return
+            #    if self.open_dark_btn.is_clicked(pos):
+            #        self.open_dark_btn.on_click()
+            #        return
             
             # Карточки бизнесов
             if self.current_view == "mine":
@@ -3365,11 +3365,11 @@ class ModernBusinessMenu:
             for button in self.nav_buttons + self.tab_buttons + self.buttons:
                 button.update_hover(pos)
             
-            if self.current_view == "mine":
-                self.open_light_btn.update_hover(pos)
-                self.open_dark_btn.update_hover(pos)
-                for card in self.business_cards:
-                    card.update_hover(pos)
+            #if self.current_view == "mine":
+            #    self.open_light_btn.update_hover(pos)
+            #    self.open_dark_btn.update_hover(pos)
+            #    for card in self.business_cards:
+            #        card.update_hover(pos)
     
     def update(self):
         """Обновление состояния меню"""

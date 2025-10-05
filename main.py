@@ -69,6 +69,7 @@ class BusinessStats:
     employee_count: int = 0
     customer_satisfaction: float = 100  # 0-100%
     market_share: float = 0  # 0-100%
+    
 
 class BusinessTier(Enum):
     """Уровни бизнеса"""
@@ -491,7 +492,7 @@ class IconRenderer:
 class Button:
     """Интерактивная кнопка с увеличенным закруглением."""
     
-    def __init__(self, rect, text, icon_renderer=None, action=None, icon_size=30):
+    def __init__(self, rect, text, icon_renderer=None, action=None, icon_size=30, is_active=False):
         self.rect = rect
         self.text = text
         self.icon_renderer = icon_renderer
@@ -500,6 +501,7 @@ class Button:
         self.cache = {}
         self.click_animation = 0
         self.icon_size = icon_size
+        self.is_active = is_active  # Добавляем атрибут активности
     
     def draw(self, surface, font, icon_x, icon_y):
         state_key = (self.rect.width, self.rect.height, self.hovered, int(self.click_animation * 10))
@@ -873,32 +875,32 @@ class GameConfig:
             "particle_duration": 700
         }
 
-# class Particle:
-#     """Класс для частиц (упрощенная версия)"""
-#     def __init__(self, x, y, color, size, velocity, duration=1.0):
-#         self.x = x
-#         self.y = y
-#         self.color = color
-#         self.size = size
-#         self.velocity = velocity
-#         self.duration = duration
-#         self.lifetime = 0
-#         self.alive = True
+class Particle:
+     """Класс для частиц (упрощенная версия)"""
+     def __init__(self, x, y, color, size, velocity, duration=1.0):
+         self.x = x
+         self.y = y
+         self.color = color
+         self.size = size
+         self.velocity = velocity
+         self.duration = duration
+         self.lifetime = 0
+         self.alive = True
     
-#     def update(self, dt):
-#         self.lifetime += dt
-#         if self.lifetime >= self.duration:
-#             self.alive = False
-#         else:
-#             self.x += self.velocity[0] * dt
-#             self.y += self.velocity[1] * dt
+     def update(self, dt):
+         self.lifetime += dt
+         if self.lifetime >= self.duration:
+             self.alive = False
+         else:
+             self.x += self.velocity[0] * dt
+             self.y += self.velocity[1] * dt
     
-#     def draw(self, surface):
-#         alpha = 255 * (1 - self.lifetime / self.duration)
-#         color_with_alpha = (*self.color, int(alpha))
-#         particle_surface = pygame.Surface((self.size * 2, self.size * 2), pygame.SRCALPHA)
-#         pygame.draw.circle(particle_surface, color_with_alpha, (self.size, self.size), self.size)
-#         surface.blit(particle_surface, (int(self.x - self.size), int(self.y - self.size)))
+     def draw(self, surface):
+         alpha = 255 * (1 - self.lifetime / self.duration)
+         color_with_alpha = (*self.color, int(alpha))
+         particle_surface = pygame.Surface((self.size * 2, self.size * 2), pygame.SRCALPHA)
+         pygame.draw.circle(particle_surface, color_with_alpha, (self.size, self.size), self.size)
+         surface.blit(particle_surface, (int(self.x - self.size), int(self.y - self.size)))
 
 # Всплывающий текст
 class FloatingText:
@@ -1596,6 +1598,7 @@ class ShopCategory(Enum):
     YACHTS = "Яхты"
     PLANES = "Самолёты"
     RESIDENCE = "Резиденция"
+    JEWELRY = "Ювелирные изделия"
 
 class BlackMarketCategory(Enum):
     WEAPONS = "Оружия"
@@ -1633,40 +1636,73 @@ class ShopSystem:
             # Очищаем предыдущие продукты
             self.products = []
 
-
             if self.current_shop == "light":
                 if category == ShopCategory.ISLANDS:
-                    islands = self.export.get_shop_islands() 
-                    self.products.append(Product(islands[0], islands[1], islands[2], islands[3], category.value))
+                    islands = self.export.get_shop_islands()
+                    if islands is not None:
+                        self.products.append(Product(islands[0], islands[1], islands[2], islands[3], category.value))
+                    else:
+                        print("Таблица островов пуста или не найдена, используем демо-данные")
+                        self.load_demo_products(category)
 
                 elif category == ShopCategory.BOOSTERS:
                     boosters = self.export.get_shop_boosters()
-                    self.products.append(Product(boosters[0], boosters[1], boosters[2], boosters[3], category.value))
+                    if boosters is not None:
+                        self.products.append(Product(boosters[0], boosters[1], boosters[2], boosters[3], category.value))
+                        # Если boosters содержит несколько бустеров, добавьте их все
+                        # Например: for booster in boosters: self.products.append(Product(...))
+                    else:
+                        print("Таблица бустеров пуста или не найдена, используем демо-данные")
+                        self.load_demo_products(category)
 
                 elif category == ShopCategory.NFT:
                     NFT = self.export.get_shop_nft()
-                    self.products.append(Product(NFT[0], NFT[1], NFT[2], NFT[3], category.value))
+                    if NFT is not None:
+                        self.products.append(Product(NFT[0], NFT[1], NFT[2], NFT[3], category.value))
+                    else:
+                        print("Таблица NFT пуста или не найдена, используем демо-данные")
+                        self.load_demo_products(category)
 
                 elif category == ShopCategory.CARS:
                     cars = self.export.get_shop_cars()
-                    stats = {"type": cars[4], "max_speed": cars[5]}
-                    self.products.append(Product(cars[0], cars[1], cars[2], cars[3], category.value, stats))
+                    if cars is not None:
+                        stats = {"type": cars[4], "max_speed": cars[5]}
+                        self.products.append(Product(cars[0], cars[1], cars[2], cars[3], category.value, cars[4]))
+                    else:
+                        print("Таблица машин пуста или не найдена, используем демо-данные")
+                        self.load_demo_products(category)
 
                 elif category == ShopCategory.UNIQUE_ITEMS:
                     items = self.export.get_shop_u_items()
-                    self.products.append(Product(items[0], items[1], items[2], items[3], category.value))
+                    if items is not None:
+                        self.products.append(Product(items[0], items[1], items[2], items[3], category.value))
+                    else:
+                        print("Таблица уникальных предметов пуста или не найдена, используем демо-данные")
+                        self.load_demo_products(category)
 
                 elif category == ShopCategory.YACHTS:
                     yachts = self.export.get_shop_yachts()
-                    self.products.append(Product(yachts[0], yachts[1], yachts[2], yachts[3], category.value))
+                    if yachts is not None:
+                        self.products.append(Product(yachts[0], yachts[1], yachts[2], yachts[3], category.value))
+                    else:
+                        print("Таблица яхт пуста или не найдена, используем демо-данные")
+                        self.load_demo_products(category)
 
                 elif category == ShopCategory.PLANES:
                     planes = self.export.get_shop_planes()
-                    self.products.append(Product(planes[0], planes[1], planes[2], planes[3], category.value))
+                    if planes is not None:
+                        self.products.append(Product(planes[0], planes[1], planes[2], planes[3], category.value))
+                    else:
+                        print("Таблица самолетов пуста или не найдена, используем демо-данные")
+                        self.load_demo_products(category)
 
                 elif category == ShopCategory.JEWELRY:
                     jewelry = self.export.get_shop_jewelry()
-                    self.products.append(Product(jewelry[0], jewelry[1], jewelry[2], jewelry[3], category.value))     
+                    if jewelry is not None:
+                        self.products.append(Product(jewelry[0], jewelry[1], jewelry[2], jewelry[3], category.value))
+                    else:
+                        print("Таблица ювелирных изделий пуста или не найдена, используем демо-данные")
+                        self.load_demo_products(category)   
                 
                 # Добавьте другие категории по аналогии
                 else:
@@ -2522,6 +2558,12 @@ class BusinessManager:
         self.last_income_time = pygame.time.get_ticks()
         
         self.load_businesses()
+        self.load_owned_businesses()
+
+    def load_owned_businesses(self):
+        """Загружает купленные бизнесы"""
+        self.owned_businesses = [b for b in self.businesses if b.is_owned]
+        print(f"Загружено {len(self.owned_businesses)} купленных бизнесов")
     
     def load_businesses(self):
         """Загрузка бизнесов из базы данных или создание по умолчанию"""
@@ -2678,7 +2720,7 @@ class BusinessManager:
             print(f"Ошибка сохранения бизнесов: {e}")
     
     def buy_business(self, business_id):
-        """Покупка бизнеса"""
+        """Покупка бизнеса с улучшенной обработкой"""
         business = next((b for b in self.businesses if b.id == business_id), None)
         if not business or business.is_owned:
             return False
@@ -2689,16 +2731,26 @@ class BusinessManager:
         balance = export_db.balance()
         
         if balance >= business.base_price:
-            # Логика покупки
-            business.is_owned = True
-            self.owned_businesses.append(business)
-            
-            # Обновляем баланс
-            self.update_balance(-business.base_price)
-            
-            self.save_to_database()
-            return True
+            try:
+                # Логика покупки
+                business.is_owned = True
+                business.is_active = True
+                self.owned_businesses.append(business)
+                
+                # Обновляем баланс
+                self.update_balance(-business.base_price)
+                
+                # Сохраняем в БД
+                self.save_to_database()
+                
+                print(f"Бизнес '{business.name}' успешно куплен!")
+                return True
+                
+            except Exception as e:
+                print(f"Ошибка при покупке бизнеса: {e}")
+                return False
         
+        print("Недостаточно средств для покупки бизнеса")
         return False
     
     def sell_business(self, business_id):
@@ -2795,24 +2847,92 @@ class BusinessManager:
                 total += business.get_net_income()
         return total / 10  # Приводим к доходу в секунду
 
+class BusinessActionButton:
+    """Специальная кнопка для действий с бизнесом"""
+    
+    def __init__(self, rect, text, action, button_type):
+        self.rect = rect
+        self.text = text
+        self.action = action
+        self.button_type = button_type  # "buy", "upgrade", "sell", "toggle", "back"
+        self.hovered = False
+    
+    def draw(self, surface, font):
+        """Отрисовка кнопки"""
+        # Цвет в зависимости от типа кнопки
+        if self.button_type == "buy":
+            base_colors = [(0, 150, 0), (0, 120, 0), (0, 100, 0)]
+        elif self.button_type == "upgrade":
+            base_colors = [(0, 100, 200), (0, 80, 180), (0, 60, 160)]
+        elif self.button_type == "sell":
+            base_colors = [(200, 100, 0), (180, 80, 0), (160, 60, 0)]
+        elif self.button_type == "toggle":
+            base_colors = [(150, 150, 0), (120, 120, 0), (100, 100, 0)]
+        else:  # back
+            base_colors = [(100, 100, 100), (80, 80, 80), (60, 60, 60)]
+        
+        # Добавляем альфа-канал
+        colors = [(c[0], c[1], c[2], 200) for c in base_colors]
+        
+        if self.hovered:
+            # Увеличиваем яркость при наведении
+            colors = [(min(c[0] + 30, 255), min(c[1] + 30, 255), min(c[2] + 30, 255), c[3]) for c in colors]
+        
+        # Создаем поверхность для кнопки
+        button_surface = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+        
+        # Рисуем градиентный фон
+        gradient = GradientGenerator.create_vertical_gradient(
+            (self.rect.width, self.rect.height),
+            colors
+        )
+        button_surface.blit(gradient, (0, 0))
+        
+        # Рисуем закругленные углы
+        mask = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+        pygame.draw.rect(mask, (255, 255, 255, 255), (0, 0, self.rect.width, self.rect.height), 
+                        border_radius=10)
+        button_surface.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+        
+        # Рамка
+        pygame.draw.rect(button_surface, (255, 255, 255, 150), 
+                        (0, 0, self.rect.width, self.rect.height), 
+                        width=2, border_radius=10)
+        
+        # Текст
+        text_surf = font.render(self.text, True, (255, 255, 255))
+        text_rect = text_surf.get_rect(center=(self.rect.width // 2, self.rect.height // 2))
+        button_surface.blit(text_surf, text_rect)
+        
+        # Отображаем кнопку на основной поверхности
+        surface.blit(button_surface, self.rect.topleft)
+    
+    def is_hovered(self, mouse_pos):
+        """Проверяет, наведена ли мышь на кнопку"""
+        return self.rect.collidepoint(mouse_pos)
+    
+    def click(self):
+        """Обработка клика"""
+        if self.action:
+            self.action()
+
 # Обновленный BusinessMenu с улучшенной графикой
 class AdvancedBusinessMenu:
     def __init__(self, game):
         self.game = game
         self.business_manager = BusinessManager(game)
-        # Добавим отладочную информацию
-        print(f"Всего бизнесов загружено: {len(self.business_manager.businesses)}")
-        print(f"Светлых бизнесов: {len(self.business_manager.get_business_by_category(BusinessCategory.LIGHT))}")
-        print(f"Темных бизнесов: {len(self.business_manager.get_business_by_category(BusinessCategory.DARK))}")
         self.current_category = BusinessCategory.LIGHT
         self.selected_business = None
         self.business_buttons = []
         self.category_buttons = []
         self.nav_buttons = []
+        self.action_buttons = []
         self.scroll_offset = 0
         self.max_scroll = 0
+        self.view_mode = "owned"
         
         self.initialize_ui()
+        self.update_business_buttons()
     
     def initialize_ui(self):
         """Инициализация UI"""
@@ -2846,11 +2966,24 @@ class AdvancedBusinessMenu:
         for i, (category, text) in enumerate(categories):
             rect = pygame.Rect(start_x + i * (category_width + 20), start_y, 
                             category_width, category_height)
-            # Устанавливаем правильное активное состояние при создании
             is_active = (category == self.current_category)
             button = Button(rect, text, None, lambda cat=category: self.set_category(cat))
-            button.is_active = is_active  # Устанавливаем начальное состояние
+            button.is_active = is_active
             self.category_buttons.append(button)
+        
+        # Кнопки режима просмотра
+        self.view_owned_button = Button(
+            pygame.Rect(320, 170, 200, 40),
+            "Мои бизнесы",
+            None,
+            lambda: self.set_view_mode("owned")
+        )
+        self.view_available_button = Button(
+            pygame.Rect(530, 170, 200, 40),
+            "Доступные",
+            None,
+            lambda: self.set_view_mode("available")
+        )
         
         # Кнопка назад
         self.back_button = Button(
@@ -2859,10 +2992,87 @@ class AdvancedBusinessMenu:
             None,
             lambda: self.game.back_to_menu()
         )
+
+    def update_action_buttons(self):
+        """Обновляет кнопки действий для выбранного бизнеса"""
+        self.action_buttons = []
+        
+        if not self.selected_business:
+            return
+            
+        business = self.selected_business
+        action_y = 280  # Начальная позиция для кнопок
+        
+        if not business.is_owned:
+            # Кнопка покупки
+            buy_button = BusinessActionButton(
+                pygame.Rect(860, action_y, 300, 50),
+                f"Купить за {business.base_price}$",
+                lambda: self.buy_business(business),
+                "buy"
+            )
+            self.action_buttons.append(buy_button)
+            action_y += 70
+        else:
+            # Кнопка улучшения (если не достигнут максимальный уровень)
+            if business.level < business.max_level:
+                upgrade_cost = business.get_upgrade_cost()
+                upgrade_button = BusinessActionButton(
+                    pygame.Rect(860, action_y, 300, 50),
+                    f"Улучшить за {upgrade_cost}$",
+                    lambda: self.upgrade_business(business),
+                    "upgrade"
+                )
+                self.action_buttons.append(upgrade_button)
+                action_y += 70
+            
+            # Кнопка продажи
+            sell_price = business.get_sell_price()
+            sell_button = BusinessActionButton(
+                pygame.Rect(860, action_y, 300, 50),
+                f"Продать за {sell_price}$",
+                lambda: self.sell_business(business),
+                "sell"
+            )
+            self.action_buttons.append(sell_button)
+            action_y += 70
+            
+            # Кнопка активности
+            status_text = "Деактивировать" if business.is_active else "Активировать"
+            status_button = BusinessActionButton(
+                pygame.Rect(860, action_y, 300, 50),
+                status_text,
+                lambda: self.toggle_business_activity(business),
+                "toggle"
+            )
+            self.action_buttons.append(status_button)
+            action_y += 70
+        
+        # Кнопка назад к списку
+        back_button = BusinessActionButton(
+            pygame.Rect(860, action_y, 300, 50),
+            "Назад к списку",
+            lambda: self.go_back_to_list(),
+            "back"
+        )
+        self.action_buttons.append(back_button)
+    
+    def go_back_to_list(self):
+        """Возврат к списку бизнесов"""
+        self.selected_business = None
+        self.action_buttons = []
+
+    def set_view_mode(self, mode):
+        """Устанавливает режим просмотра"""
+        self.view_mode = mode
+        self.update_business_buttons()
+        
+        # Обновляем активность кнопок режима
+        self.view_owned_button.is_active = (mode == "owned")
+        self.view_available_button.is_active = (mode == "available")
     
     def set_category(self, category):
         """Установка категории"""
-        print(f"Смена категории на: {category}")
         self.current_category = category
         self.selected_business = None
         self.scroll_offset = 0
@@ -2870,24 +3080,25 @@ class AdvancedBusinessMenu:
         
         # Обновляем состояние кнопок категорий
         for button in self.category_buttons:
-            # Определяем, соответствует ли кнопка текущей категории
             is_light_active = (category == BusinessCategory.LIGHT and "Светлые" in button.text)
             is_dark_active = (category == BusinessCategory.DARK and "Тёмные" in button.text)
             button.is_active = (is_light_active or is_dark_active)
-        
-        print(f"Категория установлена: {self.current_category}")
     
     def update_business_buttons(self):
         """Обновление кнопок бизнесов"""
-        print(f"Обновление бизнесов для категории: {self.current_category}")
         self.business_buttons = []
-        businesses = self.business_manager.get_business_by_category(self.current_category)
         
-        print(f"Найдено бизнесов: {len(businesses)}")
+        # Фильтруем бизнесы по категории и режиму просмотра
+        if self.view_mode == "owned":
+            businesses = [b for b in self.business_manager.owned_businesses 
+                         if b.category == self.current_category]
+        else:
+            businesses = [b for b in self.business_manager.businesses 
+                         if b.category == self.current_category and not b.is_owned]
         
         business_width, business_height = 340, 120
         start_x = 320
-        start_y = 180
+        start_y = 220
         spacing = 20
         columns = 3
         
@@ -2906,42 +3117,11 @@ class AdvancedBusinessMenu:
         # Расчет максимальной прокрутки
         total_rows = (len(businesses) + columns - 1) // columns
         content_height = total_rows * (business_height + spacing)
-        self.max_scroll = max(0, content_height - 500)
+        self.max_scroll = max(0, content_height - 400)
     
     def select_business(self, business):
         """Выбор бизнеса для детального просмотра"""
         self.selected_business = business
-
-    def draw_category_buttons(self, surface):
-        """Упрощенная отрисовка кнопок категорий"""
-        categories = [
-            (BusinessCategory.LIGHT, "💡 Светлые", 320, 100),
-            (BusinessCategory.DARK, "🌙 Тёмные", 590, 100)
-        ]
-        
-        for category, text, x, y in categories:
-            width, height = 250, 60
-            rect = pygame.Rect(x, y, width, height)
-            
-            # Определяем цвет в зависимости от активности
-            if category == self.current_category:
-                color = (80, 80, 140, 255)  # Активный
-                text_color = (255, 255, 255, 255)
-                border_color = (120, 120, 200, 255)
-            else:
-                color = (50, 50, 90, 255)  # Неактивный
-                text_color = (180, 180, 180, 255)
-                border_color = (80, 80, 120, 255)
-            
-            # Рисуем кнопку
-            pygame.draw.rect(surface, color, rect, border_radius=10)
-            pygame.draw.rect(surface, border_color, rect, width=2, border_radius=10)
-            
-            # Текст
-            font = self.game.font_manager.get_font('button')
-            text_surf = font.render(text, True, text_color)
-            text_rect = text_surf.get_rect(center=rect.center)
-            surface.blit(text_surf, text_rect)
     
     def draw(self, surface):
         """Отрисовка меню"""
@@ -2969,8 +3149,17 @@ class AdvancedBusinessMenu:
         # Статистика
         self.draw_business_stats(surface, 320, 160)
         
-        # Категории - используем упрощенную версию
-        self.draw_category_buttons(surface)
+        # Категории
+        for button in self.category_buttons:
+            icon_x = button.rect.x + 20
+            icon_y = button.rect.centery - 15
+            button.draw(surface, self.game.font_manager.get_font('button'), icon_x, icon_y)
+        
+        # Кнопки режима просмотра
+        self.view_owned_button.draw(surface, self.game.font_manager.get_font('button'), 
+                                  self.view_owned_button.rect.x + 20, self.view_owned_button.rect.centery - 10)
+        self.view_available_button.draw(surface, self.game.font_manager.get_font('button'), 
+                                      self.view_available_button.rect.x + 20, self.view_available_button.rect.centery - 10)
         
         # Контент
         if self.selected_business:
@@ -2993,12 +3182,13 @@ class AdvancedBusinessMenu:
         # Данные
         owned_count = len(self.business_manager.owned_businesses)
         total_income = self.business_manager.get_total_net_income()
+        active_count = len([b for b in self.business_manager.owned_businesses if b.is_active])
         
         stats_font = self.game.font_manager.get_font('desc')
         texts = [
             f"Владеете: {owned_count} бизнесов",
-            f"Доход: {total_income:.0f}$/сек",
-            f"Всего бизнесов: {len(self.business_manager.businesses)}"
+            f"Активных: {active_count}",
+            f"Доход: {total_income:.0f}$/сек"
         ]
         
         for i, text in enumerate(texts):
@@ -3008,8 +3198,14 @@ class AdvancedBusinessMenu:
     
     def draw_business_list(self, surface):
         """Отрисовка списка бизнесов"""
+        if not self.business_buttons:
+            # Сообщение если бизнесов нет
+            no_business_text = "Нет бизнесов для отображения" if self.view_mode == "owned" else "Все бизнесы куплены!"
+            text_surf = self.game.font_manager.get_rendered_text(no_business_text, 'subtitle', TEXT_SECONDARY)
+            surface.blit(text_surf, (SCREEN_WIDTH//2 - text_surf.get_width()//2, 300))
+        
         for card in self.business_buttons:
-            if card.rect.y + card.rect.height > 180 and card.rect.y < 700:
+            if card.rect.y + card.rect.height > 220 and card.rect.y < 700:
                 card.draw(surface, self.game.font_manager.get_font('desc'))
     
     def draw_business_details(self, surface):
@@ -3020,21 +3216,21 @@ class AdvancedBusinessMenu:
         business = self.selected_business
         
         # Основная информация
-        info_rect = pygame.Rect(320, 180, 500, 400)
+        info_rect = pygame.Rect(320, 220, 500, 400)
         self.draw_panel(surface, info_rect, (40, 45, 60, 255))
         
         # Заголовок
         title_font = self.game.font_manager.get_font('subtitle')
         title_surf = title_font.render(business.name, True, (255, 255, 255))
-        surface.blit(title_surf, (340, 200))
+        surface.blit(title_surf, (340, 240))
         
         # Описание
         desc_font = self.game.font_manager.get_font('desc')
         desc_surf = desc_font.render(business.description, True, (200, 200, 200))
-        surface.blit(desc_surf, (340, 240))
+        surface.blit(desc_surf, (340, 280))
         
         # Статистика
-        stats_y = 280
+        stats_y = 320
         stats = [
             f"Уровень: {business.level}/{business.max_level}",
             f"Доход: {business.stats.income:.0f}$/10сек",
@@ -3050,60 +3246,98 @@ class AdvancedBusinessMenu:
             surface.blit(stat_surf, (340, stats_y + i * 25))
         
         # Кнопки действий
-        actions_rect = pygame.Rect(840, 180, 340, 400)
+        actions_rect = pygame.Rect(840, 220, 340, 400)
         self.draw_panel(surface, actions_rect, (40, 45, 60, 255))
         
-        action_y = 200
+        action_y = 240
+        action_buttons = []
+        
         if not business.is_owned:
             # Кнопка покупки
-            buy_button = Button(
+            buy_button = BusinessActionButton(
                 pygame.Rect(860, action_y, 300, 50),
                 f"Купить за {business.base_price}$",
-                None,
-                lambda: self.business_manager.buy_business(business.id)
+                lambda: self.buy_business(business),
+                "buy"
             )
-            buy_button.draw(surface, self.game.font_manager.get_font('button'), 880, action_y + 12)
+            action_buttons.append(buy_button)
             action_y += 70
         else:
             # Кнопка улучшения
             upgrade_cost = business.get_upgrade_cost()
-            upgrade_button = Button(
+            upgrade_button = BusinessActionButton(
                 pygame.Rect(860, action_y, 300, 50),
                 f"Улучшить за {upgrade_cost}$",
-                None,
-                lambda: self.business_manager.upgrade_business(business.id)
+                lambda: self.upgrade_business(business),
+                "upgrade"
             )
-            upgrade_button.draw(surface, self.game.font_manager.get_font('button'), 880, action_y + 12)
+            action_buttons.append(upgrade_button)
             action_y += 70
             
             # Кнопка продажи
             sell_price = business.get_sell_price()
-            sell_button = Button(
+            sell_button = BusinessActionButton(
                 pygame.Rect(860, action_y, 300, 50),
                 f"Продать за {sell_price}$",
-                None,
-                lambda: self.business_manager.sell_business(business.id)
+                lambda: self.sell_business(business),
+                "sell"
             )
-            sell_button.draw(surface, self.game.font_manager.get_font('button'), 880, action_y + 12)
+            action_buttons.append(sell_button)
             action_y += 70
             
-            # Статус активности
-            status_text = "Активен" if business.is_active else "Неактивен"
-            status_button = Button(
+            # Кнопка активности
+            status_text = "Деактивировать" if business.is_active else "Активировать"
+            status_button = BusinessActionButton(
                 pygame.Rect(860, action_y, 300, 50),
-                f"Статус: {status_text}",
-                None,
-                lambda: setattr(business, 'is_active', not business.is_active)
+                status_text,
+                lambda: self.toggle_business_activity(business),
+                "toggle"
             )
-            status_button.draw(surface, self.game.font_manager.get_font('button'), 880, action_y + 12)
+            action_buttons.append(status_button)
+            action_y += 70
+        
+        # Кнопка назад к списку
+        back_button = BusinessActionButton(
+            pygame.Rect(860, action_y, 300, 50),
+            "Назад к списку",
+            lambda: setattr(self, 'selected_business', None),
+            "back"
+        )
+        action_buttons.append(back_button)
+        
+        # Рисуем кнопки действий
+        for button in action_buttons:
+            button.draw(surface, self.game.font_manager.get_font('button'))
         
         # Анимация частиц
         for particle in business.particles:
             if particle['lifetime'] > 0:
                 particle_x = 340 + particle['x']
-                particle_y = 300 + particle['y']
+                particle_y = 340 + particle['y']
                 color = (*particle['color'], particle['alpha'])
                 pygame.draw.circle(surface, color, (int(particle_x), int(particle_y)), 2)
+    
+    def buy_business(self, business):
+        """Покупка бизнеса"""
+        if self.business_manager.buy_business(business.id):
+            self.selected_business = None
+            self.update_business_buttons()
+    
+    def upgrade_business(self, business):
+        """Улучшение бизнеса"""
+        if self.business_manager.upgrade_business(business.id):
+            self.update_business_buttons()
+    
+    def sell_business(self, business):
+        """Продажа бизнеса"""
+        if self.business_manager.sell_business(business.id):
+            self.selected_business = None
+            self.update_business_buttons()
+    
+    def toggle_business_activity(self, business):
+        """Переключение активности бизнеса"""
+        business.is_active = not business.is_active
+        self.business_manager.save_to_database()
     
     def draw_panel(self, surface, rect, color):
         """Рисует панель"""
@@ -3114,17 +3348,6 @@ class AdvancedBusinessMenu:
         """Обработка событий"""
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mouse_pos = pygame.mouse.get_pos()
-            
-            # Проверяем клики по категориям (исправленная версия)
-            categories = [
-                (BusinessCategory.LIGHT, pygame.Rect(320, 100, 250, 60)),
-                (BusinessCategory.DARK, pygame.Rect(590, 100, 250, 60))
-            ]
-            
-            for category, rect in categories:
-                if rect.collidepoint(mouse_pos):
-                    self.set_category(category)
-                    return True
             
             # Навигация
             for button in self.nav_buttons:
@@ -3138,19 +3361,30 @@ class AdvancedBusinessMenu:
                 self.back_button.click()
                 return True
             
+            # Кнопки категорий
+            for button in self.category_buttons:
+                if button.rect.collidepoint(mouse_pos):
+                    button.click()
+                    return True
+            
+            # Кнопки режима просмотра
+            if self.view_owned_button.rect.collidepoint(mouse_pos):
+                self.view_owned_button.click()
+                return True
+            if self.view_available_button.rect.collidepoint(mouse_pos):
+                self.view_available_button.click()
+                return True
+            
             # Карточки бизнесов
             for card in self.business_buttons:
                 if card.rect.collidepoint(mouse_pos):
                     card.click()
                     return True
             
-            # Сброс выбора при клике на пустое место
+            # Обработка действий в детальном просмотре
             if self.selected_business:
-                info_rect = pygame.Rect(320, 180, 500, 400)
-                actions_rect = pygame.Rect(840, 180, 340, 400)
-                if not (info_rect.collidepoint(mouse_pos) or actions_rect.collidepoint(mouse_pos)):
-                    self.selected_business = None
-                    return True
+                # Здесь будет обработка кнопок действий
+                pass
         
         elif event.type == pygame.MOUSEWHEEL:
             # Прокрутка
@@ -3161,7 +3395,7 @@ class AdvancedBusinessMenu:
         return False
 
 class BusinessCard:
-    """Карточка бизнеса"""
+    """Улучшенная карточка бизнеса"""
     
     def __init__(self, rect, business, action):
         self.rect = rect
@@ -3171,28 +3405,38 @@ class BusinessCard:
     
     def draw(self, surface, font):
         """Отрисовка карточки"""
-        # Фон
+        # Фон с градиентом
         if self.business.is_owned:
             if self.business.is_active:
-                color = (60, 100, 60, 255) if not self.hovered else (80, 120, 80, 255)
+                colors = [(60, 100, 60, 255), (40, 80, 40, 255), (20, 60, 20, 255)]
             else:
-                color = (100, 100, 60, 255) if not self.hovered else (120, 120, 80, 255)
+                colors = [(100, 100, 60, 255), (80, 80, 40, 255), (60, 60, 20, 255)]
         else:
-            color = (60, 60, 100, 255) if not self.hovered else (80, 80, 120, 255)
+            colors = [(60, 60, 100, 255), (40, 40, 80, 255), (20, 20, 60, 255)]
         
-        pygame.draw.rect(surface, color, self.rect, border_radius=12)
-        pygame.draw.rect(surface, (100, 100, 150, 255), self.rect, width=2, border_radius=12)
-        
-        # Тень при наведении
         if self.hovered:
-            shadow = pygame.Surface((self.rect.width + 6, self.rect.height + 6), pygame.SRCALPHA)
-            pygame.draw.rect(shadow, (255, 255, 255, 30), (3, 3, self.rect.width, self.rect.height), 
-                          border_radius=12)
-            surface.blit(shadow, (self.rect.x - 3, self.rect.y - 3))
+            # Добавляем свечение при наведении
+            glow_surf = GradientGenerator.create_rounded_rect(
+                (self.rect.width + 10, self.rect.height + 10),
+                [(255, 255, 255, 30), (200, 200, 255, 20), (150, 150, 255, 10)],
+                15
+            )
+            surface.blit(glow_surf, (self.rect.x - 5, self.rect.y - 5))
+        
+        card_surf = GradientGenerator.create_rounded_rect(
+            (self.rect.width, self.rect.height),
+            colors,
+            12
+        )
+        surface.blit(card_surf, self.rect.topleft)
+        
+        # Рамка
+        border_color = (100, 255, 100) if self.business.is_owned and self.business.is_active else (100, 100, 150)
+        pygame.draw.rect(surface, border_color, self.rect, width=2, border_radius=12)
         
         # Иконка статуса
-        status_icon = "✓" if self.business.is_owned else "○"
-        status_color = (100, 255, 100) if self.business.is_owned else (200, 200, 200)
+        status_icon = "✓" if self.business.is_owned else "💰"
+        status_color = (100, 255, 100) if self.business.is_owned else (255, 255, 100)
         icon_font = pygame.font.Font(None, 24)
         icon_surf = icon_font.render(status_icon, True, status_color)
         surface.blit(icon_surf, (self.rect.x + 15, self.rect.y + 15))
@@ -3200,9 +3444,9 @@ class BusinessCard:
         # Название
         name_font = pygame.font.Font(None, 22)
         name_surf = name_font.render(self.business.name, True, (255, 255, 255))
-        surface.blit(name_surf, (self.rect.x + 40, self.rect.y + 15))
+        surface.blit(name_surf, (self.rect.x + 45, self.rect.y + 15))
         
-        # Уровень
+        # Уровень и тип
         level_text = f"Ур. {self.business.level}"
         level_surf = font.render(level_text, True, (200, 200, 200))
         surface.blit(level_surf, (self.rect.x + self.rect.width - 70, self.rect.y + 15))
@@ -3218,10 +3462,21 @@ class BusinessCard:
             status_color = (100, 255, 100) if self.business.is_active else (255, 100, 100)
             status_surf = font.render(status_text, True, status_color)
             surface.blit(status_surf, (self.rect.x + 15, self.rect.y + 70))
+            
+            # Прогресс уровня
+            progress_width = (self.rect.width - 30) * (self.business.level / self.business.max_level)
+            progress_rect = pygame.Rect(self.rect.x + 15, self.rect.y + 95, progress_width, 8)
+            pygame.draw.rect(surface, (0, 150, 255), progress_rect, border_radius=4)
         else:
             price_text = f"Цена: {self.business.base_price}$"
             price_surf = font.render(price_text, True, (255, 255, 100))
             surface.blit(price_surf, (self.rect.x + 15, self.rect.y + 70))
+            
+            # Риск
+            risk_text = f"Риск: {self.business.stats.risk:.0f}%"
+            risk_color = (255, 100, 100) if self.business.stats.risk > 50 else (255, 255, 100)
+            risk_surf = font.render(risk_text, True, risk_color)
+            surface.blit(risk_surf, (self.rect.x + 150, self.rect.y + 70))
         
         # Анимация частиц для активных бизнесов
         if self.business.is_owned and self.business.is_active:
@@ -3728,7 +3983,7 @@ class Game:
         
     def initialize_ui(self):
         self.texts = {
-            'bus': "SKATT", 'title': "Black Empire",
+            'bus': "SKATT x R3DAX", 'title': "Black Empire",
             'subtitle1': "Построй империю от старта до", 'subtitle2': "корпорации",
             'desc': [
                 "Стартуй маленьким бизнесом: закупи сырье,",
@@ -4073,7 +4328,7 @@ class Game:
 
     def draw_clicker(self):
         """Отрисовывает кликер."""
-        self.clicker_menu.draw(self.screen)
+        self.clicker_menu.draw()
 
     def draw_panel(self, rect):
         """Рисует закругленную панель."""

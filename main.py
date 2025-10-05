@@ -2661,98 +2661,78 @@ class ModernBusinessButton:
         
         surface.blit(button_surface, self.rect.topleft)
     
-    def collect_income(self):
-        """Сбор дохода со всех активных бизнесов"""
-        total_income = 0
+    def create_vertical_gradient(self, size, colors):
+        """Создает вертикальный градиент"""
+        width, height = size
+        surface = pygame.Surface((width, height), pygame.SRCALPHA)
         
-        for business in self.owned_businesses:
-            if business.is_active:
-                net_income = business.get_net_income()
-                total_income += net_income
+        for y in range(height):
+            pos = y / max(height - 1, 1)
+            r = int(colors[0][0] + (colors[1][0] - colors[0][0]) * pos)
+            g = int(colors[0][1] + (colors[1][1] - colors[0][1]) * pos)
+            b = int(colors[0][2] + (colors[1][2] - colors[0][2]) * pos)
+            pygame.draw.line(surface, (r, g, b), (0, y), (width, y))
         
-        if total_income > 0:
-            self.update_balance(total_income)
-            print(f"Собран доход с бизнесов: {total_income}$")
+        return surface
     
-    def get_business_by_category(self, category):
-        """Получение бизнесов по категории"""
-        filtered_businesses = [b for b in self.businesses if b.category == category]
-        print(f"Бизнесы категории {category}: {len(filtered_businesses)} шт.")
-        for business in filtered_businesses:
-            print(f"  - {business.name} (ID: {business.id})")
-        return filtered_businesses
+    def is_clicked(self, pos):
+        return self.rect.collidepoint(pos)
     
-    def get_total_net_income(self):
-        """Общий чистый доход в секунду"""
-        total = 0
-        for business in self.owned_businesses:
-            if business.is_active:
-                total += business.get_net_income()
-        return total / 10  # Приводим к доходу в секунду
+    def update_hover(self, pos):
+        self.hovered = self.rect.collidepoint(pos)
 
-# Обновленный BusinessMenu с улучшенной графикой
-class AdvancedBusinessMenu:
+class ModernBusinessMenu:
+    """Современное меню бизнесов в стиле HTML версии"""
+    
     def __init__(self, game):
         self.game = game
-        self.business_manager = BusinessManager(game)
-        # Добавим отладочную информацию
-        print(f"Всего бизнесов загружено: {len(self.business_manager.businesses)}")
-        print(f"Светлых бизнесов: {len(self.business_manager.get_business_by_category(BusinessCategory.LIGHT))}")
-        print(f"Темных бизнесов: {len(self.business_manager.get_business_by_category(BusinessCategory.DARK))}")
-        self.current_category = BusinessCategory.LIGHT
-        self.selected_business = None
-        self.business_buttons = []
-        self.category_buttons = []
-        self.nav_buttons = []
+        self.business_manager = BusinessManager()
+        self.current_view = "mine"  # "mine", "catalog_light", "catalog_dark", "single"
+        self.selected_business_uid = None
+        self.business_cards = []
+        self.catalog_items = []
+        self.buttons = []
         self.scroll_offset = 0
         
         self.initialize_ui()
     
     def initialize_ui(self):
         """Инициализация UI"""
-        # Навигационные кнопки
-        nav_buttons = [
-            ("Кликер", lambda: self.game.play_game(), False),
-            ("Магазины", lambda: self.game.open_shop_selection(), False),
-            ("Инвестиции", lambda: self.game.open_investments(), False),
-            ("Бизнесы", lambda: None, True),
-            ("Профиль", lambda: self.game.open_profile(), False)
+        self.nav_buttons = [
+            ModernBusinessButton(pygame.Rect(50, 150, 200, 50), "Кликер", lambda: self.game.play_game()),
+            ModernBusinessButton(pygame.Rect(50, 210, 200, 50), "Магазины", lambda: self.game.open_shop_selection()),
+            ModernBusinessButton(pygame.Rect(50, 270, 200, 50), "Инвестиции", lambda: self.game.open_investments()),
+            ModernBusinessButton(pygame.Rect(50, 330, 200, 50), "Бизнесы", lambda: None, True),
+            ModernBusinessButton(pygame.Rect(50, 390, 200, 50), "Профиль", lambda: self.game.open_profile())
         ]
         
-        button_width, button_height = 200, 60
-        button_x = 50
-        button_y_start = 150
-        
-        for i, (text, action, is_active) in enumerate(nav_buttons):
-            rect = pygame.Rect(button_x, button_y_start + i * 70, button_width, button_height)
-            self.nav_buttons.append(NavButton(rect, text, action, is_active))
-        
-        # Кнопки категорий
-        categories = [
-            (BusinessCategory.LIGHT, "💡 Светлые"),
-            (BusinessCategory.DARK, "🌙 Тёмные"),
+        # Кнопки вкладок
+        self.tab_buttons = [
+            ModernBusinessButton(pygame.Rect(280, 100, 180, 40), "Светлые бизнесы", 
+                               lambda: self.open_catalog("light")),
+            ModernBusinessButton(pygame.Rect(470, 100, 180, 40), "Тёмные бизнесы", 
+                               lambda: self.open_catalog("dark"), True),
+            ModernBusinessButton(pygame.Rect(660, 100, 150, 40), "Мои бизнесы", 
+                               lambda: self.show_my_businesses(), True)
         ]
-
-        category_width, category_height = 250, 60
-        start_x = 320
-        start_y = 100
-
-        for i, (category, text) in enumerate(categories):
-            rect = pygame.Rect(start_x + i * (category_width + 20), start_y, 
-                            category_width, category_height)
-            # Устанавливаем правильное активное состояние при создании
-            is_active = (category == self.current_category)
-            button = Button(rect, text, None, lambda cat=category: self.set_category(cat))
-            button.is_active = is_active  # Устанавливаем начальное состояние
-            self.category_buttons.append(button)
         
-        # Кнопка назад
-        self.back_button = Button(
-            pygame.Rect(300, 50, 200, 60),
-            "Назад",
-            None,
-            lambda: self.game.back_to_menu()
-        )
+        # Кнопки открытия каталога
+        self.open_light_btn = ModernBusinessButton(pygame.Rect(820, 100, 150, 40), 
+                                                 "Открыть светлые", lambda: self.open_catalog("light"))
+        self.open_dark_btn = ModernBusinessButton(pygame.Rect(980, 100, 150, 40), 
+                                                "Открыть тёмные", lambda: self.open_catalog("dark"))
+    
+    def open_catalog(self, category: str):
+        """Открытие каталога бизнесов"""
+        self.current_view = f"catalog_{category}"
+        self.selected_business_uid = None
+        self.update_catalog_view(category)
+    
+    def show_my_businesses(self):
+        """Показать мои бизнесы"""
+        self.current_view = "mine"
+        self.selected_business_uid = None
+        self.update_business_cards()
     
     def show_single_business(self, business_uid: str):
         """Показать детали бизнеса"""
@@ -3588,13 +3568,13 @@ class Game:
 
         self.nav_buttons = self.create_nav_buttons()
         self.shop_system = ShopSystem(self)
-        self.shop_selection_menu = ShopSelectionMenu(self)
-        self.light_shop_menu = LightShopMenu(self)
-        self.light_category_products_menu = LightCategoryProductsMenu(self)
-        self.black_market_category_products_menu = BlackMarketCategoryProductsMenu(self)
-        self.black_market_menu = BlackMarketMenu(self)
-        self.business_menu = AdvancedBusinessMenu(self)
-        self.profile_menu = ProfileMenu(self)
+        self.shop_selection_menu = ShopSelectionMenu(self, self.nav_buttons)
+        self.light_shop_menu = LightShopMenu(self, self.nav_buttons)
+        self.light_category_products_menu = LightCategoryProductsMenu(self, self.nav_buttons)
+        self.black_market_category_products_menu = BlackMarketCategoryProductsMenu(self, self.nav_buttons)
+        self.black_market_menu = BlackMarketMenu(self, self.nav_buttons)
+        self.business_menu = AdvancedBusinessMenu(self, self.nav_buttons)
+        self.profile_menu = ProfileMenu(self, self.nav_buttons)
         
         
         # Получаем доступные опции из config.json

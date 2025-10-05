@@ -873,32 +873,32 @@ class GameConfig:
             "particle_duration": 700
         }
 
-# class Particle:
-#     """Класс для частиц (упрощенная версия)"""
-#     def __init__(self, x, y, color, size, velocity, duration=1.0):
-#         self.x = x
-#         self.y = y
-#         self.color = color
-#         self.size = size
-#         self.velocity = velocity
-#         self.duration = duration
-#         self.lifetime = 0
-#         self.alive = True
+class Particle:
+    """Класс для частиц (упрощенная версия)"""
+    def __init__(self, x, y, color, size, velocity, duration=1.0):
+        self.x = x
+        self.y = y
+        self.color = color
+        self.size = size
+        self.velocity = velocity
+        self.duration = duration
+        self.lifetime = 0
+        self.alive = True
     
-#     def update(self, dt):
-#         self.lifetime += dt
-#         if self.lifetime >= self.duration:
-#             self.alive = False
-#         else:
-#             self.x += self.velocity[0] * dt
-#             self.y += self.velocity[1] * dt
+    def update(self, dt):
+        self.lifetime += dt
+        if self.lifetime >= self.duration:
+            self.alive = False
+        else:
+            self.x += self.velocity[0] * dt
+            self.y += self.velocity[1] * dt
     
-#     def draw(self, surface):
-#         alpha = 255 * (1 - self.lifetime / self.duration)
-#         color_with_alpha = (*self.color, int(alpha))
-#         particle_surface = pygame.Surface((self.size * 2, self.size * 2), pygame.SRCALPHA)
-#         pygame.draw.circle(particle_surface, color_with_alpha, (self.size, self.size), self.size)
-#         surface.blit(particle_surface, (int(self.x - self.size), int(self.y - self.size)))
+    def draw(self, surface):
+        alpha = 255 * (1 - self.lifetime / self.duration)
+        color_with_alpha = (*self.color, int(alpha))
+        particle_surface = pygame.Surface((self.size * 2, self.size * 2), pygame.SRCALPHA)
+        pygame.draw.circle(particle_surface, color_with_alpha, (self.size, self.size), self.size)
+        surface.blit(particle_surface, (int(self.x - self.size), int(self.y - self.size)))
 
 # Всплывающий текст
 class FloatingText:
@@ -927,11 +927,17 @@ class FloatingText:
         text_surface = font.render(self.text, True, text_color)
         surface.blit(text_surface, (int(self.x - text_surface.get_width() // 2), int(self.y)))
 
+class ButtonFactory:
+    '''Создание кнопок в меню игры'''
+    def nav_buttons_in_game(self):
+        pass
+
 class ClickerMenu:
     """Исправленная версия кликера с использованием общей палитры цветов."""
 
-    def __init__(self, game):  # Добавляем параметр game
+    def __init__(self, game, nav_buttons):  # Добавляем параметр game
         self.game = game  # Сохраняем ссылку на основной игровой объект
+        self.nav_buttons = nav_buttons
         self.config = GameConfig()
         # Используем экран из game вместо создания нового
         self.screen = game.screen
@@ -999,32 +1005,7 @@ class ClickerMenu:
 
     def initialize_ui(self):
         """Инициализация UI кликера с индивидуальным расположением кнопок."""
-        self.nav_buttons = []
-        self.invest_button = None
-        
-        # Индивидуальные позиции для навигационных кнопок
-        nav_positions = [
-            ("Кликер", 10, 20, 80, 150),      # x, y, width, height
-            ("Магазины", 10, 180, 80, 150),
-            ("Инвестиции", 10, 340, 80, 150),
-            ("Бизнесы", 10, 500, 80, 150),
-            ("Профиль", 10, 660, 80, 150)
-        ]
-        
-        nav_actions = {
-            "Кликер": lambda: self.game.play_game(),
-            "Магазины": lambda: self.game.open_shop_selection(),
-            "Инвестиции": lambda: self.game.open_investments(),
-            "Бизнесы": lambda: self.game.open_businesses(),
-            "Профиль": lambda: self.game.open_profile()
-        }
-
-        for text, x, y, width, height in nav_positions:
-            rect = pygame.Rect(x, y, width, height)
-            action = nav_actions[text]
-            is_active = (text == "Кликер")  # Первая кнопка активна по умолчанию
-            self.nav_buttons.append(NavButton(rect, text, action, is_active))
-        
+                
         # Индивидуальная позиция для кнопки инвестирования
         invest_rect = pygame.Rect(
             self.config.screen_width - 250,  # индивидуальный X
@@ -1198,7 +1179,7 @@ class ClickerMenu:
         
         # Кнопки навигации
         for button in self.nav_buttons:
-            button.draw(self.screen, self.fonts["medium"])
+            button.draw(self.screen, self.game.font_manager.get_font('button'))
 
         # Разделительная линия
         pygame.draw.line(self.screen, PANEL_BG, 
@@ -1237,49 +1218,52 @@ class ClickerMenu:
         # Отрисовываем всплывающий текст
         for text in self.floating_texts:
             text.draw(self.screen, self.fonts["large"])
-
+        
     def handle_event(self, event):
         """Обработка кликов по кнопке и навигации."""
+        mouse_pos = pygame.mouse.get_pos()
+        
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            mouse_pos = pygame.mouse.get_pos()
             # Проверяем навигационные кнопки
             for button in self.nav_buttons:
                 if button.rect.collidepoint(mouse_pos):
                     button.click()
                     # Обновляем активное состояние
-                    for btn in self.nav_buttons:
-                        btn.is_active = (btn.text == button.text)
+                    self.game.update_navigation_state(button.text)
                     return True
 
-        """Обрабатывает события игры"""
-        mouse_pos = pygame.mouse.get_pos()
-        button_rect = pygame.Rect(
-            self.config.screen_width - 700,
-            self.config.screen_height // 2 - 140,
-            400, 450
-        )
-        is_button_hovered = button_rect.collidepoint(mouse_pos)
-        
-        if event.type == pygame.QUIT:
-            self.running = False
-            self.game.running = False
-        
-        elif event.type == pygame.VIDEORESIZE:
-            # Обработка изменения размера окна
-            self.config.screen_width, self.config.screen_height = event.size
-            self.screen = pygame.display.set_mode((self.config.screen_width, self.config.screen_height), 
-                                                 pygame.RESIZABLE)
-            self.cached_surfaces.clear()
-        
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if is_button_hovered:
+            # Проверяем кнопку инвестирования
+            button_rect = pygame.Rect(
+                self.config.screen_width - 700,
+                self.config.screen_height // 2 - 140,
+                400, 450
+            )
+            if button_rect.collidepoint(mouse_pos):
                 self.handle_click()
+                return True
         
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 self.handle_click()
+                return True
             elif event.key == pygame.K_ESCAPE:
                 self.game.back_to_menu()
+                return True
+        
+        elif event.type == pygame.QUIT:
+            self.running = False
+            self.game.running = False
+            return True
+            
+        elif event.type == pygame.VIDEORESIZE:
+            # Обработка изменения размера окна
+            self.config.screen_width, self.config.screen_height = event.size
+            self.screen = pygame.display.set_mode((self.config.screen_width, self.config.screen_height), 
+                                                pygame.RESIZABLE)
+            self.cached_surfaces.clear()
+            return True
+        
+        return False
 
     def handle_click(self):
         """Обрабатывает клик по кнопке"""
@@ -1319,12 +1303,25 @@ class InvestButton:
         self.is_hovered = False
         self.is_pressed = False
 
+    def draw(self, surface, font):
+        """Базовая отрисовка кнопки"""
+        color = (100, 100, 200) if self.is_hovered else (70, 70, 150)
+        pygame.draw.rect(surface, color, self.rect, border_radius=10)
+        text_surf = font.render(self.text, True, (255, 255, 255))
+        text_rect = text_surf.get_rect(center=self.rect.center)
+        surface.blit(text_surf, text_rect)
+
+    def is_hovered(self, mouse_pos):
+        self.is_hovered = self.rect.collidepoint(mouse_pos)
+        return self.is_hovered
+
 #вкладка Инвестиции
 class InvestmentMenu:
     """Класс для меню инвестиций."""
     
-    def __init__(self, game):
+    def __init__(self, game, nav_buttons):
         self.game = game
+        self.nav_buttons = nav_buttons
         self.export = ExportDB()
         self.current_tab = "акции"  # Текущая активная вкладка
         self.buttons = []
@@ -1332,26 +1329,7 @@ class InvestmentMenu:
         self.initialize_ui()
     
     def initialize_ui(self):
-        """Инициализация UI элементов меню инвестиций."""
-        # Кнопки левой панели навигации
-        nav_buttons = [
-            ("Кликер", lambda: self.game.play_game()),
-            ("Магазины", lambda: self.game.open_shop_selection()),
-            ("Инвестиции", lambda: None),
-            ("Бизнесы", lambda: self.game.open_businesses()),
-            ("Профиль", lambda: self.game.open_profile())
-        ]
-        
-        # Создаем кнопки навигации
-        button_width, button_height = 200, 60
-        button_x = 50
-        button_y_start = 150
-        
-        for i, (text, action) in enumerate(nav_buttons):
-            rect = pygame.Rect(button_x, button_y_start + i * 70, button_width, button_height)
-            is_active = text == "Инвестиции"
-            self.buttons.append(NavButton(rect, text, action, is_active))
-        
+        """Инициализация UI элементов меню инвестиций."""        
         # Кнопки вкладок (акции, недвижимость, криптовалюта)
         tab_button_width, tab_button_height = 150, 50
         tab_button_x = 300
@@ -1386,7 +1364,7 @@ class InvestmentMenu:
         self.draw_panel(surface, content_panel_rect, (30, 30, 50, 200))
         
         # Рисуем кнопки навигации
-        for button in self.buttons:
+        for button in self.nav_buttons:
             button.draw(surface, self.game.font_manager.get_font('button'))
         
         # Рисуем кнопки вкладок
@@ -1541,7 +1519,7 @@ class InvestmentMenu:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mouse_pos = pygame.mouse.get_pos()
             
-            for button in self.buttons:
+            for button in self.nav_buttons:
                 if button.rect.collidepoint(mouse_pos):
                     button.click()
                     self.game.update_navigation_state(button.text)
@@ -1733,31 +1711,13 @@ class ShopSystem:
             return False
 
 class ShopSelectionMenu:
-    def __init__(self, game):
+    def __init__(self, game, nav_buttons):
         self.game = game
+        self.nav_buttons = nav_buttons
         self.buttons = []
-        self.nav_buttons = []  # Добавляем навигационные кнопки
         self.initialize_ui()
     
-    def initialize_ui(self):
-        # Кнопки левой панели навигации
-        nav_buttons = [
-            ("Кликер", lambda: self.game.play_game(), False),
-            ("Магазины", lambda: None, True),  # Активная кнопка
-            ("Инвестиции", lambda: self.game.open_investments(), False),
-            ("Бизнесы", lambda: self.game.open_businesses(), False),
-            ("Профиль", lambda: self.game.open_profile(), False)
-        ]
-        
-        # Создаем кнопки навигации
-        button_width, button_height = 200, 60
-        button_x = 50
-        button_y_start = 150
-        
-        for i, (text, action, is_active) in enumerate(nav_buttons):
-            rect = pygame.Rect(button_x, button_y_start + i * 70, button_width, button_height)
-            self.nav_buttons.append(NavButton(rect, text, action, is_active))
-        
+    def initialize_ui(self):        
         # Основные кнопки выбора магазина
         button_width, button_height = 300, 80
         center_x = SCREEN_WIDTH // 2
@@ -1828,8 +1788,7 @@ class ShopSelectionMenu:
                 if button.rect.collidepoint(mouse_pos):
                     button.click()
                     # Обновляем состояние кнопок
-                    for btn in self.nav_buttons:
-                        btn.is_active = (btn.text == button.text)
+                    self.game.update_navigation_state(button.text)
                     return True
             
             # Проверяем клики по основным кнопкам
@@ -1841,31 +1800,13 @@ class ShopSelectionMenu:
         return False
 
 class LightShopMenu:
-    def __init__(self, game):
+    def __init__(self, game, nav_buttons):
         self.game = game
         self.category_buttons = []
-        self.nav_buttons = []
+        self.nav_buttons = nav_buttons
         self.initialize_ui() 
     
-    def initialize_ui(self):
-        # Кнопки левой панели навигации
-        nav_buttons = [
-            ("Кликер", lambda: self.game.play_game(), False),
-            ("Магазины", lambda: self.game.open_shop_selection(), True),  # Активная кнопка
-            ("Инвестиции", lambda: self.game.open_investments(), False),
-            ("Бизнесы", lambda: self.game.open_businesses(), False),
-            ("Профиль", lambda: self.game.open_profile(), False)
-        ]
-        
-        # Создаем кнопки навигации
-        button_width, button_height = 200, 60
-        button_x = 50
-        button_y_start = 150
-        
-        for i, (text, action, is_active) in enumerate(nav_buttons):
-            rect = pygame.Rect(button_x, button_y_start + i * 70, button_width, button_height)
-            self.nav_buttons.append(NavButton(rect, text, action, is_active))
-        
+    def initialize_ui(self):        
         # Кнопка назад
         self.back_button = Button(pygame.Rect(300, 50, 200, 60),"Назад в магазины",None, lambda: setattr(self.game, 'state', ScreenState.SHOP_SELECTION))
         
@@ -1944,6 +1885,7 @@ class LightShopMenu:
             for button in self.nav_buttons:
                 if button.rect.collidepoint(mouse_pos):
                     button.click()
+                    self.game.update_navigation_state(button.text)
                     return True
             
             # Проверяем клики по кнопке назад (только если она существует)
@@ -1960,9 +1902,9 @@ class LightShopMenu:
         return False
 
 class LightCategoryProductsMenu:
-    def __init__(self, game):
+    def __init__(self, game, nav_buttons):
         self.game = game
-        self.nav_buttons = []
+        self.nav_buttons = nav_buttons
         self.product_buttons = []
         self.search_box = pygame.Rect(300, 180, 400, 40)
         self.search_active = False
@@ -1970,24 +1912,6 @@ class LightCategoryProductsMenu:
         self.initialize_ui()
     
     def initialize_ui(self):
-        # Кнопки левой панели навигации
-        nav_buttons = [
-            ("Кликер", lambda: self.game.play_game(), False),
-            ("Магазины", lambda: self.game.open_shop_selection(), True),
-            ("Инвестиции", lambda: self.game.open_investments(), False),
-            ("Бизнесы", lambda: self.game.open_businesses(), False),
-            ("Профиль", lambda: self.game.open_profile(), False)
-        ]
-        
-        # Создаем кнопки навигации
-        button_width, button_height = 200, 60
-        button_x = 50
-        button_y_start = 150
-        
-        for i, (text, action, is_active) in enumerate(nav_buttons):
-            rect = pygame.Rect(button_x, button_y_start + i * 70, button_width, button_height)
-            self.nav_buttons.append(NavButton(rect, text, action, is_active))
-
         # Кнопка назад - возврат в СВЕТЛЫЙ магазин
         self.back_button = Button(
             pygame.Rect(300, 50, 200, 60),
@@ -2108,6 +2032,7 @@ class LightCategoryProductsMenu:
             for button in self.nav_buttons:
                 if button.rect.collidepoint(mouse_pos):
                     button.click()
+                    self.game.update_navigation_state(button.text)
                     return True
             
             # Проверяем клики по кнопке назад
@@ -2176,9 +2101,10 @@ class ProductButton:
 class BlackMarketCategoryProductsMenu(LightCategoryProductsMenu):
     """Категория товаров черного рынка (наследуется от светлой версии)"""
     
-    def __init__(self, game):
-        super().__init__(game)
+    def __init__(self, game, nav_buttons):
+        super().__init__(game, nav_buttons)
         # Переопределяем кнопку назад для черного рынка
+        self.nav_buttons = nav_buttons
         self.back_button = Button(
             pygame.Rect(300, 50, 200, 60),
             "Назад",
@@ -2247,31 +2173,13 @@ class BlackMarketCategoryProductsMenu(LightCategoryProductsMenu):
 
 # Аналогичный класс для черного рынка с темным стилем
 class BlackMarketMenu:
-    def __init__(self, game):
+    def __init__(self, game, nav_buttons):
         self.game = game
+        self.nav_buttons = nav_buttons
         self.category_buttons = []
-        self.nav_buttons = []
         self.initialize_ui()
     
-    def initialize_ui(self):
-        # Кнопки левой панели навигации
-        nav_buttons = [
-            ("Кликер", lambda: self.game.play_game(), False),
-            ("Магазины", lambda: self.game.open_shop_selection(), True),  # Активная кнопка
-            ("Инвестиции", lambda: self.game.open_investments(), False),
-            ("Бизнесы", lambda: self.game.open_businesses(), False),
-            ("Профиль", lambda: self.game.open_profile(), False)
-        ]
-        
-        # Создаем кнопки навигации
-        button_width, button_height = 200, 60
-        button_x = 50
-        button_y_start = 150
-        
-        for i, (text, action, is_active) in enumerate(nav_buttons):
-            rect = pygame.Rect(button_x, button_y_start + i * 70, button_width, button_height)
-            self.nav_buttons.append(NavButton(rect, text, action, is_active))
-        
+    def initialize_ui(self):        
         # Кнопка назад
         self.back_button = Button(pygame.Rect(300, 50, 200, 60),"Назад в магазины",None, lambda: setattr(self.game, 'state', ScreenState.SHOP_SELECTION))
         
@@ -2349,6 +2257,7 @@ class BlackMarketMenu:
             for button in self.nav_buttons:
                 if button.rect.collidepoint(mouse_pos):
                     button.click()
+                    self.game.update_navigation_state(button.text)
                     return True
             
             # Проверяем клики по кнопке назад (с обработкой исключений)
@@ -2797,8 +2706,9 @@ class BusinessManager:
 
 # Обновленный BusinessMenu с улучшенной графикой
 class AdvancedBusinessMenu:
-    def __init__(self, game):
+    def __init__(self, game, nav_buttons):
         self.game = game
+        self.nav_buttons = nav_buttons
         self.business_manager = BusinessManager(game)
         # Добавим отладочную информацию
         print(f"Всего бизнесов загружено: {len(self.business_manager.businesses)}")
@@ -2808,31 +2718,13 @@ class AdvancedBusinessMenu:
         self.selected_business = None
         self.business_buttons = []
         self.category_buttons = []
-        self.nav_buttons = []
         self.scroll_offset = 0
         self.max_scroll = 0
         
         self.initialize_ui()
     
     def initialize_ui(self):
-        """Инициализация UI"""
-        # Навигационные кнопки
-        nav_buttons = [
-            ("Кликер", lambda: self.game.play_game(), False),
-            ("Магазины", lambda: self.game.open_shop_selection(), False),
-            ("Инвестиции", lambda: self.game.open_investments(), False),
-            ("Бизнесы", lambda: None, True),
-            ("Профиль", lambda: self.game.open_profile(), False)
-        ]
-        
-        button_width, button_height = 200, 60
-        button_x = 50
-        button_y_start = 150
-        
-        for i, (text, action, is_active) in enumerate(nav_buttons):
-            rect = pygame.Rect(button_x, button_y_start + i * 70, button_width, button_height)
-            self.nav_buttons.append(NavButton(rect, text, action, is_active))
-        
+        """Инициализация UI"""        
         # Кнопки категорий
         categories = [
             (BusinessCategory.LIGHT, "💡 Светлые"),
@@ -3240,10 +3132,10 @@ class BusinessCard:
 class ProfileMenu:
     """Простое меню профиля без скролла."""
     
-    def __init__(self, game):
+    def __init__(self, game, nav_buttons):
         self.game = game
-        self.nav_buttons = []
         self.card_buttons = []  # Кнопки в карточках
+        self.nav_buttons = nav_buttons
         self.initialize_ui()
         
         # Данные профиля
@@ -3256,25 +3148,7 @@ class ProfileMenu:
         }
     
     def initialize_ui(self):
-        """Инициализация UI элементов профиля."""
-        # Кнопки левой панели навигации
-        nav_buttons = [
-            ("Кликер", lambda: self.game.play_game(), False),
-            ("Магазины", lambda: self.game.open_shop_selection(), False),
-            ("Инвестиции", lambda: self.game.open_investments(), False),
-            ("Бизнесы", lambda: self.game.open_businesses(), False),
-            ("Профиль", lambda: None, True)  # Активная кнопка
-        ]
-        
-        # Создаем кнопки навигации
-        button_width, button_height = 200, 60
-        button_x = 50
-        button_y_start = 150
-        
-        for i, (text, action, is_active) in enumerate(nav_buttons):
-            rect = pygame.Rect(button_x, button_y_start + i * 70, button_width, button_height)
-            self.nav_buttons.append(NavButton(rect, text, action, is_active))
-        
+        """Инициализация UI элементов профиля."""        
         # Кнопка назад
         self.back_button = Button(
             pygame.Rect(300, 50, 200, 60),
@@ -3528,14 +3402,15 @@ class Game:
         self.state = ScreenState.LOADING
         self.settings_manager = Settings()
 
+        self.nav_buttons = self.create_nav_buttons()
         self.shop_system = ShopSystem(self)
-        self.shop_selection_menu = ShopSelectionMenu(self)
-        self.light_shop_menu = LightShopMenu(self)
-        self.light_category_products_menu = LightCategoryProductsMenu(self)
-        self.black_market_category_products_menu = BlackMarketCategoryProductsMenu(self)
-        self.black_market_menu = BlackMarketMenu(self)
-        self.business_menu = AdvancedBusinessMenu(self)
-        self.profile_menu = ProfileMenu(self)
+        self.shop_selection_menu = ShopSelectionMenu(self, self.nav_buttons)
+        self.light_shop_menu = LightShopMenu(self, self.nav_buttons)
+        self.light_category_products_menu = LightCategoryProductsMenu(self, self.nav_buttons)
+        self.black_market_category_products_menu = BlackMarketCategoryProductsMenu(self, self.nav_buttons)
+        self.black_market_menu = BlackMarketMenu(self, self.nav_buttons)
+        self.business_menu = AdvancedBusinessMenu(self, self.nav_buttons)
+        self.profile_menu = ProfileMenu(self, self.nav_buttons)
         
         
         # Получаем доступные опции из config.json
@@ -3560,10 +3435,11 @@ class Game:
         
         self.font_manager = FontManager()
         self.icon_renderer = IconRenderer()
-        self.clicker_menu = ClickerMenu(self)
-        self.investment_menu = InvestmentMenu(self)
+        self.clicker_menu = ClickerMenu(self, self.nav_buttons)
+        self.investment_menu = InvestmentMenu(self, self.nav_buttons)
         self.loading_screen = LoadingScreen(self.screen, self.font_manager)
         
+
         self.stars = []
         self.background_cache = None
         self.panel_cache = {}
@@ -3643,7 +3519,35 @@ class Game:
         
         print("Настройки применены в реальном времени")
 
-    
+    def create_nav_buttons(self):
+        """Создает навигационные кнопки для всех меню"""
+        nav_buttons = []
+        
+        # Индивидуальные позиции для навигационных кнопок
+        nav_positions = [
+            ("Кликер", 10, 20, 80, 150),      # x, y, width, height
+            ("Магазины", 10, 180, 80, 150),
+            ("Инвестиции", 10, 340, 80, 150),
+            ("Бизнесы", 10, 500, 80, 150),
+            ("Профиль", 10, 660, 80, 150)
+        ]
+        
+        nav_actions = {
+            "Кликер": lambda: self.play_game(),
+            "Магазины": lambda: self.open_shop_selection(),
+            "Инвестиции": lambda: self.open_investments(),
+            "Бизнесы": lambda: self.open_businesses(),
+            "Профиль": lambda: self.open_profile()
+        }
+
+        for text, x, y, width, height in nav_positions:
+            rect = pygame.Rect(x, y, width, height)
+            action = nav_actions[text]
+            is_active = (text == "Кликер")  # Первая кнопка активна по умолчанию
+            nav_buttons.append(NavButton(rect, text, action, is_active))
+
+        return nav_buttons
+
     def update_navigation_state(self, active_button_text):
         """Обновляет состояние кнопок навигации во всех меню"""
         menus = [
@@ -3654,7 +3558,10 @@ class Game:
             getattr(self, 'black_market_menu', None),
             getattr(self, 'business_menu', None)  # ДОБАВИТЬ бизнес-меню
         ]
-        
+
+        for button in self.nav_buttons:
+            button.is_active = (button.text == active_button_text)
+
         for menu in menus:
             if menu is not None:
                 # Пытаемся получить кнопки из разных возможных атрибутов
@@ -3955,8 +3862,9 @@ class Game:
                         self.apply_button.hovered = self.apply_button.is_hovered(mouse_pos)
         
         except Exception as e:
-            while True:
-                print(f"ТЫ ЕБАНЫЙ ХУЕСОС: {e}")
+            print(f"ТЫ ЕБАНЫЙ ХУЕСОС: {e}")
+            import traceback
+            traceback.print_exc()
                 
     def run(self):
         """Основной игровой цикл."""

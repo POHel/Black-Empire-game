@@ -3237,15 +3237,6 @@ class ModernBusinessMenu:
                     tab.on_click()
                     return
             
-            # Кнопки открытия каталога
-            #if self.current_view == "mine":
-            #    if self.open_light_btn.is_clicked(pos):
-            #        self.open_light_btn.on_click()
-            #        return
-            #    if self.open_dark_btn.is_clicked(pos):
-            #        self.open_dark_btn.on_click()
-            #        return
-            
             # Карточки бизнесов
             if self.current_view == "mine":
                 for card in self.business_cards:
@@ -3262,23 +3253,31 @@ class ModernBusinessMenu:
             
             # Кнопки в детальном виде
             elif self.current_view == "single":
-                for button in self.buttons:
-                    if button.is_clicked(pos):
-                        button.on_click()
-                        return
+                # Убедимся, что self.buttons существует
+                if hasattr(self, 'buttons'):
+                    for button in self.buttons:
+                        if button.is_clicked(pos):
+                            button.on_click()
+                            return
         
         elif event.type == pygame.MOUSEMOTION:
             pos = pygame.mouse.get_pos()
             
             # Обновление состояния наведения для всех интерактивных элементов
-            for button in self.nav_buttons + self.tab_buttons + self.buttons:
+            all_buttons = []
+            all_buttons.extend(self.nav_buttons)
+            all_buttons.extend(self.tab_buttons)
+            
+            # Добавляем дополнительные кнопки, если они существуют
+            if hasattr(self, 'buttons'):
+                all_buttons.extend(self.buttons)
+            
+            for button in all_buttons:
                 button.update_hover(pos)
             
-            #if self.current_view == "mine":
-            #    self.open_light_btn.update_hover(pos)
-            #    self.open_dark_btn.update_hover(pos)
-            #    for card in self.business_cards:
-            #        card.update_hover(pos)
+            if self.current_view == "mine":
+                for card in self.business_cards:
+                    card.update_hover(pos)
     
     def update(self):
         """Обновление состояния меню"""
@@ -3292,370 +3291,6 @@ class ModernBusinessMenu:
             self.update_catalog_view(category)
         elif self.current_view == "single":
             self.update_single_view()
-# оптимизация бизнеса
-class OptimizedBusinessManager:
-    """Оптимизированный менеджер бизнесов с кэшированием и батчингом"""
-    
-    def __init__(self):
-        self.my_businesses: List[Business] = []
-        self.last_tick_time = time.time()
-        self.income_cache = {}  # Кэш доходов
-        self.business_dict = {}  # Быстрый доступ по UID
-        self.update_interval = 5.0  # Обновление каждые 5 секунд вместо постоянного
-        self.last_update_time = 0
-        self.dirty = False  # Флаг изменений для сохранения
-        
-        # Предварительно вычисленные шаблоны
-        self._light_businesses = tuple(BusinessManager.LIGHT_BUSINESSES)
-        self._dark_businesses = tuple(BusinessManager.DARK_BUSINESSES)
-        
-        self.load_data()
-
-    def load_data(self):
-        """Оптимизированная загрузка данных"""
-        try:
-            # В реальной реализации - загрузка из БД
-            self.my_businesses = []
-            self.business_dict = {b.uid: b for b in self.my_businesses}
-            self.rebuild_cache()
-        except:
-            self.my_businesses = []
-            self.business_dict = {}
-
-    def rebuild_cache(self):
-        """Пересборка кэша"""
-        self.income_cache.clear()
-        for business in self.my_businesses:
-            self.income_cache[business.uid] = business.get_net_income_per_hour()
-        self.dirty = True
-
-    def buy_business(self, template: BusinessTemplate) -> Business:
-        """Оптимизированная покупка бизнеса"""
-        business = Business(template)
-        self.my_businesses.append(business)
-        self.business_dict[business.uid] = business
-        self.income_cache[business.uid] = business.get_net_income_per_hour()
-        self.dirty = True
-        return business
-
-    def sell_business(self, business_uid: str) -> bool:
-        """Оптимизированная продажа бизнеса"""
-        business = self.business_dict.get(business_uid)
-        if business:
-            self.my_businesses = [b for b in self.my_businesses if b.uid != business_uid]
-            self.business_dict.pop(business_uid, None)
-            self.income_cache.pop(business_uid, None)
-            self.dirty = True
-            return True
-        return False
-
-    def collect_income(self, business_uid: str) -> int:
-        """Оптимизированный сбор дохода"""
-        business = self.business_dict.get(business_uid)
-        if not business:
-            return 0
-        
-        income = business.income_accumulated
-        business.income_accumulated = 0
-        self.dirty = True
-        return income
-
-    def get_business(self, business_uid: str) -> Optional[Business]:
-        """Быстрый доступ к бизнесу"""
-        return self.business_dict.get(business_uid)
-
-    def update_income(self):
-        """Оптимизированное обновление доходов с батчингом"""
-        current_time = time.time()
-        
-        # Обновляем не чаще чем раз в update_interval секунд
-        if current_time - self.last_update_time < self.update_interval:
-            return
-            
-        dt_hours = (current_time - self.last_tick_time) / 3600.0
-        
-        # Батч-обновление всех бизнесов
-        for business in self.my_businesses:
-            gain = business.income_per_hour * dt_hours
-            expense = business.expenses_per_hour * dt_hours
-            business.income_accumulated += int(max(0, gain - expense))
-            
-            # Обновляем кэш
-            self.income_cache[business.uid] = business.get_net_income_per_hour()
-        
-        self.last_tick_time = current_time
-        self.last_update_time = current_time
-        self.dirty = True
-
-    def get_total_income_per_hour(self) -> int:
-        """Быстрое получение общего дохода в час"""
-        return sum(self.income_cache.values())
-
-    def save_data(self):
-        """Оптимизированное сохранение (только при изменениях)"""
-        if self.dirty:
-            # В реальной реализации - сохранение в БД
-            self.dirty = False
-
-
-class OptimizedModernBusinessMenu(ModernBusinessMenu):
-    """Оптимизированное меню бизнесов"""
-    
-    def __init__(self, game):
-        self.game = game
-        self.business_manager = OptimizedBusinessManager()
-        self.current_view = "mine"
-        self.selected_business_uid = None
-        
-        # Кэширование поверхностей
-        self.surface_cache = {}
-        self.card_cache = {}
-        self.last_render_time = 0
-        self.render_interval = 0.1  # Ограничение перерисовки
-        
-        # Предварительная инициализация UI
-        self.initialize_ui()
-        self.pre_render_static_elements()
-
-    def pre_render_static_elements(self):
-        """Предварительный рендеринг статических элементов"""
-        # Панели
-        self.cached_panels = {
-            'main': self.create_cached_panel((1410, 790)),
-            'nav': self.create_cached_panel((240, 500)),
-            'content': self.create_cached_panel((1120, 600))
-        }
-
-    def create_cached_panel(self, size):
-        """Создает кэшированную панель"""
-        key = f"panel_{size[0]}_{size[1]}"
-        if key not in self.surface_cache:
-            surface = self.create_modern_panel_surface(size)
-            self.surface_cache[key] = surface
-        return self.surface_cache[key]
-
-    def create_modern_panel_surface(self, size):
-        """Создает поверхность панели с эффектом стекла"""
-        width, height = size
-        surface = pygame.Surface((width, height), pygame.SRCALPHA)
-        
-        # Основной фон
-        pygame.draw.rect(surface, (11, 17, 23, 200), 
-                        (0, 0, width, height), border_radius=18)
-        
-        # Стеклянный эффект
-        for y in range(height):
-            alpha = 10 - int(y / height * 5)
-            pygame.draw.line(surface, (255, 255, 255, max(0, alpha)), 
-                           (0, y), (width, y))
-        
-        # Рамка
-        pygame.draw.rect(surface, (255, 255, 255, 30), 
-                        (0, 0, width, height), width=1, border_radius=18)
-        
-        return surface
-
-    def update_business_cards(self):
-        """Оптимизированное обновление карточек бизнесов"""
-        current_time = time.time()
-        if current_time - self.last_render_time < self.render_interval:
-            return
-            
-        self.business_cards = []
-        businesses = self.business_manager.my_businesses
-        
-        if not businesses:
-            return
-
-        card_width, card_height = 320, 140
-        start_x, start_y = 280, 160
-        spacing = 16
-        columns = 3
-        
-        for i, business in enumerate(businesses):
-            row = i // columns
-            col = i % columns
-            
-            x = start_x + col * (card_width + spacing)
-            y = start_y + row * (card_height + spacing)
-            
-            # Кэшируем карточку
-            card_key = f"card_{business.uid}"
-            if card_key not in self.card_cache:
-                rect = pygame.Rect(x, y, card_width, card_height)
-                self.card_cache[card_key] = ModernBusinessCard(
-                    rect, business, 
-                    lambda uid=business.uid: self.show_single_business(uid)
-                )
-            
-            self.business_cards.append(self.card_cache[card_key])
-        
-        self.last_render_time = current_time
-
-    def draw_optimized(self, surface):
-        """Оптимизированная отрисовка"""
-        # Фон
-        surface.fill(DARK_BG)
-        
-        # Статические элементы из кэша
-        surface.blit(self.cached_panels['main'], (20, 20))
-        surface.blit(self.cached_panels['nav'], (30, 120))
-        surface.blit(self.cached_panels['content'], (280, 150))
-        
-        # Динамический контент
-        if self.current_view == "mine":
-            self.draw_my_businesses_optimized(surface)
-        elif self.current_view.startswith("catalog_"):
-            self.draw_catalog_optimized(surface)
-        elif self.current_view == "single":
-            self.draw_single_business(surface)
-
-    def draw_my_businesses_optimized(self, surface):
-        """Оптимизированная отрисовка моих бизнесов"""
-        if not self.business_manager.my_businesses:
-            # Статическое сообщение
-            if "empty_msg" not in self.surface_cache:
-                empty_font = pygame.font.Font(None, 24)
-                empty_text = "У тебя пока нет бизнесов. Открой каталог и купи первый бизнес."
-                self.surface_cache["empty_msg"] = empty_font.render(
-                    empty_text, True, TEXT_MUTED
-                )
-            
-            msg_surface = self.surface_cache["empty_msg"]
-            surface.blit(msg_surface, (280 + 560 - msg_surface.get_width()//2, 
-                                    150 + 300 - msg_surface.get_height()//2))
-        else:
-            # Рендерим только видимые карточки
-            for card in self.business_cards:
-                if card.rect.bottom > 150 and card.rect.top < 750:
-                    card.draw(surface, None)
-
-    def draw_catalog_optimized(self, surface):
-        """Оптимизированная отрисовка каталога"""
-        category = "light" if self.current_view == "catalog_light" else "dark"
-        templates = (self.business_manager._light_businesses if category == "light" 
-                    else self.business_manager._dark_businesses)
-        
-        card_width, card_height = 260, 120
-        start_x, start_y = 300, 160
-        spacing = 12
-        columns = 3
-        
-        for i, template in enumerate(templates):
-            row = i // columns
-            col = i % columns
-            
-            x = start_x + col * (card_width + spacing)
-            y = start_y + row * (card_height + spacing)
-            
-            # Пропускаем невидимые элементы
-            if y + card_height < 150 or y > 700:
-                continue
-                
-            self.draw_catalog_item_optimized(surface, template, x, y)
-
-    def draw_catalog_item_optimized(self, surface, template, x, y):
-        """Оптимизированная отрисовка элемента каталога"""
-        # Кэшируем элементы каталога
-        item_key = f"catalog_{template.id}"
-        if item_key not in self.surface_cache:
-            item_surface = self.create_catalog_item_surface(template)
-            self.surface_cache[item_key] = item_surface
-        
-        surface.blit(self.surface_cache[item_key], (x, y))
-
-    def create_catalog_item_surface(self, template):
-        """Создает поверхность элемента каталога"""
-        width, height = 260, 120
-        surface = pygame.Surface((width, height), pygame.SRCALPHA)
-        
-        # Фон
-        pygame.draw.rect(surface, (255, 255, 255, 10), 
-                        (0, 0, width, height), border_radius=12)
-        pygame.draw.rect(surface, (255, 255, 255, 20), 
-                        (0, 0, width, height), width=1, border_radius=12)
-        
-        # Статический текст
-        name_font = pygame.font.Font(None, 16)
-        price_font = pygame.font.Font(None, 14)
-        desc_font = pygame.font.Font(None, 12)
-        
-        name_surf = name_font.render(template.name, True, TEXT_PRIMARY)
-        price_text = f"{self.format_money(template.price)}"
-        price_surf = price_font.render(price_text, True, ACCENT2)
-        desc_text = template.description[:47] + "..." if len(template.description) > 50 else template.description
-        desc_surf = desc_font.render(desc_text, True, TEXT_MUTED)
-        income_text = f"Доход/час: {self.format_money(template.income_per_hour)}"
-        income_surf = desc_font.render(income_text, True, TEXT_MUTED)
-        
-        # Позиционирование
-        surface.blit(name_surf, (12, 12))
-        surface.blit(price_surf, (width - price_surf.get_width() - 12, 12))
-        surface.blit(desc_surf, (12, 35))
-        surface.blit(income_surf, (12, height - 24))
-        
-        return surface
-
-    def update(self):
-        """Оптимизированное обновление"""
-        self.business_manager.update_income()
-        
-        # Обновляем UI только при необходимости
-        if self.current_view == "mine":
-            self.update_business_cards()
-        elif self.current_view == "single":
-            self.update_single_view()
-
-    def format_money(self, amount):
-        """Оптимизированное форматирование денег"""
-        if amount >= 1000000:
-            return f"${amount/1000000:.1f}M"
-        elif amount >= 1000:
-            return f"${amount/1000:.0f}K"
-        return f"${int(amount)}"
-
-
-class OptimizedBusinessCard(ModernBusinessCard):
-    """Оптимизированная карточка бизнеса с кэшированием"""
-    
-    def __init__(self, rect, business, on_click):
-        super().__init__(rect, business, on_click)
-        self.cached_surface = None
-        self.last_update_time = 0
-        self.update_interval = 2.0  # Обновляем кэш каждые 2 секунды
-
-    def draw_optimized(self, surface):
-        """Оптимизированная отрисовка с кэшированием"""
-        current_time = time.time()
-        
-        # Обновляем кэш если нужно
-        if (self.cached_surface is None or 
-            current_time - self.last_update_time > self.update_interval):
-            self.cached_surface = self.render_to_surface()
-            self.last_update_time = current_time
-        
-        # Рисуем из кэша
-        if self.hovered:
-            # Эффекты при наведении рисуем отдельно
-            shadow = pygame.Surface((self.rect.width + 10, self.rect.height + 10), pygame.SRCALPHA)
-            pygame.draw.rect(shadow, (0, 0, 0, 80), 
-                          (5, 5, self.rect.width, self.rect.height), border_radius=16)
-            surface.blit(shadow, (self.rect.x - 5, self.rect.y - 5))
-            
-            glow = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
-            pygame.draw.rect(glow, (255, 255, 255, 30), 
-                          (0, 0, self.rect.width, self.rect.height), border_radius=14)
-            surface.blit(self.cached_surface, self.rect.topleft)
-            surface.blit(glow, self.rect.topleft)
-        else:
-            surface.blit(self.cached_surface, self.rect.topleft)
-
-    def render_to_surface(self):
-        """Рендерит карточку в поверхность для кэширования"""
-        surface = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
-        self.draw(surface, None)  # Используем оригинальный метод рисования
-        return surface
-
 
 class ProfileMenu:
     """Простое меню профиля без скролла."""

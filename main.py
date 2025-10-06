@@ -862,21 +862,22 @@ class Particle:
          self.duration = duration
          self.lifetime = 0
          self.alive = True
-    
-#     def update(self, dt):
-#         self.lifetime += dt
-#         if self.lifetime >= self.duration:
-#             self.alive = False
-#         else:
-#             self.x += self.velocity[0] * dt
-#             self.y += self.velocity[1] * dt
-    
-#     def draw(self, surface):
-#         alpha = 255 * (1 - self.lifetime / self.duration)
-#         color_with_alpha = (*self.color, int(alpha))
-#         particle_surface = pygame.Surface((self.size * 2, self.size * 2), pygame.SRCALPHA)
-#         pygame.draw.circle(particle_surface, color_with_alpha, (self.size, self.size), self.size)
-#         surface.blit(particle_surface, (int(self.x - self.size), int(self.y - self.size)))
+
+     def update(self, dt):
+         self.lifetime += dt
+         if self.lifetime >= self.duration:
+             self.alive = False
+         else:
+             self.x += self.velocity[0] * dt
+             self.y += self.velocity[1] * dt
+
+     def draw(self, surface):
+         alpha = int(255 * (1 - self.lifetime / self.duration))
+         alpha = max(0, min(255, alpha))
+         color_with_alpha = (*self.color, alpha)
+         particle_surface = pygame.Surface((self.size * 2, self.size * 2), pygame.SRCALPHA)
+         pygame.draw.circle(particle_surface, color_with_alpha, (self.size, self.size), self.size)
+         surface.blit(particle_surface, (int(self.x - self.size), int(self.y - self.size)))
 
 # Всплывающий текст
 class FloatingText:
@@ -1289,9 +1290,8 @@ class InvestButton:
         text_rect = text_surf.get_rect(center=self.rect.center)
         surface.blit(text_surf, text_rect)
 
-    def is_hovered(self, mouse_pos):
-        self.is_hovered = self.rect.collidepoint(mouse_pos)
-        return self.is_hovered
+    def check_hovered(self, mouse_pos):
+        return self.rect.collidepoint(mouse_pos)
 
 #вкладка Инвестиции
 class InvestmentMenu:
@@ -2684,9 +2684,8 @@ class ModernBusinessButton:
 class ModernBusinessMenu:
     """Современное меню бизнесов в стиле HTML версии"""
     
-    def __init__(self, game, nav_buttons):
+    def __init__(self, game):
         self.game = game
-        self.nav_buttons = nav_buttons
         self.business_manager = BusinessManager()
         self.current_view = "mine"  # "mine", "catalog_light", "catalog_dark", "single"
         self.selected_business_uid = None
@@ -3238,15 +3237,6 @@ class ModernBusinessMenu:
                     tab.on_click()
                     return
             
-            # Кнопки открытия каталога
-            #if self.current_view == "mine":
-            #    if self.open_light_btn.is_clicked(pos):
-            #        self.open_light_btn.on_click()
-            #        return
-            #    if self.open_dark_btn.is_clicked(pos):
-            #        self.open_dark_btn.on_click()
-            #        return
-            
             # Карточки бизнесов
             if self.current_view == "mine":
                 for card in self.business_cards:
@@ -3263,23 +3253,31 @@ class ModernBusinessMenu:
             
             # Кнопки в детальном виде
             elif self.current_view == "single":
-                for button in self.buttons:
-                    if button.is_clicked(pos):
-                        button.on_click()
-                        return
+                # Убедимся, что self.buttons существует
+                if hasattr(self, 'buttons'):
+                    for button in self.buttons:
+                        if button.is_clicked(pos):
+                            button.on_click()
+                            return
         
         elif event.type == pygame.MOUSEMOTION:
             pos = pygame.mouse.get_pos()
             
             # Обновление состояния наведения для всех интерактивных элементов
-            for button in self.nav_buttons + self.tab_buttons + self.buttons:
+            all_buttons = []
+            all_buttons.extend(self.nav_buttons)
+            all_buttons.extend(self.tab_buttons)
+            
+            # Добавляем дополнительные кнопки, если они существуют
+            if hasattr(self, 'buttons'):
+                all_buttons.extend(self.buttons)
+            
+            for button in all_buttons:
                 button.update_hover(pos)
             
-            #if self.current_view == "mine":
-            #    self.open_light_btn.update_hover(pos)
-            #    self.open_dark_btn.update_hover(pos)
-            #    for card in self.business_cards:
-            #        card.update_hover(pos)
+            if self.current_view == "mine":
+                for card in self.business_cards:
+                    card.update_hover(pos)
     
     def update(self):
         """Обновление состояния меню"""
@@ -3574,7 +3572,7 @@ class Game:
         self.light_category_products_menu = LightCategoryProductsMenu(self, self.nav_buttons)
         self.black_market_category_products_menu = BlackMarketCategoryProductsMenu(self, self.nav_buttons)
         self.black_market_menu = BlackMarketMenu(self, self.nav_buttons)
-        self.business_menu = ModernBusinessMenu(self, self.nav_buttons)
+        self.business_menu = ModernBusinessMenu(self)
         self.profile_menu = ProfileMenu(self, self.nav_buttons)
         
         

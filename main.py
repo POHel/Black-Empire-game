@@ -2684,8 +2684,9 @@ class ModernBusinessButton:
 class ModernBusinessMenu:
     """Современное меню бизнесов в стиле HTML версии"""
     
-    def __init__(self, game):
+    def __init__(self, game, nav_buttons):
         self.game = game
+        self.nav_buttons = nav_buttons
         self.business_manager = BusinessManager()
         self.current_view = "mine"  # "mine", "catalog_light", "catalog_dark", "single"
         self.selected_business_uid = None
@@ -3573,7 +3574,7 @@ class Game:
         self.light_category_products_menu = LightCategoryProductsMenu(self, self.nav_buttons)
         self.black_market_category_products_menu = BlackMarketCategoryProductsMenu(self, self.nav_buttons)
         self.black_market_menu = BlackMarketMenu(self, self.nav_buttons)
-        self.business_menu = AdvancedBusinessMenu(self, self.nav_buttons)
+        self.business_menu = ModernBusinessMenu(self, self.nav_buttons)
         self.profile_menu = ProfileMenu(self, self.nav_buttons)
         
         

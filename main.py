@@ -1640,8 +1640,8 @@ class TabButton:
     def draw(self, surface, font):
         """Рисует кнопку вкладки."""
         if self.is_active:
-            color = (70, 70, 120, 255)  # Активный цвет
-            text_color = (255, 255, 255, 255)
+            color = (50, 50, 90, 255)  # Активный цвет
+            text_color = (180, 180, 180, 255)
         else:
             color = (50, 50, 90, 255)  # Неактивный цвет
             text_color = (180, 180, 180, 255)
@@ -1851,21 +1851,25 @@ class ShopSelectionMenu:
         center_x = SCREEN_WIDTH // 2
         center_y = SCREEN_HEIGHT // 2
         
-        # ПРАВИЛЬНО:
         self.buttons = [
             Button(
                 pygame.Rect(center_x - 350, center_y - 50, button_width, button_height),
                 "Светлый рынок",
                 None,
-                lambda: self.game.open_light_shop()  # Используем self.game
+                lambda: self.game.open_light_shop()
             ),
             Button(
                 pygame.Rect(center_x + 50, center_y - 50, button_width, button_height),
                 "Тёмный рынок", 
                 None,
-                lambda: self.game.open_black_market()  # Используем self.game
+                lambda: self.game.open_black_market()
             )
         ]
+        
+        # Добавляем атрибуты для кнопок
+        for button in self.buttons:
+            button.is_active = False
+            button.hovered = False
 
     def open_light_shop(self):
         self.game.state = ScreenState.SHOP
@@ -1922,8 +1926,23 @@ class ShopSelectionMenu:
             # Проверяем клики по основным кнопкам
             for button in self.buttons:
                 if button.rect.collidepoint(mouse_pos):
+                    # Сбрасываем активное состояние у всех кнопок
+                    for btn in self.buttons:
+                        btn.is_active = False
+                        btn.hovered = False
+                    # Устанавливаем активное состояние для нажатой кнопки
+                    button.is_active = True
                     button.click()
                     return True
+        
+        elif event.type == pygame.MOUSEMOTION:
+            # Обновляем hover состояние
+            mouse_pos = pygame.mouse.get_pos()
+            for button in self.buttons:
+                button.hovered = button.rect.collidepoint(mouse_pos)
+            # Обновляем hover для кнопки назад если есть
+            if hasattr(self, 'back_button') and self.back_button:
+                self.back_button.hovered = self.back_button.rect.collidepoint(mouse_pos)
         
         return False
 
@@ -1935,15 +1954,25 @@ class LightShopMenu:
         self.initialize_ui() 
     
     def initialize_ui(self):        
-        # Кнопка назад
-        self.back_button = Button(pygame.Rect(300, 50, 200, 60),"Назад в магазины",None, lambda: setattr(self.game, 'state', ScreenState.SHOP_SELECTION))
+        # Кнопка назад - исправленный action
+        self.back_button = Button(
+            pygame.Rect(300, 50, 200, 60),
+            "Назад в магазины",
+            None, 
+            lambda: self.game.open_shop_selection()  # Исправлено!
+        )
+        # Добавляем атрибуты для кнопки назад
+        self.back_button.is_active = False
+        self.back_button.hovered = False
         
-        # Кнопки категорий
+        # Кнопки категорий - исправленная инициализация
         categories = list(ShopCategory)
         button_width, button_height = 250, 80
         start_x = 300
         start_y = 200
         spacing = 30
+        
+        self.category_buttons = []  # Очищаем список
         
         for i, category in enumerate(categories):
             row = i // 3
@@ -1951,17 +1980,18 @@ class LightShopMenu:
             x = start_x + col * (button_width + spacing)
             y = start_y + row * (button_height + spacing)
             
-            self.category_buttons.append(
-                Button(
-                    pygame.Rect(x, y, button_width, button_height),
-                    category.value,
-                    None,
-                    lambda cat=category: self.open_category(cat)
-                )
+            btn = Button(
+                pygame.Rect(x, y, button_width, button_height),
+                category.value,
+                None,
+                lambda cat=category: self.open_category(cat)
             )
+            btn.is_active = False
+            btn.hovered = False
+            self.category_buttons.append(btn)
     
     def open_category(self, category):
-        self.game.shop_system.current_shop = "light"  # Устанавливаем магазин
+        self.game.shop_system.current_shop = "light"
         self.game.shop_system.current_category = category
         self.game.shop_system.load_products(category)
         self.game.state = ScreenState.SHOP_CATEGORY
@@ -1979,22 +2009,23 @@ class LightShopMenu:
         for button in self.nav_buttons:
             button.draw(surface, self.game.font_manager.get_font('button'))
         
-        # Кнопка назад
+        # Кнопка назад - исправленная отрисовка
         if self.back_button:
             icon_x = self.back_button.rect.x + 20
             icon_y = self.back_button.rect.centery - 12
-            # Используем icon_renderer из game для отрисовки иконки
             self.game.icon_renderer.draw_back_icon(surface, icon_x, icon_y, 25)
-            self.back_button.draw(surface, self.game.font_manager.get_font('button'), icon_x, icon_y)
-        
+            self.back_button.draw(surface, self.game.font_manager.get_font('button'), icon_x, icon_y)            
+
         # Заголовок
         title = self.game.font_manager.get_rendered_text("Светлый рынок", 'title', (200, 200, 255), True)
         surface.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, 150))
         
-        # Кнопки категорий
+        # Кнопки категорий - исправленная отрисовка
         for button in self.category_buttons:
-            button.draw(surface, self.game.font_manager.get_font('button'), button.rect.x + 20, button.rect.centery - 15)
-        
+            icon_x = button.rect.x + 20
+            icon_y = button.rect.centery - 15
+            button.draw(surface, self.game.font_manager.get_font('button'), icon_x, icon_y)
+
         # Инструкция
         instruction = self.game.font_manager.get_rendered_text("Выберите категорию товаров", 'subtitle', TEXT_SECONDARY)
         surface.blit(instruction, (SCREEN_WIDTH//2 - instruction.get_width()//2, 550))
@@ -2009,6 +2040,11 @@ class LightShopMenu:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mouse_pos = pygame.mouse.get_pos()
             
+            # Проверяем клики по кнопке назад
+            if self.back_button and self.back_button.rect.collidepoint(mouse_pos):
+                self.back_button.click()
+                return True
+            
             # Проверяем клики по кнопкам навигации
             for button in self.nav_buttons:
                 if button.rect.collidepoint(mouse_pos):
@@ -2016,19 +2052,32 @@ class LightShopMenu:
                     self.game.update_navigation_state(button.text)
                     return True
             
-            # Проверяем клики по кнопке назад (только если она существует)
-            if self.back_button and self.back_button.rect.collidepoint(mouse_pos):
-                self.back_button.click()
-                return True
-            
             # Проверяем клики по кнопкам категорий
             for button in self.category_buttons:
                 if button.rect.collidepoint(mouse_pos):
                     button.click()
                     return True
         
+        elif event.type == pygame.MOUSEMOTION:
+            # Обновляем hover состояние
+            mouse_pos = pygame.mouse.get_pos()
+            
+            # Для кнопки назад
+            if self.back_button:
+                self.back_button.hovered = self.back_button.rect.collidepoint(mouse_pos)
+            
+            # Для кнопок категорий
+            for button in self.category_buttons:
+                button.hovered = button.rect.collidepoint(mouse_pos)
+            
+            # Для навигационных кнопок
+            for button in self.nav_buttons:
+                if hasattr(button, 'hovered'):
+                    button.hovered = button.rect.collidepoint(mouse_pos)
+        
         return False
 
+    
 class LightCategoryProductsMenu:
     def __init__(self, game, nav_buttons):
         self.game = game
@@ -2047,6 +2096,9 @@ class LightCategoryProductsMenu:
             None,
             lambda: setattr(self.game, 'state', ScreenState.SHOP)
         )
+        # Добавляем атрибуты
+        self.back_button.is_active = False
+        self.back_button.hovered = False
     
     def update_products(self):
         """Обновляет кнопки товаров на основе загруженных продуктов"""
@@ -2165,12 +2217,28 @@ class LightCategoryProductsMenu:
             
             # Проверяем клики по кнопке назад
             if self.back_button.rect.collidepoint(mouse_pos):
+                # Сбрасываем состояния продуктов
+                for btn in self.product_buttons:
+                    if hasattr(btn, 'is_active'):
+                        btn.is_active = False
+                    if hasattr(btn, 'hovered'):
+                        btn.hovered = False
+                self.back_button.is_active = True
                 self.back_button.click()
                 return True
             
             # Проверяем клики по товарам
             for button in self.product_buttons:
                 if button.rect.collidepoint(mouse_pos):
+                    # Сбрасываем активное состояние у всех продуктовых кнопок
+                    for btn in self.product_buttons:
+                        if hasattr(btn, 'is_active'):
+                            btn.is_active = False
+                        if hasattr(btn, 'hovered'):
+                            btn.hovered = False
+                    # Устанавливаем активное состояние для нажатой кнопки
+                    if hasattr(button, 'is_active'):
+                        button.is_active = True
                     button.click()
                     return True
             
@@ -2189,6 +2257,15 @@ class LightCategoryProductsMenu:
                 # Добавляем символ (ограничиваем длину)
                 if len(self.search_text) < 30:
                     self.search_text += event.unicode
+
+        elif event.type == pygame.MOUSEMOTION:
+            # Обновляем hover состояние
+            mouse_pos = pygame.mouse.get_pos()
+            for button in self.product_buttons:
+                if hasattr(button, 'hovered'):
+                    button.hovered = button.rect.collidepoint(mouse_pos)
+            if self.back_button:
+                self.back_button.hovered = self.back_button.rect.collidepoint(mouse_pos)
         
         return False
 
@@ -2332,6 +2409,15 @@ class BlackMarketMenu:
                     lambda cat=category: self.open_category(cat)
                 )
             )
+            btn = Button(
+            pygame.Rect(x, y, button_width, button_height),
+            category.value,
+            None,
+            lambda cat=category: self.open_category(cat)
+            )
+            btn.is_active = False  # Добавляем атрибут
+            btn.hovered = False    # Добавляем атрибут
+            self.category_buttons.append(btn)
 
     def open_category(self, category):
         self.game.shop_system.current_shop = "black"  # Устанавливаем рынок
@@ -2369,6 +2455,8 @@ class BlackMarketMenu:
         
         # Кнопки категорий
         for button in self.category_buttons:
+            # Передаем состояние активности в отрисовку
+            button.is_active = button.is_active  # текущее состояние
             button.draw(surface, self.game.font_manager.get_font('button'), button.rect.x + 20, button.rect.centery - 15)
     
     def draw_panel(self, surface, rect, color):
@@ -2403,6 +2491,12 @@ class BlackMarketMenu:
             for button in self.category_buttons:
                 if button.rect.collidepoint(mouse_pos):
                     try:
+                        # Сбрасываем активное состояние у всех кнопок
+                        for btn in self.category_buttons:
+                            btn.is_active = False
+                            btn.hovered = False
+                        # Устанавливаем активное состояние для нажатой кнопки
+                        button.is_active = True
                         button.click()
                         return True
                     except Exception as e:
@@ -2411,6 +2505,18 @@ class BlackMarketMenu:
                         self.game.shop_system.load_demo_products(button.text)
                         self.game.state = ScreenState.BLACK_MARKET_CATEGORY
                         return True
+
+
+        elif event.type == pygame.MOUSEMOTION:
+            # Обновляем hover состояние
+            mouse_pos = pygame.mouse.get_pos()
+            for button in self.category_buttons:
+                button.hovered = button.rect.collidepoint(mouse_pos)
+        
+        if event.type == pygame.MOUSEMOTION:
+            mouse_pos = pygame.mouse.get_pos()
+            for button in self.category_buttons:
+                button.hovered = button.rect.collidepoint(mouse_pos)
         return False
     
 class UpgradeType(Enum):
@@ -4472,7 +4578,7 @@ class Game:
 
         # Обновляем основные навигационные кнопки
         for button in self.nav_buttons:
-            button.is_active = (button.text == active_button_text)
+            button.is_active = (button.text == active_button_text) if active_button_text else False
 
         # Обновляем кнопки в меню
         for menu in menus:
@@ -4485,38 +4591,122 @@ class Game:
                 if buttons:
                     for button in buttons:
                         if hasattr(button, 'text') and hasattr(button, 'is_active'):
-                            button.is_active = (button.text == active_button_text)
+                            button.is_active = (button.text == active_button_text) if active_button_text else False
+        
+        # Обновляем кнопки в конкретных меню магазинов
+        if hasattr(self, 'light_shop_menu') and self.light_shop_menu:
+            for button in self.light_shop_menu.category_buttons:
+                if hasattr(button, 'is_active'):
+                    button.is_active = False
+        
+        if hasattr(self, 'black_market_menu') and self.black_market_menu:
+            for button in self.black_market_menu.category_buttons:
+                if hasattr(button, 'is_active'):
+                    button.is_active = False
+        
+        # Сбрасываем активное состояние продуктовых кнопок
+        if hasattr(self, 'light_category_products_menu') and self.light_category_products_menu:
+            for button in self.light_category_products_menu.product_buttons:
+                if hasattr(button, 'is_active'):
+                    button.is_active = False
+        
+        if hasattr(self, 'black_market_category_products_menu') and self.black_market_category_products_menu:
+            for button in self.black_market_category_products_menu.product_buttons:
+                if hasattr(button, 'is_active'):
+                    button.is_active = False
 
-
+    def reset_shop_states(self):
+        """Сбрасывает состояние всех кнопок в магазинах"""
+        # Светлый магазин
+        if hasattr(self, 'light_shop_menu') and self.light_shop_menu:
+            for button in self.light_shop_menu.category_buttons:
+                if hasattr(button, 'is_active'):
+                    button.is_active = False
+                if hasattr(button, 'hovered'):
+                    button.hovered = False
+            # Сбрасываем кнопку назад
+            if hasattr(self.light_shop_menu, 'back_button') and self.light_shop_menu.back_button:
+                self.light_shop_menu.back_button.hovered = False
+        
+        # Черный рынок
+        if hasattr(self, 'black_market_menu') and self.black_market_menu:
+            for button in self.black_market_menu.category_buttons:
+                if hasattr(button, 'is_active'):
+                    button.is_active = False
+                if hasattr(button, 'hovered'):
+                    button.hovered = False
+            # Сбрасываем кнопку назад
+            if hasattr(self.black_market_menu, 'back_button') and self.black_market_menu.back_button:
+                self.black_market_menu.back_button.hovered = False
+        
+        # Сбрасываем продукты
+        if hasattr(self, 'light_category_products_menu') and self.light_category_products_menu:
+            self.light_category_products_menu.product_buttons = []
+            if hasattr(self.light_category_products_menu, 'back_button') and self.light_category_products_menu.back_button:
+                self.light_category_products_menu.back_button.hovered = False
+        
+        if hasattr(self, 'black_market_category_products_menu') and self.black_market_category_products_menu:
+            self.black_market_category_products_menu.product_buttons = []
+            if hasattr(self.black_market_category_products_menu, 'back_button') and self.black_market_category_products_menu.back_button:
+                self.black_market_category_products_menu.back_button.hovered = False
+        
+        # Сбрасываем ShopSelectionMenu
+        if hasattr(self, 'shop_selection_menu') and self.shop_selection_menu:
+            for button in self.shop_selection_menu.buttons:
+                if hasattr(button, 'is_active'):
+                    button.is_active = False
+                if hasattr(button, 'hovered'):
+                    button.hovered = False
     def play_game(self):
-            """Переход в игровой режим (кликер)."""
-            self.state = ScreenState.CLICKER
-            self.update_navigation_state("Кликер")
-            print("Запуск игры...")
+        """Переход в игровой режим (кликер)."""
+        self.state = ScreenState.CLICKER
+        self.update_navigation_state("Кликер")
+        print("Запуск игры...")
 
     def open_investments(self):
-            """Открывает меню инвестиций."""
-            self.state = ScreenState.INVESTMENTS
-            self.update_navigation_state("Инвестиции")
-            print("Открытие инвестиций...")
+        """Открывает меню инвестиций."""
+        self.state = ScreenState.INVESTMENTS
+        self.update_navigation_state("Инвестиции")
+        print("Открытие инвестиций...")
 
     def open_shop_selection(self):
-            """Открывает выбор магазина"""
-            self.state = ScreenState.SHOP_SELECTION
-            self.update_navigation_state("Магазины")
-            print("Открытие выбора магазина...")
+        """Открывает выбор магазина"""
+        self.state = ScreenState.SHOP_SELECTION
+        self.update_navigation_state("Магазины")
+        self.reset_shop_states()
+        print("Открытие выбора магазина...")
 
     def open_light_shop(self):
-            """Открывает светлый магазин"""
-            self.state = ScreenState.SHOP
-            self.update_navigation_state("Магазины")
-            print("Открытие светлого магазина...")
+        """Открывает светлый магазин"""
+        self.state = ScreenState.SHOP
+        self.update_navigation_state("Магазины")
+        self.reset_shop_states()
+        print("Открытие светлого магазина...")
 
     def open_black_market(self):
-            """Открывает черный рынок"""
-            self.state = ScreenState.BLACK_MARKET
-            self.update_navigation_state("Магазины")
-            print("Открытие черного рынка...")
+        """Открывает черный рынок"""
+        self.state = ScreenState.BLACK_MARKET
+        self.update_navigation_state("Магазины")
+        self.reset_shop_states()
+        print("Открытие черного рынка...")
+
+    def back_to_shops(self):
+        """Возврат к выбору магазинов"""
+        self.state = ScreenState.SHOP_SELECTION
+        print("Возврат к выбору магазинов...")
+        self.reset_shop_states()
+
+    def back_to_light_shop(self):
+        """Возврат в светлый магазин"""
+        self.state = ScreenState.SHOP
+        print("Возврат в светлый магазин...")
+        self.reset_shop_states()
+
+    def back_to_black_market(self):
+        """Возврат в черный рынок"""
+        self.state = ScreenState.BLACK_MARKET
+        print("Возврат в черный рынок...")
+        self.reset_shop_states()
 
     def open_businesses(self):
         """Открывает меню бизнесов."""
@@ -4827,10 +5017,10 @@ class Game:
                     self.investment_menu.draw(self.screen)
                 elif self.state == ScreenState.CLICKER:
                     self.clicker_menu.draw()  # ← Исправленный вызов
-                elif self.state == ScreenState.SHOP_SELECTION:
-                    self.shop_selection_menu.draw(self.screen)
                 elif self.state == ScreenState.SHOP:
                     self.light_shop_menu.draw(self.screen)
+                elif self.state == ScreenState.SHOP_SELECTION:
+                    self.shop_selection_menu.draw(self.screen)
                 elif self.state == ScreenState.SHOP_CATEGORY:
                     self.light_category_products_menu.draw(self.screen)
                 elif self.state == ScreenState.BLACK_MARKET:

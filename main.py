@@ -67,8 +67,9 @@ class NavButton:
     def __init__(self, rect, text, action, is_active=False):
         self.rect = rect
         self.text = text
-        self.action = action
         self.is_active = is_active
+        self.icon_function = None
+        self.action = None
     
     def draw(self, surface, font):
         """Рисует кнопку навигации."""
@@ -82,10 +83,22 @@ class NavButton:
         pygame.draw.rect(surface, color, self.rect, border_radius=10)
         pygame.draw.rect(surface, (100, 100, 150, 255), self.rect, width=1, border_radius=10)
         
+        if self.icon_function:
+            self.icon_function(surface, self.rect)
+
+        # Текст
         text_surf = font.render(self.text, True, text_color)
         text_rect = text_surf.get_rect(center=self.rect.center)
         surface.blit(text_surf, text_rect)
-    
+
+    def handle_event(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.rect.collidepoint(event.pos):
+                if self.action:
+                    self.action()
+                return True
+        return False
+
     def click(self):
         """Выполняет действие при клике."""
         if self.action:
@@ -331,73 +344,177 @@ class GradientGenerator:
 
 class IconRenderer:
     """Рендерер иконок."""
-    
     def __init__(self):
         self.icon_cache = {}
         self.play_icon_img = None
         self.settings_icon_img = None
+        self.clicker_icon_img = None
+        self.business_icon_img = None
+        self.investments_icon_img = None
+        self.profile_icon_img = None
+        self.shop_icon_img = None
         self.load_image_icons()
 
     def load_image_icons(self):
         """Загружает иконки из файлов с правильной обработкой ошибок."""
+        import os
+        icon_files = {
+            'play_icon_img':     'images/play_icon.png',
+            'settings_icon_img': 'images/settings_icon.png',
+            'clicker_icon_img':  'images/clicker_icon.png',
+            'business_icon_img': 'images/business_icon.png',
+            'investments_icon_img': 'images/investments_icon.png',
+            'profile_icon_img':  'images/profile_icon.png',
+            'shop_icon_img':     'images/shop_icon.png'
+        }
         try:
-            import os
-            if os.path.exists('images/play_icon.png'):
-                self.play_icon_img = pygame.image.load('images/play_icon.png').convert_alpha()
-                self.play_icon_img = pygame.transform.scale(self.play_icon_img, (30, 30))
-            else:
-                print("Файл images/play_icon.png не найден, используем векторные иконки")
-                self.play_icon_img = None
-                
-            if os.path.exists('images/settings_icon.png'):
-                self.settings_icon_img = pygame.image.load('images/settings_icon.png').convert_alpha()
-                self.settings_icon_img = pygame.transform.scale(self.settings_icon_img, (30, 30))
-            else:
-                print("Файл images/settings_icon.png не найден, используем векторные иконки")
-                self.settings_icon_img = None
-                
+            for attr, filename in icon_files.items():
+                if os.path.exists(filename):
+                    img = pygame.image.load(filename).convert_alpha()
+                    img = pygame.transform.scale(img, (30, 30))
+                    setattr(self, attr, img)
+                else:
+                    print(f"Файл {filename} не найден, используем векторную иконку")
+                    setattr(self, attr, None)
         except pygame.error as e:
             print(f"Ошибка загрузки иконок: {e}")
-            self.play_icon_img = None
-            self.settings_icon_img = None
+            for attr in icon_files.keys():
+                setattr(self, attr, None)
         except Exception as e:
             print(f"Общая ошибка при загрузке иконок: {e}")
-            self.play_icon_img = None
-            self.settings_icon_img = None
-    
+            for attr in icon_files.keys():
+                setattr(self, attr, None)
+
+    def _draw_image_icon(self, surface, x, y, size, img_attr, fallback_func):
+        img = getattr(self, img_attr, None)
+        if img is not None:
+            try:
+                if size != 30:
+                    scaled_icon = pygame.transform.scale(img, (size, size))
+                    surface.blit(scaled_icon, (x, y))
+                else:
+                    surface.blit(img, (x, y))
+                return True
+            except Exception as e:
+                print(f"Ошибка отрисовки изображения {img_attr}: {e}")
+        # Fallback на векторную функцию
+        fallback_func(surface, x, y, size)
+        return False
+
+    # Универсальные методы для каждого типа иконки, вызывают _draw_image_icon
     def draw_play_image_icon(self, surface, x, y, size=30):
-        """Рисует иконку игры из изображения."""
-        if self.play_icon_img is not None:
-            try:
-                if size != 30:
-                    scaled_icon = pygame.transform.scale(self.play_icon_img, (size, size))
-                    surface.blit(scaled_icon, (x, y))
-                else:
-                    surface.blit(self.play_icon_img, (x, y))
-                return True
-            except Exception as e:
-                print(f"Ошибка отрисовки изображения play: {e}")
-        
-        # Fallback на векторную иконку
-        self.draw_play_icon(surface, x, y, size)
-        return False
-    
+        return self._draw_image_icon(surface, x, y, size, "play_icon_img", self.draw_play_icon)
+
     def draw_settings_image_icon(self, surface, x, y, size=30):
-        """Рисует иконку настроек из изображения."""
-        if self.settings_icon_img is not None:
-            try:
-                if size != 30:
-                    scaled_icon = pygame.transform.scale(self.settings_icon_img, (size, size))
-                    surface.blit(scaled_icon, (x, y))
-                else:
-                    surface.blit(self.settings_icon_img, (x, y))
-                return True
-            except Exception as e:
-                print(f"Ошибка отрисовки изображения settings: {e}")
+        return self._draw_image_icon(surface, x, y, size, "settings_icon_img", self.draw_settings_icon)
+
+    def draw_clicker_image_icon(self, surface, x, y, size=30):
+        return self._draw_image_icon(surface, x, y, size, "clicker_icon_img", self.draw_clicker_icon)
+
+    def draw_business_image_icon(self, surface, x, y, size=30):
+        return self._draw_image_icon(surface, x, y, size, "business_icon_img", self.draw_business_icon)
+
+    def draw_investments_image_icon(self, surface, x, y, size=30):
+        return self._draw_image_icon(surface, x, y, size, "investments_icon_img", self.draw_investments_icon)
+
+    def draw_profile_image_icon(self, surface, x, y, size=30):
+        return self._draw_image_icon(surface, x, y, size, "profile_icon_img", self.draw_profile_icon)
+
+    def draw_shop_image_icon(self, surface, x, y, size=30):
+        return self._draw_image_icon(surface, x, y, size, "shop_icon_img", self.draw_shop_icon)
+
+    # Fallback методы для отрисовки векторных иконок
+    def draw_play_icon(self, surface, x, y, size=30):
+        cache_key = ("play", size)
+        if cache_key not in self.icon_cache:
+            icon_surf = pygame.Surface((size, size), pygame.SRCALPHA)
+            points = [(size*0.3, size*0.2), (size*0.8, size*0.5), (size*0.3, size*0.8)]
+            pygame.gfxdraw.filled_polygon(icon_surf, points, PURPLE_PRIMARY)
+            pygame.gfxdraw.aapolygon(icon_surf, points, TEXT_PRIMARY)
+            self.icon_cache[cache_key] = icon_surf
+        surface.blit(self.icon_cache[cache_key], (x, y))
+
+    def draw_settings_icon(self, surface, x, y, size=30):
+        cache_key = ("settings", size)
+        if cache_key not in self.icon_cache:
+            icon_surf = pygame.Surface((size, size), pygame.SRCALPHA)
+            center = size // 2
+            pygame.draw.circle(icon_surf, TEXT_PRIMARY, (center, center), size//3, 2)
+            for i in range(8):
+                angle = math.radians(i * 45)
+                x1 = center + (size//3) * math.cos(angle)
+                y1 = center + (size//3) * math.sin(angle)
+                x2 = center + (size//2) * math.cos(angle)
+                y2 = center + (size//2) * math.sin(angle)
+                pygame.draw.line(icon_surf, TEXT_PRIMARY, (x1, y1), (x2, y2), 2)
+            self.icon_cache[cache_key] = icon_surf
+        surface.blit(self.icon_cache[cache_key], (x, y))
+
+    def draw_clicker_icon(self, surface, x, y, size=30):
+        # Контур пальца
+        icon_surf = pygame.Surface((size, size), pygame.SRCALPHA)
+        # Основание пальца (овал)
+        pygame.draw.ellipse(icon_surf, PURPLE_PRIMARY, [size*0.3, size*0.45, size*0.4, size*0.35])
+        # Палец (вертикальный прямоугольник)
+        pygame.draw.rect(icon_surf, PURPLE_PRIMARY, [size*0.45, size*0.1, size*0.1, size*0.5])
+        # Обрисовка
+        pygame.draw.ellipse(icon_surf, TEXT_PRIMARY, [size*0.3, size*0.45, size*0.4, size*0.35], 2)
+        pygame.draw.rect(icon_surf, TEXT_PRIMARY, [size*0.45, size*0.1, size*0.1, size*0.5], 2)
+        surface.blit(icon_surf, (x, y))
+
+
+    def draw_business_icon(self, surface, x, y, size=30):
+        icon_surf = pygame.Surface((size, size), pygame.SRCALPHA)
+        # Здание
+        pygame.draw.rect(icon_surf, PURPLE_PRIMARY, [size*0.25, size*0.35, size*0.5, size*0.5])
+        pygame.draw.rect(icon_surf, TEXT_PRIMARY, [size*0.25, size*0.35, size*0.5, size*0.5], 2)
+        # Окна
+        for i in range(2):
+            for j in range(2):
+                pygame.draw.rect(icon_surf, TEXT_PRIMARY, [
+                    size*0.32 + j*size*0.23, size*0.42 + i*size*0.18, size*0.12, size*0.12
+                ], 1)
+        # Дверь
+        pygame.draw.rect(icon_surf, TEXT_PRIMARY, [size*0.47, size*0.68, size*0.06, size*0.17], 1)
+        surface.blit(icon_surf, (x, y))
         
-        # Fallback на векторную иконку
-        self.draw_settings_icon(surface, x, y, size)
-        return False
+
+    def draw_investments_icon(self, surface, x, y, size=30):
+        icon_surf = pygame.Surface((size, size), pygame.SRCALPHA)
+        # Основа графика
+        pygame.draw.line(icon_surf, TEXT_PRIMARY, (size*0.2, size*0.8), (size*0.8, size*0.8), 2)
+        pygame.draw.line(icon_surf, TEXT_PRIMARY, (size*0.2, size*0.8), (size*0.2, size*0.2), 2)
+        # Стрелка (рост)
+        pygame.draw.line(icon_surf, PURPLE_PRIMARY, (size*0.2, size*0.7), (size*0.5, size*0.4), 3)
+        pygame.draw.line(icon_surf, PURPLE_PRIMARY, (size*0.5, size*0.4), (size*0.7, size*0.6), 3)
+        pygame.draw.polygon(icon_surf, PURPLE_PRIMARY, [
+            (size*0.7, size*0.6), (size*0.65, size*0.55), (size*0.75, size*0.54)
+        ])
+        surface.blit(icon_surf, (x, y))
+        
+
+    def draw_profile_icon(self, surface, x, y, size=30):
+        icon_surf = pygame.Surface((size, size), pygame.SRCALPHA)
+        # Голова
+        pygame.draw.circle(icon_surf, PURPLE_PRIMARY, (int(size/2), int(size*0.37)), int(size*0.18))
+        pygame.draw.circle(icon_surf, TEXT_PRIMARY, (int(size/2), int(size*0.37)), int(size*0.18), 2)
+        # Тело
+        pygame.draw.ellipse(icon_surf, PURPLE_PRIMARY, [size*0.23, size*0.55, size*0.54, size*0.32])
+        pygame.draw.ellipse(icon_surf, TEXT_PRIMARY, [size*0.23, size*0.55, size*0.54, size*0.32], 2)
+        surface.blit(icon_surf, (x, y))
+        
+
+    def draw_shop_icon(self, surface, x, y, size=30):
+        icon_surf = pygame.Surface((size, size), pygame.SRCALPHA)
+        # Основание магазина
+        pygame.draw.rect(icon_surf, PURPLE_PRIMARY, [size*0.2, size*0.6, size*0.6, size*0.25])
+        pygame.draw.rect(icon_surf, TEXT_PRIMARY, [size*0.2, size*0.6, size*0.6, size*0.25], 2)
+        # Крыша (треугольник)
+        roof_points = [(size*0.1, size*0.6), (size*0.5, size*0.2), (size*0.9, size*0.6)]
+        pygame.draw.polygon(icon_surf, PURPLE_PRIMARY, roof_points)
+        pygame.draw.polygon(icon_surf, TEXT_PRIMARY, roof_points, 2)
+        surface.blit(icon_surf, (x, y))
+        
     
     def draw_play_icon(self, surface, x, y, size=30):
         cache_key = ("play", size)
@@ -410,7 +527,7 @@ class IconRenderer:
         
         surface.blit(self.icon_cache[cache_key], (x, y))
     
-    def draw_settings_icon(self, surface, x, y, size=40):
+    def draw_settings_icon(self, surface, x, y, size=30):
         cache_key = ("settings", size)
         if cache_key not in self.icon_cache:
             icon_surf = pygame.Surface((size, size), pygame.SRCALPHA)
@@ -448,7 +565,7 @@ class IconRenderer:
         
         surface.blit(self.icon_cache[cache_key], (x, y))
 
-    def draw_apply_icon(self, surface, x, y, size=25):
+    def draw_apply_icon(self, surface, x, y, size=30):
         """Рисует иконку применения (галочку)."""
         cache_key = ("apply", size)
         if cache_key not in self.icon_cache:
@@ -3565,6 +3682,7 @@ class Game:
         self.state = ScreenState.LOADING
         self.settings_manager = Settings()
 
+        self.icon_renderer = IconRenderer()
         self.nav_buttons = self.create_nav_buttons()
         self.shop_system = ShopSystem(self)
         self.shop_selection_menu = ShopSelectionMenu(self, self.nav_buttons)
@@ -3597,7 +3715,6 @@ class Game:
         }
         
         self.font_manager = FontManager()
-        self.icon_renderer = IconRenderer()
         self.clicker_menu = ClickerMenu(self, self.nav_buttons)
         self.investment_menu = InvestmentMenu(self, self.nav_buttons)
         self.loading_screen = LoadingScreen(self.screen, self.font_manager)
@@ -3686,30 +3803,70 @@ class Game:
         """Создает навигационные кнопки для всех меню"""
         nav_buttons = []
         
-        # Индивидуальные позиции для навигационных кнопок
         nav_positions = [
-            ("Кликер", 10, 20, 80, 150),      # x, y, width, height
+            ("Кликер", 10, 20, 80, 150),
             ("Магазины", 10, 180, 80, 150),
             ("Инвестиции", 10, 340, 80, 150),
             ("Бизнесы", 10, 500, 80, 150),
             ("Профиль", 10, 660, 80, 150)
         ]
-        
+
         nav_actions = {
-            "Кликер": lambda: self.play_game(),
-            "Магазины": lambda: self.open_shop_selection(),
-            "Инвестиции": lambda: self.open_investments(),
-            "Бизнесы": lambda: self.open_businesses(),
-            "Профиль": lambda: self.open_profile()
+            "Кликер": (
+                lambda surface, rect: self.draw_icon_in_center(surface, rect, "clicker"),
+                self.play_game
+            ),
+            "Магазины": (
+                lambda surface, rect: self.draw_icon_in_center(surface, rect, "shop"),
+                self.open_shop_selection
+            ),
+            "Инвестиции": (
+                lambda surface, rect: self.draw_icon_in_center(surface, rect, "investments"),
+                self.open_investments
+            ),
+            "Бизнесы": (
+                lambda surface, rect: self.draw_icon_in_center(surface, rect, "business"),
+                self.open_businesses
+            ),
+            "Профиль": (
+                lambda surface, rect: self.draw_icon_in_center(surface, rect, "profile"),
+                self.open_profile
+            )
         }
 
         for text, x, y, width, height in nav_positions:
             rect = pygame.Rect(x, y, width, height)
-            action = nav_actions[text]
-            is_active = (text == "Кликер")  # Первая кнопка активна по умолчанию
-            nav_buttons.append(NavButton(rect, text, action, is_active))
+            icon_func, action = nav_actions[text]
+            is_active = (text == "Кликер")
+            button = NavButton(rect, text, is_active)
+            button.icon_function = icon_func
+            button.action = action
+            nav_buttons.append(button)
 
         return nav_buttons
+
+    def draw_icon_in_center(self, surface, rect, icon_type, icon_size=50):
+        """Вспомогательная функция для рисования иконки по центру кнопки"""
+        icon_x = rect.centerx - icon_size // 2 - 2
+        icon_y = rect.centery - icon_size // 2 + 35
+
+        if icon_type == "clicker":
+            self.icon_renderer.draw_clicker_image_icon(surface, icon_x, icon_y, icon_size)
+        elif icon_type == "shop":
+            self.icon_renderer.draw_shop_image_icon(surface, icon_x, icon_y, icon_size)
+        elif icon_type == "investments":
+            self.icon_renderer.draw_investments_image_icon(surface, icon_x, icon_y, icon_size)
+        elif icon_type == "business":
+            self.icon_renderer.draw_business_image_icon(surface, icon_x, icon_y, icon_size)
+        elif icon_type == "profile":
+            self.icon_renderer.draw_profile_image_icon(surface, icon_x, icon_y, icon_size)
+
+    def draw_nav_buttons(self, surface):
+        """Отрисовывает навигационные кнопки с иконками"""
+        for nav_button in self.nav_buttons:
+            nav_button.draw(surface)
+            if hasattr(nav_button, 'icon_function'):
+                button.icon_function(surface, nav_button.rect)
 
     def update_navigation_state(self, active_button_text):
         """Обновляет состояние кнопок навигации во всех меню"""
@@ -3719,25 +3876,26 @@ class Game:
             getattr(self, 'shop_selection_menu', None),
             getattr(self, 'light_shop_menu', None),
             getattr(self, 'black_market_menu', None),
-            getattr(self, 'business_menu', None)  # ДОБАВИТЬ бизнес-меню
+            getattr(self, 'business_menu', None)
         ]
 
+        # Обновляем основные навигационные кнопки
         for button in self.nav_buttons:
             button.is_active = (button.text == active_button_text)
 
+        # Обновляем кнопки в меню
         for menu in menus:
             if menu is not None:
-                # Пытаемся получить кнопки из разных возможных атрибутов
                 buttons = None
                 for attr_name in ['nav_buttons', 'buttons', 'navigation_buttons']:
                     if hasattr(menu, attr_name):
                         buttons = getattr(menu, attr_name)
                         break
-                
                 if buttons:
                     for button in buttons:
-                        if (hasattr(button, 'text') and hasattr(button, 'is_active')):
+                        if hasattr(button, 'text') and hasattr(button, 'is_active'):
                             button.is_active = (button.text == active_button_text)
+
 
     def play_game(self):
             """Переход в игровой режим (кликер)."""
@@ -4098,7 +4256,8 @@ class Game:
         
         except Exception as e:
             print(f"ТЫ КУСОК ЕБАНОГО ДОЛБАЕБА: {e}")
-
+            import traceback
+            traceback.print_exc()
     def draw_main_menu(self):
         """Отрисовывает главное меню."""
         # Рисуем левую панель
@@ -4115,6 +4274,8 @@ class Game:
             icon_x = button.rect.x + 20
             icon_y = button.rect.centery - 15
             button.draw(self.screen, self.font_manager.get_font('button'), icon_x, icon_y)
+
+        # self.draw_nav_buttons(self.screen)
 
     def draw_settings(self):
         """Отрисовывает экран настроек."""

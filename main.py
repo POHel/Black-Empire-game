@@ -2413,6 +2413,15 @@ class BlackMarketMenu:
                         return True
         return False
     
+class UpgradeType(Enum):
+    INCOME = "income"           # Увеличение дохода
+    EFFICIENCY = "efficiency"   # Снижение расходов  
+    CAPACITY = "capacity"       # Увеличение мощности
+    QUALITY = "quality"         # Улучшение качества
+    MARKETING = "marketing"     # Увеличение доли рынка
+    AUTOMATION = "automation"   # Автоматизация процессов
+    SECURITY = "security"       # Безопасность (для темных бизнесов)
+    INNOVATION = "innovation"   # Инновации (для IT бизнесов)
 
 @dataclass
 class BusinessTemplate:
@@ -2424,15 +2433,105 @@ class BusinessTemplate:
     description: str
     category: str  # "light" или "dark"
 
+@dataclass
 class BusinessUpgrade:
-    """Улучшения бизнеса"""
-    def __init__(self):
-        self.level = 0
-        self.automation = 0
-        self.marketing = 0
+    id: str
+    name: str
+    description: str
+    cost: int
+    effect: float  # Множитель эффекта
+    upgrade_type: UpgradeType
+    max_level: int = 10
+    current_level: int = 0
+    requirements: Optional[List[str]] = None  # Требуемые улучшения
+    
+    def __post_init__(self):
+        if self.requirements is None:
+            self.requirements = []
+    
+    def can_upgrade(self, business) -> bool:
+        """Проверяет можно ли улучшить"""
+        if self.current_level >= self.max_level:
+            return False
+        
+        # Проверяем требования
+        if self.requirements is None:
+            self.requirements = []
+        for req_id in self.requirements:
+            if not any(upg.id == req_id and upg.current_level > 0 
+                      for upg in business.upgrades):
+                return False
+        return True
+    
+    def apply_effect(self, business):
+        """Применяет эффект улучшения к бизнесу"""
+        if self.upgrade_type == UpgradeType.INCOME:
+            business.income_per_hour = int(business.income_per_hour * (1 + self.effect))
+        elif self.upgrade_type == UpgradeType.EFFICIENCY:
+            business.expenses_per_hour = max(0, int(business.expenses_per_hour * (1 - self.effect)))
+        elif self.upgrade_type == UpgradeType.CAPACITY:
+            business.capacity_multiplier *= (1 + self.effect)
+        elif self.upgrade_type == UpgradeType.QUALITY:
+            business.quality_multiplier *= (1 + self.effect)
+        elif self.upgrade_type == UpgradeType.MARKETING:
+            business.market_share = min(100.0, business.market_share * (1 + self.effect))
+        elif self.upgrade_type == UpgradeType.AUTOMATION:
+            business.automation_level += self.effect
+        elif self.upgrade_type == UpgradeType.SECURITY:
+            business.security_level += self.effect
+        elif self.upgrade_type == UpgradeType.INNOVATION:
+            business.innovation_level += self.effect
 
-class Business:
-    """Бизнес игрока"""
+# Индивидуальные улучшения для каждого типа бизнеса
+BUSINESS_UPGRADES = {
+    # Светлые бизнесы
+    "light-1": [  # Продажа (розничная торговля)
+        BusinessUpgrade("retail-1", "Улучшение витрин", "Привлекательные витрины увеличивают продажи", 5000, 0.15, UpgradeType.INCOME),
+        BusinessUpgrade("retail-2", "Система скидок", "Лояльность клиентов растет", 8000, 0.10, UpgradeType.MARKETING),
+        BusinessUpgrade("retail-3", "Оптимизация запасов", "Снижение расходов на хранение", 6000, 0.12, UpgradeType.EFFICIENCY),
+        BusinessUpgrade("retail-4", "Обучение персонала", "Улучшение обслуживания клиентов", 7000, 0.08, UpgradeType.QUALITY),
+    ],
+    
+    "light-3": [  # IT-стартап
+        BusinessUpgrade("it-1", "Нанять Senior разработчиков", "Увеличивает качество продукта", 15000, 0.20, UpgradeType.QUALITY),
+        BusinessUpgrade("it-2", "Запуск рекламной кампании", "Привлечение новых клиентов", 12000, 0.15, UpgradeType.MARKETING),
+        BusinessUpgrade("it-3", "Оптимизация серверов", "Снижение расходов на инфраструктуру", 10000, 0.18, UpgradeType.EFFICIENCY),
+        BusinessUpgrade("it-4", "Внедрение AI", "Автоматизация процессов разработки", 20000, 0.25, UpgradeType.AUTOMATION),
+        BusinessUpgrade("it-5", "Исследование новых технологий", "Инновации увеличивают доход", 25000, 0.30, UpgradeType.INNOVATION),
+    ],
+    
+    "light-15": [  # Банк
+        BusinessUpgrade("bank-1", "Расширение филиальной сети", "Увеличение клиентской базы", 50000, 0.20, UpgradeType.INCOME),
+        BusinessUpgrade("bank-2", "Цифровизация услуг", "Снижение операционных расходов", 40000, 0.15, UpgradeType.EFFICIENCY),
+        BusinessUpgrade("bank-3", "Премиальные пакеты услуг", "Увеличение дохода с клиента", 35000, 0.18, UpgradeType.QUALITY),
+        BusinessUpgrade("bank-4", "Система кибербезопасности", "Защита от кибератак", 45000, 0.12, UpgradeType.SECURITY),
+    ],
+    
+    # Темные бизнесы
+    "dark-1": [  # Кибер-мошенничество
+        BusinessUpgrade("cyber-1", "Анонимные сервера", "Снижение риска обнаружения", 8000, 0.15, UpgradeType.SECURITY),
+        BusinessUpgrade("cyber-2", "Фишинговая рассылка", "Увеличение охвата", 6000, 0.20, UpgradeType.MARKETING),
+        BusinessUpgrade("cyber-3", "Взлом банковских систем", "Повышение эффективности атак", 12000, 0.25, UpgradeType.INCOME),
+        BusinessUpgrade("cyber-4", "Крипто-кошельки", "Анонимные переводы", 10000, 0.18, UpgradeType.SECURITY),
+    ],
+    
+    "dark-9": [  # Нарко-картель
+        BusinessUpgrade("cartel-1", "Расширение каналов поставок", "Увеличение объемов", 20000, 0.22, UpgradeType.CAPACITY),
+        BusinessUpgrade("cartel-2", "Коррупция чиновников", "Снижение внимания властей", 25000, 0.20, UpgradeType.SECURITY),
+        BusinessUpgrade("cartel-3", "Новые точки сбыта", "Расширение рынка", 18000, 0.18, UpgradeType.MARKETING),
+        BusinessUpgrade("cartel-4", "Улучшение качества продукта", "Повышение цены", 15000, 0.15, UpgradeType.QUALITY),
+    ],
+    
+    "dark-14": [  # Частная военная компания
+        BusinessUpgrade("pmc-1", "Современное вооружение", "Увеличение эффективности", 30000, 0.25, UpgradeType.QUALITY),
+        BusinessUpgrade("pmc-2", "Подготовка бойцов", "Повышение квалификации", 25000, 0.20, UpgradeType.INCOME),
+        BusinessUpgrade("pmc-3", "Международные контракты", "Расширение географии", 35000, 0.30, UpgradeType.MARKETING),
+        BusinessUpgrade("pmc-4", "Техническое оснащение", "Современное оборудование", 28000, 0.22, UpgradeType.CAPACITY),
+    ]
+}
+
+
+class BusinessFull:
     def __init__(self, template: BusinessTemplate):
         self.uid = f"b-{random.randint(10000, 99999)}"
         self.template_id = template.id
@@ -2443,39 +2542,75 @@ class Business:
         self.income_accumulated = 0
         self.expenses_per_hour = int(template.income_per_hour * 0.35)
         self.market_share = round(random.uniform(1.0, 7.0), 2)
-        self.upgrades = BusinessUpgrade()
+        self.upgrade_data = BusinessUpgradeData()
+        self.upgrades: List[BusinessUpgrade] = []
+        self.capacity_multiplier = 1.0
+        self.quality_multiplier = 1.0
+        self.automation_level = 0
+        self.security_level = 0
+        self.innovation_level = 0
+        self.risk_level = 10.0
         self.notes = template.description
-        
-    def get_net_income_per_hour(self) -> int:
-        """Чистый доход в час"""
-        return max(0, self.income_per_hour - self.expenses_per_hour)
-    
+        self.initialize_upgrades()
+
+    def initialize_upgrades(self):
+        if self.template_id in BUSINESS_UPGRADES:
+            self.upgrades = BUSINESS_UPGRADES[self.template_id]
+
+    def get_available_upgrades(self) -> List[BusinessUpgrade]:
+        return [upgrade for upgrade in self.upgrades if upgrade.can_upgrade(self)]
+
+    def purchase_upgrade(self, upgrade_id: str) -> bool:
+        upgrade = next((u for u in self.upgrades if u.id == upgrade_id), None)
+        if not upgrade or not upgrade.can_upgrade(self):
+            return False
+        upgrade.current_level += 1
+        upgrade.apply_effect(self)
+        return True
+
     def upgrade_income(self) -> bool:
-        """Улучшение дохода"""
         cost = max(100, int(self.income_per_hour * 6))
-        # В демо всегда успешно
         self.income_per_hour = int(self.income_per_hour * 1.25)
-        self.upgrades.level += 1
+        self.upgrade_data.level += 1
         self.level += 1
         return True
-    
+
     def upgrade_efficiency(self) -> bool:
-        """Улучшение эффективности (снижение расходов)"""
         cost = max(80, int(self.expenses_per_hour * 4))
         self.expenses_per_hour = max(0, int(self.expenses_per_hour * 0.8))
-        self.upgrades.automation += 1
+        self.upgrade_data.automation += 1
         return True
-    
+
     def upgrade_marketing(self) -> bool:
-        """Улучшение маркетинга (увеличение доли рынка)"""
         cost = max(200, int(self.income_per_hour * 4))
         self.market_share = min(100.0, round(self.market_share + random.uniform(0.7, 3.7), 2))
-        self.upgrades.marketing += 1
+        self.upgrade_data.marketing += 1
         return True
-    
+
+    def get_net_income_per_hour(self) -> int:
+        base_income = self.income_per_hour * self.capacity_multiplier * self.quality_multiplier
+        expenses = self.expenses_per_hour * (1 - self.automation_level * 0.1)
+        return max(0, int(base_income - expenses))
+
+    def calculate_risk(self) -> float:
+        base_risk = 10.0
+        risk_reduction = self.security_level * 2.0
+        return max(1.0, base_risk - risk_reduction)
+
+    def get_upgrade_progress(self) -> Dict[str, float]:
+        progress = {}
+        for upgrade_type in UpgradeType:
+            upgrades = [u for u in self.upgrades if u.upgrade_type == upgrade_type]
+            if upgrades:
+                progress[upgrade_type.value] = sum(u.current_level for u in upgrades) / sum(u.max_level for u in upgrades)
+            else:
+                progress[upgrade_type.value] = 0.0
+        return progress
+
     def get_sell_price(self) -> int:
-        """Цена продажи (70% от вложений)"""
         return int(self.income_per_hour * 100 * 0.7)
+
+from typing import TYPE_CHECKING
 
 class BusinessManager:
     """Менеджер бизнесов как в HTML версии"""
@@ -2532,11 +2667,9 @@ class BusinessManager:
         self.my_businesses = []
     
     def save_data(self):
-        """Сохранение данных (в демо просто заглушка)"""
-        # В реальной реализации здесь будет сохранение в БД
         pass
-    
-    def buy_business(self, template: BusinessTemplate) -> Business:
+
+    def buy_business(self, template: BusinessTemplate):
         """Покупка бизнеса"""
         business = Business(template)
         self.my_businesses.append(business)
@@ -2560,10 +2693,10 @@ class BusinessManager:
         self.save_data()
         return income
     
-    def get_business(self, business_uid: str) -> Optional[Business]:
+    def get_business(self, business_uid: str) -> Optional["Business"]:
         """Получение бизнеса по ID"""
         return next((b for b in self.my_businesses if b.uid == business_uid), None)
-    
+
     def update_income(self):
         """Обновление накопленного дохода (вызывается периодически)"""
         current_time = time.time()
@@ -2574,6 +2707,117 @@ class BusinessManager:
             expense = business.expenses_per_hour * dt_hours
             business.income_accumulated += int(max(0, gain - expense))      
         self.last_tick_time = current_time
+
+class Business:
+    def __init__(self, template: BusinessTemplate):
+        self.uid = f"b-{random.randint(10000, 99999)}"
+        self.template_id = template.id
+        self.name = template.name
+        self.purchased_at = time.time()
+        self.level = 1
+        self.income_per_hour = template.income_per_hour
+        self.income_accumulated = 0
+        self.expenses_per_hour = int(template.income_per_hour * 0.35)
+        self.market_share = round(random.uniform(1.0, 7.0), 2)
+        
+        # Разделяем улучшения на данные и объекты
+        self.upgrade_data = BusinessUpgradeData()  # Простые данные
+        self.upgrades: List[BusinessUpgrade] = []  # Объекты улучшений
+        
+        # Новые атрибуты для улучшений
+        self.capacity_multiplier = 1.0
+        self.quality_multiplier = 1.0
+        self.automation_level = 0
+        self.security_level = 0
+        self.innovation_level = 0
+        self.risk_level = 10.0  # Уровень риска (для темных бизнесов)
+        
+        self.notes = template.description
+        self.initialize_upgrades()
+    
+    def initialize_upgrades(self):
+        """Инициализирует улучшения для этого бизнеса"""
+        if self.template_id in BUSINESS_UPGRADES:
+            # Создаем копии улучшений для этого бизнеса
+            for upgrade_template in BUSINESS_UPGRADES[self.template_id]:
+                self.upgrades.append(BusinessUpgrade(
+                    id=upgrade_template.id,
+                    name=upgrade_template.name,
+                    description=upgrade_template.description,
+                    cost=upgrade_template.cost,
+                    effect=upgrade_template.effect,
+                    upgrade_type=upgrade_template.upgrade_type,
+                    max_level=upgrade_template.max_level
+                ))
+
+    def get_upgrade_progress(self) -> Dict[str, float]:
+        """Возвращает прогресс по всем типам улучшений"""
+        progress = {}
+        for upgrade_type in UpgradeType:
+            upgrades_of_type = [u for u in self.upgrades if u.upgrade_type == upgrade_type]
+            if upgrades_of_type:
+                total_levels = sum(u.current_level for u in upgrades_of_type)
+                max_levels = sum(u.max_level for u in upgrades_of_type)
+                progress[upgrade_type.value] = total_levels / max_levels if max_levels > 0 else 0
+            else:
+                progress[upgrade_type.value] = 0.0
+        return progress
+    
+    def get_available_upgrades(self) -> List[BusinessUpgrade]:
+        """Возвращает доступные для покупки улучшения"""
+        return [upgrade for upgrade in self.upgrades if upgrade.can_upgrade(self)]
+    
+    def purchase_upgrade(self, upgrade_id: str) -> bool:
+        """Покупка улучшения"""
+        upgrade = next((u for u in self.upgrades if u.id == upgrade_id), None)
+        if not upgrade or not upgrade.can_upgrade(self):
+            return False
+        
+        # В реальной реализации проверяем баланс игрока
+        # if player_balance < upgrade.cost: return False
+        
+        upgrade.current_level += 1
+        upgrade.apply_effect(self)
+        return True
+    
+    def upgrade_income(self) -> bool:
+        """Улучшение дохода"""
+        cost = max(100, int(self.income_per_hour * 6))
+        # В демо всегда успешно
+        self.income_per_hour = int(self.income_per_hour * 1.25)
+        self.upgrade_data.level += 1  # Используем upgrade_data вместо upgrades
+        self.level += 1
+        return True
+    
+    def upgrade_efficiency(self) -> bool:
+        """Улучшение эффективности (снижение расходов)"""
+        cost = max(80, int(self.expenses_per_hour * 4))
+        self.expenses_per_hour = max(0, int(self.expenses_per_hour * 0.8))
+        self.upgrade_data.automation += 1  # Используем upgrade_data вместо upgrades
+        return True
+    
+    def upgrade_marketing(self) -> bool:
+        """Улучшение маркетинга (увеличение доли рынка)"""
+        cost = max(200, int(self.income_per_hour * 4))
+        self.market_share = min(100.0, round(self.market_share + random.uniform(0.7, 3.7), 2))
+        self.upgrade_data.marketing += 1  # Используем upgrade_data вместо upgrades
+        return True
+    
+    def get_net_income_per_hour(self) -> int:
+        """Чистый доход в час с учетом всех модификаторов"""
+        base_income = self.income_per_hour * self.capacity_multiplier * self.quality_multiplier
+        expenses = self.expenses_per_hour * (1 - self.automation_level * 0.1)
+        return max(0, int(base_income - expenses))
+    
+    def calculate_risk(self) -> float:
+        """Расчет уровня риска (для темных бизнесов)"""
+        base_risk = 10.0
+        risk_reduction = self.security_level * 2.0
+        return max(1.0, base_risk - risk_reduction)
+    
+    def get_sell_price(self) -> int:
+        """Цена продажи (70% от вложений)"""
+        return int(self.income_per_hour * 100 * 0.7)
 
 class ModernBusinessCard:
     """Современная карточка бизнеса в стиле HTML"""
@@ -2805,14 +3049,15 @@ class ModernBusinessMenu:
         self.game = game
         self.business_manager = BusinessManager()
         self.current_view = "mine"  # "mine", "catalog_light", "catalog_dark", "single"
-        self.selected_business_uid = None
+        self.selected_business_uid: Optional[str] = None
+        self.upgrade_menu: Optional[BusinessUpgradeMenu] = None
         self.business_cards = []
         self.catalog_items = []
         self.buttons = []
         self.scroll_offset = 0
         
         self.initialize_ui()
-    
+        
     def initialize_ui(self):
         """Инициализация UI"""
         self.nav_buttons = [
@@ -2832,12 +3077,13 @@ class ModernBusinessMenu:
             ModernBusinessButton(pygame.Rect(660, 100, 150, 40), "Мои бизнесы", 
                                lambda: self.show_my_businesses(), True)
         ]
-        
-        # Кнопки открытия каталога
-        #self.open_light_btn = ModernBusinessButton(pygame.Rect(820, 100, 150, 40), 
-                                                 #"Открыть светлые", lambda: self.open_catalog("light"))
-        #self.open_dark_btn = ModernBusinessButton(pygame.Rect(980, 100, 150, 40), 
-                                                #"Открыть тёмные", lambda: self.open_catalog("dark"))
+
+    def show_upgrades(self, business_uid: str):
+        """Показывает меню улучшений для бизнеса"""
+        business = self.business_manager.get_business(business_uid)
+        if business:
+            self.upgrade_menu = BusinessUpgradeMenu(business)
+            self.current_view = "upgrades"
     
     def open_catalog(self, category: str):
         """Открытие каталога бизнесов"""
@@ -2854,7 +3100,7 @@ class ModernBusinessMenu:
     def show_single_business(self, business_uid: str):
         """Показать детали бизнеса"""
         self.current_view = "single"
-        self.selected_business_uid = business_uid
+        self.selected_business_uid = business_uid  # Теперь точно строка
         self.update_single_view()
     
     def update_business_cards(self):
@@ -2920,11 +3166,8 @@ class ModernBusinessMenu:
         self.buttons = []    
         if self.selected_business_uid is None:
             return
-        if self.selected_business_uid is None:
-            return
+            
         business_uid = self.selected_business_uid
-        if business_uid is None:
-            return
         business = self.business_manager.get_business(business_uid)
         if not business:
             return
@@ -2944,17 +3187,28 @@ class ModernBusinessMenu:
             ModernBusinessButton(pygame.Rect(620, action_y + 55, 280, 45), 
                                "Маркетинг", 
                                lambda: business.upgrade_marketing() and self.update_single_view()),
-            ModernBusinessButton(pygame.Rect(300, action_y + 110, 600, 45), 
-                               f"Продать бизнес за {business.get_sell_price()}$", 
-                               lambda: self.sell_business())
         ])
         
-        # Кнопка назад
-        self.buttons.append(
+        # Кнопка улучшений (только если есть улучшения)
+        if business.upgrades:
+            self.buttons.append(
+                ModernBusinessButton(
+                    pygame.Rect(300, 340, 600, 45), 
+                    "🗲 Улучшения бизнеса", 
+                    lambda: self.show_upgrades(business_uid),  # Используем business_uid вместо self.selected_business_uid
+                    True  # primary button
+                )
+            )
+        
+        # Кнопка продажи и назад
+        self.buttons.extend([
+            ModernBusinessButton(pygame.Rect(300, action_y + 110, 600, 45), 
+                               f"Продать бизнес за {business.get_sell_price()}$", 
+                               lambda: self.sell_business()),
             ModernBusinessButton(pygame.Rect(300, action_y + 165, 600, 45), 
                                "← Назад к списку", 
                                lambda: self.show_my_businesses())
-        )
+        ])
     
     def buy_business(self, template: BusinessTemplate):
         """Покупка бизнеса"""
@@ -2997,7 +3251,9 @@ class ModernBusinessMenu:
         
         # Навигация
         self.draw_navigation(surface)
-        
+
+        if self.current_view == "upgrades" and self.upgrade_menu:
+            self.draw_upgrades_view(surface)
         # Контент в зависимости от текущего вида
         if self.current_view == "mine":
             self.draw_my_businesses(surface)
@@ -3005,6 +3261,23 @@ class ModernBusinessMenu:
             self.draw_catalog(surface)
         elif self.current_view == "single":
             self.draw_single_business(surface)
+
+    def draw_upgrades_view(self, surface):
+        """Отрисовка вида улучшений"""
+        content_rect = pygame.Rect(280, 150, 1120, 600)
+        self.draw_modern_panel(surface, content_rect, (11, 17, 23, 200))
+        
+        # Кнопка назад
+        back_button = ModernBusinessButton(
+            pygame.Rect(300, 100, 150, 40),
+            "← Назад",
+            lambda: self.show_single_business(self.selected_business_uid if self.selected_business_uid is not None else "")
+        )
+        back_button.draw(surface, None)
+        
+        # Меню улучшений
+        if self.upgrade_menu:
+            self.upgrade_menu.draw(surface)
     
     def draw_background_accents(self, surface):
         """Рисует градиентные акценты фона как в HTML"""
@@ -3209,14 +3482,18 @@ class ModernBusinessMenu:
         # Доходы
         income_rect = pygame.Rect(x, y, stats_width//2 - 10, stats_height)
         self.draw_stat_panel(surface, income_rect, "Доход / час", 
-                           self.format_money(business.income_per_hour), 
-                           f"Накоплено: {self.format_money(business.income_accumulated)}")
+                        self.format_money(business.income_per_hour), 
+                        f"Накоплено: {self.format_money(business.income_accumulated)}")
         
         # Расходы
         expense_rect = pygame.Rect(x + stats_width//2 + 10, y, stats_width//2 - 10, stats_height)
+        
+        # ИСПРАВЛЕННАЯ СТРОКА - используем upgrade_data вместо upgrades
+        upgrade_info = f"Апгрейды: {business.upgrade_data.level}/{business.upgrade_data.automation}/{business.upgrade_data.marketing}"
+        
         self.draw_stat_panel(surface, expense_rect, "Расход / час", 
-                           self.format_money(business.expenses_per_hour), 
-                           f"Апгрейды: {business.upgrades.level}/{business.upgrades.automation}/{business.upgrades.marketing}")
+                        self.format_money(business.expenses_per_hour), 
+                        upgrade_info)
     
     def draw_stat_panel(self, surface, rect, title, value, note):
         """Рисует панель статистики"""
@@ -3370,12 +3647,23 @@ class ModernBusinessMenu:
             
             # Кнопки в детальном виде
             elif self.current_view == "single":
-                # Убедимся, что self.buttons существует
                 if hasattr(self, 'buttons'):
                     for button in self.buttons:
                         if button.is_clicked(pos):
                             button.on_click()
                             return
+            
+            # Кнопки в меню улучшений
+            elif self.current_view == "upgrades" and self.upgrade_menu:
+                for button in self.upgrade_menu.upgrade_buttons:
+                    if button.is_clicked(pos):
+                        button.on_click(button.upgrade)
+                        return
+                
+                for button in self.upgrade_menu.stats_buttons:
+                    if button.is_clicked(pos):
+                        button.on_click()
+                        return
         
         elif event.type == pygame.MOUSEMOTION:
             pos = pygame.mouse.get_pos()
@@ -3388,6 +3676,11 @@ class ModernBusinessMenu:
             # Добавляем дополнительные кнопки, если они существуют
             if hasattr(self, 'buttons'):
                 all_buttons.extend(self.buttons)
+            
+            # Добавляем кнопки улучшений если они активны
+            if self.current_view == "upgrades" and self.upgrade_menu:
+                all_buttons.extend(self.upgrade_menu.upgrade_buttons)
+                all_buttons.extend(self.upgrade_menu.stats_buttons)
             
             for button in all_buttons:
                 button.update_hover(pos)
@@ -3408,6 +3701,304 @@ class ModernBusinessMenu:
             self.update_catalog_view(category)
         elif self.current_view == "single":
             self.update_single_view()
+
+@dataclass
+class BusinessUpgradeData:
+    """Отдельный класс для хранения данных об улучшениях"""
+    level: int = 0
+    automation: int = 0
+    marketing: int = 0
+
+"""
+class Business:
+    def __init__(self, template: BusinessTemplate):
+        self.uid = f"b-{random.randint(10000, 99999)}"
+        self.template_id = template.id
+        self.name = template.name
+        self.purchased_at = time.time()
+        self.level = 1
+        self.income_per_hour = template.income_per_hour
+        self.income_accumulated = 0
+        self.expenses_per_hour = int(template.income_per_hour * 0.35)
+        self.market_share = round(random.uniform(1.0, 7.0), 2)
+        
+        # Разделяем улучшения на данные и объекты
+        self.upgrade_data = BusinessUpgradeData()  # Простые данные
+        self.upgrades: List[BusinessUpgrade] = []  # Объекты улучшений
+        
+        # Новые атрибуты для улучшений
+        self.capacity_multiplier = 1.0
+        self.quality_multiplier = 1.0
+        self.automation_level = 0
+        self.security_level = 0
+        self.innovation_level = 0
+        self.risk_level = 10.0  # Уровень риска (для темных бизнесов)
+        
+        self.notes = template.description
+        self.initialize_upgrades()
+    
+    def initialize_upgrades(self):
+        #Инициализирует улучшения для этого бизнеса
+        if self.template_id in BUSINESS_UPGRADES:
+            # Создаем копии улучшений для этого бизнеса
+            for upgrade_template in BUSINESS_UPGRADES[self.template_id]:
+                self.upgrades.append(BusinessUpgrade(
+                    id=upgrade_template.id,
+                    name=upgrade_template.name,
+                    description=upgrade_template.description,
+                    cost=upgrade_template.cost,
+                    effect=upgrade_template.effect,
+                    upgrade_type=upgrade_template.upgrade_type,
+                    max_level=upgrade_template.max_level
+                ))
+    
+    def get_available_upgrades(self) -> List[BusinessUpgrade]:
+        #Возвращает доступные для покупки улучшения
+        return [upgrade for upgrade in self.upgrades if upgrade.can_upgrade(self)]
+    
+    def purchase_upgrade(self, upgrade_id: str) -> bool:
+        #Покупка улучшения
+        upgrade = next((u for u in self.upgrades if u.id == upgrade_id), None)
+        if not upgrade or not upgrade.can_upgrade(self):
+            return False
+        
+        # В реальной реализации проверяем баланс игрока
+        # if player_balance < upgrade.cost: return False
+        
+        upgrade.current_level += 1
+        upgrade.apply_effect(self)
+        return True
+    
+    def upgrade_income(self) -> bool:
+        #Улучшение дохода
+        cost = max(100, int(self.income_per_hour * 6))
+        # В демо всегда успешно
+        self.income_per_hour = int(self.income_per_hour * 1.25)
+        self.upgrade_data.level += 1  # Используем upgrade_data вместо upgrades
+        self.level += 1
+        return True
+    
+    def upgrade_efficiency(self) -> bool:
+        #Улучшение эффективности (снижение расходов)
+        cost = max(80, int(self.expenses_per_hour * 4))
+        self.expenses_per_hour = max(0, int(self.expenses_per_hour * 0.8))
+        self.upgrade_data.automation += 1  # Используем upgrade_data вместо upgrades
+        return True
+    
+    def upgrade_marketing(self) -> bool:
+        #Улучшение маркетинга (увеличение доли рынка)
+        cost = max(200, int(self.income_per_hour * 4))
+        self.market_share = min(100.0, round(self.market_share + random.uniform(0.7, 3.7), 2))
+        self.upgrade_data.marketing += 1  # Используем upgrade_data вместо upgrades
+        return True
+    
+    def get_net_income_per_hour(self) -> int:
+        #Чистый доход в час с учетом всех модификаторов
+        base_income = self.income_per_hour * self.capacity_multiplier * self.quality_multiplier
+        expenses = self.expenses_per_hour * (1 - self.automation_level * 0.1)
+        return max(0, int(base_income - expenses))
+    
+    def calculate_risk(self) -> float:
+        #Расчет уровня риска (для темных бизнесов)
+        base_risk = 10.0
+        risk_reduction = self.security_level * 2.0
+        return max(1.0, base_risk - risk_reduction)
+    
+    def get_upgrade_progress(self) -> Dict[str, float]:
+        #Возвращает прогресс по всем типам улучшений
+        progress = {}
+        for upgrade_type in UpgradeType:
+            upgrades_of_type = [u for u in self.upgrades if u.upgrade_type == upgrade_type]
+            if upgrades_of_type:
+                total_levels = sum(u.current_level for u in upgrades_of_type)
+                max_levels = sum(u.max_level for u in upgrades_of_type)
+                progress[upgrade_type.value] = total_levels / max_levels if max_levels > 0 else 0
+        return progress
+    
+    def get_sell_price(self) -> int:
+        #Цена продажи (70% от вложений)
+        return int(self.income_per_hour * 100 * 0.7)"""
+
+class BusinessUpgradeMenu:
+    def __init__(self, business: Business):
+        self.business = business
+        self.upgrade_buttons = []
+        self.stats_buttons = []
+        self.initialize_ui()
+    
+    def initialize_ui(self):
+        """Инициализация UI для улучшений"""
+        # Кнопки статистики
+        stats_rect = pygame.Rect(300, 150, 400, 50)
+        self.stats_buttons.append(
+            ModernBusinessButton(stats_rect, "Общая статистика", self.show_stats)
+        )
+        
+        # Кнопки по типам улучшений
+        upgrade_types = list(UpgradeType)
+        button_width, button_height = 180, 40
+        start_x = 300
+        start_y = 220
+        
+        for i, upgrade_type in enumerate(upgrade_types):
+            x = start_x + (i % 3) * (button_width + 10)
+            y = start_y + (i // 3) * (button_height + 10)
+            
+            # Проверяем есть ли такие улучшения у бизнеса
+            has_upgrades = any(u.upgrade_type == upgrade_type for u in self.business.upgrades)
+            if has_upgrades:
+                self.stats_buttons.append(
+                    ModernBusinessButton(
+                        pygame.Rect(x, y, button_width, button_height),
+                        upgrade_type.value.capitalize(),
+                        lambda ut=upgrade_type: self.show_upgrades_by_type(ut)
+                    )
+                )
+
+    def show_stats(self):
+        """Показывает общую статистику улучшений"""
+        # Очищаем кнопки улучшений, показываем только статистику
+        self.upgrade_buttons.clear()
+    
+    def show_upgrades_by_type(self, upgrade_type: UpgradeType):
+        """Показывает улучшения определенного типа"""
+        self.upgrade_buttons.clear()
+        
+        upgrades = [u for u in self.business.get_available_upgrades() 
+                   if u.upgrade_type == upgrade_type]
+        
+        start_x, start_y = 300, 300
+        button_width, button_height = 350, 80
+        
+        for i, upgrade in enumerate(upgrades):
+            y = start_y + i * (button_height + 10)
+            rect = pygame.Rect(start_x, y, button_width, button_height)
+            
+            self.upgrade_buttons.append(
+                UpgradeButton(rect, upgrade, self.purchase_upgrade)
+            )
+    
+    def purchase_upgrade(self, upgrade: BusinessUpgrade):
+        """Покупка улучшения"""
+        if self.business.purchase_upgrade(upgrade.id):
+            print(f"Улучшение '{upgrade.name}' куплено!")
+            self.initialize_ui()  # Обновляем UI
+    
+    def draw(self, surface):
+        """Отрисовка меню улучшений"""
+        # Заголовок
+        title_font = pygame.font.Font(None, 32)
+        title_text = f"Улучшения: {self.business.name}"
+        title_surf = title_font.render(title_text, True, TEXT_PRIMARY)
+        surface.blit(title_surf, (300, 100))
+        
+        # Кнопки статистики и фильтров
+        for button in self.stats_buttons:
+            button.draw(surface, None)
+        
+        # Кнопки улучшений
+        for button in self.upgrade_buttons:
+            button.draw(surface)
+        
+        # Если нет активных улучшений, показываем статистику
+        if not self.upgrade_buttons:
+            self.draw_upgrade_progress(surface, 720, 150)
+    
+    def draw_upgrade_progress(self, surface, x, y):
+        """Рисует прогресс по типам улучшений"""
+        progress = self.business.get_upgrade_progress()
+        
+        progress_font = pygame.font.Font(None, 16)
+        title_surf = progress_font.render("Прогресс улучшений:", True, TEXT_PRIMARY)
+        surface.blit(title_surf, (x, y))
+        
+        for i, (upgrade_type, progress_value) in enumerate(progress.items()):
+            progress_y = y + 30 + i * 25
+            
+            # Текст типа
+            type_surf = progress_font.render(upgrade_type.capitalize(), True, TEXT_MUTED)
+            surface.blit(type_surf, (x, progress_y))
+            
+            # Полоска прогресса
+            bar_width, bar_height = 150, 12
+            bar_x = x + 120
+            
+            # Фон полоски
+            pygame.draw.rect(surface, (50, 50, 50), 
+                           (bar_x, progress_y, bar_width, bar_height), border_radius=6)
+            
+            # Заполнение
+            fill_width = int(bar_width * progress_value)
+            if fill_width > 0:
+                color = self.get_progress_color(progress_value)
+                pygame.draw.rect(surface, color, 
+                               (bar_x, progress_y, fill_width, bar_height), border_radius=6)
+            
+            # Процент
+            percent_text = f"{int(progress_value * 100)}%"
+            percent_surf = progress_font.render(percent_text, True, TEXT_PRIMARY)
+            surface.blit(percent_surf, (bar_x + bar_width + 10, progress_y - 2))
+    
+    def get_progress_color(self, progress: float):
+        """Возвращает цвет прогресса в зависимости от значения"""
+        if progress < 0.3:
+            return (220, 50, 50)    # Красный
+        elif progress < 0.7:
+            return (220, 180, 50)   # Желтый
+        else:
+            return (50, 220, 50)    # Зеленый
+
+class UpgradeButton:
+    """Кнопка улучшения бизнеса"""
+    
+    def __init__(self, rect: pygame.Rect, upgrade: BusinessUpgrade, on_click):
+        self.rect = rect
+        self.upgrade = upgrade
+        self.on_click = on_click
+        self.hovered = False
+    
+    def draw(self, surface):
+        """Отрисовка кнопки улучшения"""
+        button_surface = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+        
+        # Фон кнопки
+        bg_color = (60, 60, 80, 200) if not self.hovered else (80, 80, 100, 200)
+        pygame.draw.rect(button_surface, bg_color, 
+                        (0, 0, self.rect.width, self.rect.height), border_radius=10)
+        
+        # Рамка
+        border_color = (100, 100, 150) if not self.hovered else (120, 120, 180)
+        pygame.draw.rect(button_surface, border_color, 
+                        (0, 0, self.rect.width, self.rect.height), 
+                        width=2, border_radius=10)
+        
+        # Текст улучшения
+        font = pygame.font.Font(None, 16)
+        name_surf = font.render(self.upgrade.name, True, TEXT_PRIMARY)
+        button_surface.blit(name_surf, (10, 10))
+        
+        # Описание
+        desc_font = pygame.font.Font(None, 12)
+        desc_surf = desc_font.render(self.upgrade.description, True, TEXT_MUTED)
+        button_surface.blit(desc_surf, (10, 30))
+        
+        # Стоимость и уровень
+        cost_text = f"Стоимость: {self.upgrade.cost}$"
+        level_text = f"Уровень: {self.upgrade.current_level}/{self.upgrade.max_level}"
+        
+        cost_surf = desc_font.render(cost_text, True, ACCENT2)
+        level_surf = desc_font.render(level_text, True, TEXT_MUTED)
+        
+        button_surface.blit(cost_surf, (10, 50))
+        button_surface.blit(level_surf, (self.rect.width - 100, 50))
+        
+        surface.blit(button_surface, self.rect.topleft)
+    
+    def is_clicked(self, pos):
+        return self.rect.collidepoint(pos)
+    
+    def update_hover(self, pos):
+        self.hovered = self.rect.collidepoint(pos)
 
 class ProfileMenu:
     """Простое меню профиля без скролла."""

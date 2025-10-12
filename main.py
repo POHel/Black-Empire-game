@@ -559,7 +559,7 @@ class LoadingScreen(QWidget):
         """Обновление всех анимаций"""
         # Прогресс загрузки
         if self.progress < 100:
-            self.progress += 0.5  # Замедляем загрузку для демонстрации
+            self.progress += 2 # Замедляем загрузку для демонстрации
         else:
             self.animation_timer.stop()
             self.loadingFinished.emit()
@@ -568,7 +568,7 @@ class LoadingScreen(QWidget):
         self.rotation_angle = (self.rotation_angle + 3) % 360
         
         # Мерцание точек
-        self.dots = (self.dots + 1) % 4
+        self.dots = (self.dots + 1) % 5
         
         self.update()
     
@@ -606,11 +606,30 @@ class LoadingScreen(QWidget):
         
         painter.restore()
         
-        # Текст загрузки
         painter.setPen(QPen(TEXT_PRIMARY))
-        painter.setFont(QFont("Arial", 24, QFont.Weight.Bold))
-        loading_text = f"Загрузка{'.' * self.dots}"
-        painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, loading_text)
+        font = QFont("Arial", 24, QFont.Weight.Bold)
+        painter.setFont(font)
+
+        # Всегда используем максимальную длину текста
+        base_text = "Загрузка...."
+        text_width = painter.fontMetrics().horizontalAdvance(base_text)
+        
+        # Рисуем текст в фиксированной позиции
+        text_x = (self.width() - text_width) // 2
+        text_y = self.height() // 2 + 10
+        
+        # Текущий текст (без дергания)
+        loading_texts = ["Загрузка", "Загрузка.", "Загрузка.", "Загрузка..", "Загрузка...", "Загрузка...."]
+        current_text = loading_texts[self.dots]
+        
+        painter.drawText(text_x, text_y, current_text)
+
+        
+        # Создаем фиксированную область для текста
+        # loading_rect = QRect(0, self.height() // 2 - 20, self.width(), 60)
+        
+        # Используем выравнивание по центру и фиксированную ширину
+        # painter.drawText(loading_rect, Qt.AlignmentFlag.AlignCenter, current_text)
         
         # Прогресс-бар
         bar_width = 500

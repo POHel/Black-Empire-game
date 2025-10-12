@@ -568,7 +568,7 @@ class LoadingScreen(QWidget):
         self.rotation_angle = (self.rotation_angle + 3) % 360
         
         # Мерцание точек
-        self.dots = (self.dots + 1) % 5
+        self.dots = (self.dots + 1) % 4
         
         self.update()
     
@@ -611,7 +611,7 @@ class LoadingScreen(QWidget):
         painter.setFont(font)
 
         # Всегда используем максимальную длину текста
-        base_text = "Загрузка...."
+        base_text = "Загрузка..."
         text_width = painter.fontMetrics().horizontalAdvance(base_text)
         
         # Рисуем текст в фиксированной позиции
@@ -619,7 +619,7 @@ class LoadingScreen(QWidget):
         text_y = self.height() // 2 + 10
         
         # Текущий текст (без дергания)
-        loading_texts = ["Загрузка", "Загрузка.", "Загрузка.", "Загрузка..", "Загрузка...", "Загрузка...."]
+        loading_texts = ["Загрузка", "Загрузка.", "Загрузка..", "Загрузка...", "Загрузка..."]
         current_text = loading_texts[self.dots]
         
         painter.drawText(text_x, text_y, current_text)
@@ -826,13 +826,13 @@ class ClickerGame(QWidget):
         
         # Кнопка клика
         self.click_button = AnimatedButton("💰 КЛИК!")
-        self.click_button.setFixedSize(200, 200)
+        self.click_button.setFixedSize(500, 500)
         self.click_button.setStyleSheet("""
             QPushButton {
                 background: qradialgradient(cx:0.5, cy:0.5, radius:0.8,
                     stop:0 #7828c8, stop:1 #371e72);
                 border: 4px solid #8b5cf6;
-                border-radius: 100px;
+                border-radius: 250px;
                 color: white;
                 font-size: 24px;
                 font-weight: bold;

@@ -1407,17 +1407,118 @@ class LightShopMenu(QWidget):
 class BusinessManager:
     def __init__(self):
         self.my_businesses = []
+        self.business_data = self.load_business_data()
         
+    def load_business_data(self):
+        """Загрузка данных о бизнесах"""
+        return [
+            # Светлые бизнесы
+            {
+                'id': 1,
+                'name': 'Продажа (Retail)',
+                'icon': '🏪',
+                'level': 1,
+                'income_per_hour': 5000,
+                'workers': 5,
+                'workload': 75,
+                'primary_action': 'Открыть ассортимент',
+                'available_roles': [
+                    {'name': 'Продавец', 'cost': 1000},
+                    {'name': 'Менеджер', 'cost': 3000},
+                    {'name': 'Merchandiser', 'cost': 2000}
+                ],
+                'special_modes': [
+                    {'name': 'Маркет-кампания', 'cooldown': '6ч'},
+                    {'name': 'Сезонные коллаборации', 'cooldown': '24ч'}
+                ],
+                'upgrade_1': 1, 'upgrade_2': 1, 'upgrade_3': 1, 'upgrade_4': 1, 'upgrade_5': 1,
+                'type': 'light'
+            },
+            {
+                'id': 2,
+                'name': 'IT-стартап',
+                'icon': '💻',
+                'level': 1,
+                'income_per_hour': 8000,
+                'workers': 3,
+                'workload': 60,
+                'primary_action': 'Разработать фичу',
+                'available_roles': [
+                    {'name': 'Junior Dev', 'cost': 2000},
+                    {'name': 'Senior Dev', 'cost': 5000},
+                    {'name': 'PM', 'cost': 4000},
+                    {'name': 'Growth Hacker', 'cost': 4500}
+                ],
+                'special_modes': [
+                    {'name': 'Инвест-раунд', 'cooldown': '12ч'},
+                    {'name': 'Бета-тест', 'cooldown': '8ч'}
+                ],
+                'upgrade_1': 1, 'upgrade_2': 1, 'upgrade_3': 1, 'upgrade_4': 1, 'upgrade_5': 1,
+                'type': 'light'
+            },
+            {
+                'id': 3,
+                'name': 'Биотех Лаборатория',
+                'icon': '🧬',
+                'level': 1,
+                'income_per_hour': 12000,
+                'workers': 8,
+                'workload': 45,
+                'primary_action': 'Запустить исследование',
+                'available_roles': [
+                    {'name': 'Исследователь', 'cost': 6000},
+                    {'name': 'Клинический специалист', 'cost': 7000},
+                    {'name': 'Регуляторный менеджер', 'cost': 5500}
+                ],
+                'special_modes': [
+                    {'name': 'Клинические испытания', 'cooldown': '24ч'},
+                    {'name': 'Подать на патент', 'cooldown': '48ч'}
+                ],
+                'can_go_dark': True,
+                'upgrade_1': 1, 'upgrade_2': 1, 'upgrade_3': 1, 'upgrade_4': 1, 'upgrade_5': 1,
+                'type': 'light'
+            },
+            # Темные бизнесы
+            {
+                'id': 101,
+                'name': 'Кибер-мошенничество',
+                'icon': '🌐',
+                'level': 1,
+                'income_per_hour': 15000,
+                'workers': 4,
+                'workload': 85,
+                'primary_action': 'Запустить кампанию',
+                'available_roles': [
+                    {'name': 'Оператор', 'cost': 3000},
+                    {'name': 'Crypto Launder', 'cost': 8000},
+                    {'name': 'Packer', 'cost': 5000}
+                ],
+                'special_modes': [
+                    {'name': 'Exploit Market', 'cooldown': '12ч'},
+                    {'name': 'Cover-up', 'cooldown': '6ч'}
+                ],
+                'upgrade_1': 1, 'upgrade_2': 1, 'upgrade_3': 1, 'upgrade_4': 1, 'upgrade_5': 1,
+                'type': 'dark'
+            }
+        ]
+    
     def buy_business(self, business_data):
-        # Логика покупки бизнеса
-        pass
+        """Покупка бизнеса"""
+        self.my_businesses.append(business_data.copy())
+        return True
         
-    def upgrade_business(self, business_id):
-        # Логика улучшения бизнеса
-        pass
+    def upgrade_business(self, business_id, upgrade_type):
+        """Улучшение бизнеса"""
+        for business in self.my_businesses:
+            if business['id'] == business_id:
+                current_level = business.get(f'upgrade_{upgrade_type}', 1)
+                if current_level < 5:
+                    business[f'upgrade_{upgrade_type}'] = current_level + 1
+                    return True
+        return False
 
 class BusinessMenu(QWidget):
-    """Меню бизнесов"""
+    """Меню бизнесов с полноценной системой карточек"""
     
     exitToClicker = pyqtSignal()
     exitToMenu = pyqtSignal()
@@ -1425,6 +1526,9 @@ class BusinessMenu(QWidget):
     def __init__(self):
         super().__init__()
         self.business_manager = BusinessManager()
+        self.current_filter = "all"
+        self.my_businesses_layout = None
+        self.catalog_layout = None
         self.init_ui()
         
     def init_ui(self):
@@ -1444,23 +1548,26 @@ class BusinessMenu(QWidget):
         
         # Вкладки
         self.tab_widget = QTabWidget()
-        self.tab_widget.setStyleSheet("""
-            QTabWidget::pane {
-                border: 2px solid #7828c8;
+        self.tab_widget.setStyleSheet(f"""
+            QTabWidget::pane {{
+                border: 2px solid {PURPLE_PRIMARY.name()};
                 border-radius: 10px;
-                background-color: #0f0f28;
-            }
-            QTabBar::tab {
-                background-color: #371e72;
-                color: white;
+                background-color: {PANEL_BG.name()};
+            }}
+            QTabBar::tab {{
+                background-color: {DEEP_PURPLE.name()};
+                color: {TEXT_PRIMARY.name()};
                 padding: 10px 20px;
-                border: 1px solid #7828c8;
+                border: 1px solid {PURPLE_PRIMARY.name()};
                 border-radius: 5px;
                 margin-right: 2px;
-            }
-            QTabBar::tab:selected {
-                background-color: #7828c8;
-            }
+            }}
+            QTabBar::tab:selected {{
+                background-color: {PURPLE_PRIMARY.name()};
+            }}
+            QTabBar::tab:hover {{
+                background-color: {PURPLE_ACCENT.name()};
+            }}
         """)
         
         # Мои бизнесы
@@ -1476,224 +1583,456 @@ class BusinessMenu(QWidget):
         
     def create_my_businesses_tab(self):
         widget = QWidget()
-        layout = QVBoxLayout()
+        layout = QVBoxLayout(widget)  # Устанавливаем layout непосредственно для widget
         
-        # Заголовок
-        header = QLabel("Ваши бизнесы")
-        header.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 24px; font-weight: bold;")
-        layout.addWidget(header)
-        
-        # Сетка бизнесов
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setStyleSheet("""
-            QScrollArea {
-                border: none;
-                background: transparent;
-            }
-        """)
-        
-        container = QWidget()
-        container_layout = QGridLayout()
-        container_layout.setSpacing(15)
-        
-        # Пример бизнесов
-        businesses = [
-            ("🏪 Магазин", "Розничная торговля", 5000, 50),
-            ("🏢 Офис", "Бизнес-центр", 15000, 120),
-            ("🏭 Завод", "Производство", 50000, 350)
-        ]
-        
-        row, col = 0, 0
-        for name, desc, income, level in businesses:
-            business_card = self.create_business_card(name, desc, income, level)
-            container_layout.addWidget(business_card, row, col)
-            col += 1
-            if col > 2:
-                col = 0
-                row += 1
-        
-        container.setLayout(container_layout)
-        scroll.setWidget(container)
-        layout.addWidget(scroll)
-        
-        widget.setLayout(layout)
-        return widget
-        
-    def create_catalog_tab(self):
-        widget = QWidget()
-        layout = QVBoxLayout()
-        
-        # Заголовок
-        header = QLabel("Доступные бизнесы")
-        header.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 24px; font-weight: bold;")
-        layout.addWidget(header)
-        
-        # Фильтры
+        # Фильтры для моих бизнесов
         filter_layout = QHBoxLayout()
         
-        light_filter = QRadioButton("💡 Светлые бизнесы")
-        dark_filter = QRadioButton("🌑 Темные бизнесы")
-        all_filter = QRadioButton("🔍 Все бизнесы")
-        all_filter.setChecked(True)
+        filter_group = QButtonGroup()
+        filters = [
+            ("🔍 Все мои бизнесы", "all"),
+            ("💡 Светлые", "light"),
+            ("🌑 Темные", "dark")
+        ]
         
-        for rb in [light_filter, dark_filter, all_filter]:
-            rb.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 14px;")
-            filter_layout.addWidget(rb)
+        for text, filter_type in filters:
+            btn = QRadioButton(text)
+            btn.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 14px; padding: 5px;")
+            btn.toggled.connect(lambda checked, ft=filter_type: self.filter_my_businesses(ft))
+            filter_group.addButton(btn)
+            filter_layout.addWidget(btn)
+            if filter_type == "all":
+                btn.setChecked(True)
         
         filter_layout.addStretch()
         layout.addLayout(filter_layout)
         
-        # Сетка бизнесов
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
+        # Статистика
+        stats_widget = self.create_stats_widget()
+        layout.addWidget(stats_widget)
         
-        container = QWidget()
-        container_layout = QGridLayout()
-        container_layout.setSpacing(15)
+        # Сетка моих бизнесов
+        self.my_businesses_scroll = QScrollArea()
+        self.my_businesses_scroll.setWidgetResizable(True)
+        self.my_businesses_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
         
-        # Пример бизнесов из каталога
-        catalog_businesses = [
-            ("🏪 Продажа", "Розничная торговля", 5000, 50, "light"),
-            ("🏗️ Строительство", "Строительные работы", 25000, 350, "light"),
-            ("💻 IT-стартап", "Разработка ПО", 40000, 500, "light"),
-            ("🌐 Кибер-мошенничество", "Темная ниша", 12000, 300, "dark"),
-            ("💰 Теневой банкинг", "Подпольные финансы", 40000, 900, "dark")
+        self.my_businesses_container = QWidget()
+        self.my_businesses_layout = QGridLayout(self.my_businesses_container)  # Устанавливаем layout
+        self.my_businesses_layout.setSpacing(15)
+        self.my_businesses_scroll.setWidget(self.my_businesses_container)
+        
+        layout.addWidget(self.my_businesses_scroll)
+        
+        # Загружаем мои бизнесы
+        self.load_my_businesses()
+        
+        return widget
+        
+    def create_catalog_tab(self):
+        widget = QWidget()
+        layout = QVBoxLayout(widget)  # Устанавливаем layout непосредственно для widget
+        
+        # Фильтры для каталога
+        filter_layout = QHBoxLayout()
+        
+        filter_group = QButtonGroup()
+        filters = [
+            ("🔍 Все бизнесы", "all"),
+            ("💡 Светлые бизнесы", "light"),
+            ("🌑 Темные бизнесы", "dark")
         ]
         
-        row, col = 0, 0
-        for name, desc, price, income, type in catalog_businesses:
-            catalog_card = self.create_catalog_card(name, desc, price, income, type)
-            container_layout.addWidget(catalog_card, row, col)
-            col += 1
-            if col > 1:
-                col = 0
-                row += 1
+        for text, filter_type in filters:
+            btn = QRadioButton(text)
+            btn.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 14px; padding: 5px;")
+            btn.toggled.connect(lambda checked, ft=filter_type: self.filter_catalog(ft))
+            filter_group.addButton(btn)
+            filter_layout.addWidget(btn)
+            if filter_type == "all":
+                btn.setChecked(True)
         
-        container.setLayout(container_layout)
-        scroll.setWidget(container)
-        layout.addWidget(scroll)
+        filter_layout.addStretch()
+        layout.addLayout(filter_layout)
+        
+        # Сетка каталога
+        self.catalog_scroll = QScrollArea()
+        self.catalog_scroll.setWidgetResizable(True)
+        self.catalog_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        
+        self.catalog_container = QWidget()
+        self.catalog_layout = QGridLayout(self.catalog_container)  # Устанавливаем layout
+        self.catalog_layout.setSpacing(15)
+        self.catalog_scroll.setWidget(self.catalog_container)
+        
+        layout.addWidget(self.catalog_scroll)
+        
+        # Загружаем каталог
+        self.load_catalog()
+        
+        return widget
+        
+    def create_stats_widget(self):
+        widget = QFrame()
+        widget.setStyleSheet(f"""
+            QFrame {{
+                background-color: {PANEL_BG.name()};
+                border: 2px solid {PURPLE_ACCENT.name()};
+                border-radius: 10px;
+                padding: 15px;
+            }}
+        """)
+        
+        layout = QHBoxLayout()
+        
+        total_income = sum(business.get('income_per_hour', 0) for business in self.business_manager.my_businesses)
+        total_workers = sum(business.get('workers', 0) for business in self.business_manager.my_businesses)
+        
+        stats = [
+            ("💰 Общий доход/час", f"${total_income:,}"),
+            ("🏢 Активных бизнесов", str(len(self.business_manager.my_businesses))),
+            ("👥 Всего работников", str(total_workers)),
+            ("📈 Уровень империи", "3")
+        ]
+        
+        for name, value in stats:
+            stat_layout = QVBoxLayout()
+            name_label = QLabel(name)
+            name_label.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 12px;")
+            value_label = QLabel(value)
+            value_label.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 16px; font-weight: bold;")
+            
+            stat_layout.addWidget(name_label)
+            stat_layout.addWidget(value_label)
+            layout.addLayout(stat_layout)
+            layout.addSpacing(20)
         
         widget.setLayout(layout)
         return widget
         
-    def create_business_card(self, name, description, income, level):
+    def create_business_card(self, business_data, is_owned=False):
+        """Создание карточки бизнеса"""
         card = QFrame()
+        is_dark = business_data.get('type') == 'dark'
+        
         card.setStyleSheet(f"""
             QFrame {{
                 background-color: {CARD_BG.name()};
-                border: 2px solid {PURPLE_PRIMARY.name()};
+                border: 2px solid {'#ef4444' if is_dark else PURPLE_PRIMARY.name()};
                 border-radius: 15px;
-                padding: 20px;
+                padding: 15px;
             }}
         """)
-        card.setFixedSize(300, 200)
         
-        layout = QVBoxLayout()
+        if is_owned:
+            card.setFixedSize(400, 500)
+        else:
+            card.setFixedSize(400, 350)
         
-        # Заголовок
-        name_label = QLabel(name)
-        name_label.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 20px; font-weight: bold;")
-        layout.addWidget(name_label)
+        layout = QVBoxLayout(card)  # Устанавливаем layout непосредственно для card
         
-        # Описание
-        desc_label = QLabel(description)
-        desc_label.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 14px;")
-        desc_label.setWordWrap(True)
-        layout.addWidget(desc_label)
-        
-        layout.addSpacing(10)
-        
-        # Статистика
-        stats_layout = QHBoxLayout()
-        
-        income_label = QLabel(f"💰 ${income}/час")
-        income_label.setStyleSheet(f"color: {ACCENT2.name()}; font-size: 14px;")
-        
-        level_label = QLabel(f"📊 Ур. {level}")
-        level_label.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 14px;")
-        
-        stats_layout.addWidget(income_label)
-        stats_layout.addWidget(level_label)
-        layout.addLayout(stats_layout)
-        
-        layout.addSpacing(10)
-        
-        # Кнопки управления
-        btn_layout = QHBoxLayout()
-        
-        upgrade_btn = AnimatedButton("Улучшить")
-        upgrade_btn.setFixedHeight(30)
-        
-        manage_btn = AnimatedButton("Управлять")
-        manage_btn.setFixedHeight(30)
-        
-        btn_layout.addWidget(upgrade_btn)
-        btn_layout.addWidget(manage_btn)
-        layout.addLayout(btn_layout)
-        
-        card.setLayout(layout)
-        return card
-        
-    def create_catalog_card(self, name, description, price, income, business_type):
-        card = QFrame()
-        card.setStyleSheet(f"""
-            QFrame {{
-                background-color: {CARD_BG.name()};
-                border: 2px solid {'#ef4444' if business_type == 'dark' else PURPLE_PRIMARY.name()};
-                border-radius: 15px;
-                padding: 20px;
-            }}
-        """)
-        card.setFixedSize(400, 180)
-        
-        layout = QVBoxLayout()
-        
-        # Заголовок и тип
+        # Верхняя панель
         header_layout = QHBoxLayout()
         
-        name_label = QLabel(name)
-        name_label.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 18px; font-weight: bold;")
+        # Иконка и название
+        title_layout = QHBoxLayout()
+        icon_label = QLabel(business_data.get('icon', '🏢'))
+        icon_label.setStyleSheet("font-size: 20px;")
+        title_label = QLabel(business_data['name'])
+        title_label.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 18px; font-weight: bold;")
         
-        type_label = QLabel("🌑" if business_type == 'dark' else "💡")
-        type_label.setStyleSheet("font-size: 16px;")
+        title_layout.addWidget(icon_label)
+        title_layout.addWidget(title_label)
+        title_layout.addStretch()
         
-        header_layout.addWidget(name_label)
-        header_layout.addStretch()
-        header_layout.addWidget(type_label)
+        # Уровень
+        level_label = QLabel(f"Ур. {business_data.get('level', 1)}")
+        level_label.setStyleSheet(f"color: {ACCENT2.name()}; font-size: 14px; font-weight: bold;")
+        
+        # Индикатор риска для темных бизнесов
+        if is_dark:
+            risk_label = QLabel("⚠️ Риск")
+            risk_label.setStyleSheet("color: #ef4444; font-size: 12px;")
+            header_layout.addWidget(risk_label)
+        
+        header_layout.addLayout(title_layout)
+        header_layout.addWidget(level_label)
         layout.addLayout(header_layout)
         
-        # Описание
-        desc_label = QLabel(description)
-        desc_label.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 14px;")
-        desc_label.setWordWrap(True)
-        layout.addWidget(desc_label)
+        # Панель состояния
+        stats_layout = QVBoxLayout()
+        stats_layout.setSpacing(5)
         
-        layout.addSpacing(10)
-        
-        # Цена и доход
-        info_layout = QHBoxLayout()
-        
-        price_label = QLabel(f"💰 Цена: ${price:,}")
-        price_label.setStyleSheet(f"color: {ACCENT2.name()}; font-size: 14px;")
-        
-        income_label = QLabel(f"📈 Доход: ${income}/час")
+        income_label = QLabel(f"💰 Доход/час: ${business_data.get('income_per_hour', 0):,}")
         income_label.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 14px;")
         
-        info_layout.addWidget(price_label)
-        info_layout.addWidget(income_label)
-        info_layout.addStretch()
-        layout.addLayout(info_layout)
+        workers_label = QLabel(f"👥 Работники: {business_data.get('workers', 0)}")
+        workers_label.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 14px;")
         
+        if 'workload' in business_data:
+            workload_label = QLabel(f"📊 Нагрузка: {business_data['workload']}%")
+            workload_label.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 14px;")
+            stats_layout.addWidget(workload_label)
+        
+        stats_layout.addWidget(income_label)
+        stats_layout.addWidget(workers_label)
+        layout.addLayout(stats_layout)
         layout.addSpacing(10)
         
-        # Кнопка покупки
-        buy_btn = AnimatedButton("Купить бизнес")
-        buy_btn.setFixedHeight(35)
-        layout.addWidget(buy_btn)
+        # Главная панель действий
+        primary_action_layout = QHBoxLayout()
         
-        card.setLayout(layout)
+        if is_owned:
+            primary_btn = AnimatedButton(business_data['primary_action'])
+            primary_btn.setFixedHeight(40)
+            primary_btn.clicked.connect(lambda: self.handle_primary_action(business_data))
+            primary_action_layout.addWidget(primary_btn)
+            
+            # Вторичные действия
+            secondary_layout = QVBoxLayout()
+            
+            hire_btn = AnimatedButton("👥 Найм")
+            hire_btn.setFixedHeight(30)
+            hire_btn.clicked.connect(lambda: self.show_hire_dialog(business_data))
+            
+            upgrade_btn = AnimatedButton("⚡ Улучшить")
+            upgrade_btn.setFixedHeight(30)
+            upgrade_btn.clicked.connect(lambda: self.show_upgrades(business_data))
+            
+            secondary_layout.addWidget(hire_btn)
+            secondary_layout.addWidget(upgrade_btn)
+            primary_action_layout.addLayout(secondary_layout)
+        else:
+            # Для каталога - кнопка покупки
+            buy_btn = AnimatedButton(f"Купить за ${business_data.get('income_per_hour', 0) * 100:,}")
+            buy_btn.setFixedHeight(40)
+            buy_btn.clicked.connect(lambda: self.buy_business(business_data))
+            primary_action_layout.addWidget(buy_btn)
+        
+        layout.addLayout(primary_action_layout)
+        
+        # Панель специальных режимов (только для owned)
+        if is_owned and 'special_modes' in business_data:
+            special_layout = QVBoxLayout()
+            special_label = QLabel("Специальные режимы:")
+            special_label.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 12px;")
+            special_layout.addWidget(special_label)
+            
+            for mode in business_data['special_modes']:
+                mode_btn = AnimatedButton(mode['name'])
+                mode_btn.setFixedHeight(35)
+                if 'cooldown' in mode:
+                    mode_btn.setToolTip(f"Кулдаун: {mode['cooldown']}")
+                mode_btn.clicked.connect(lambda checked, m=mode, b=business_data: self.activate_special_mode(m, b))
+                special_layout.addWidget(mode_btn)
+            
+            layout.addLayout(special_layout)
+        
+        # Панель апгрейдов (только для owned)
+        if is_owned:
+            upgrades_label = QLabel("Улучшения:")
+            upgrades_label.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 12px;")
+            layout.addWidget(upgrades_label)
+            
+            upgrades_layout = QHBoxLayout()
+            
+            upgrade_types = [
+                ("⚡", "Производительность"),
+                ("🎯", "Качество"), 
+                ("🤖", "Автоматизация"),
+                ("💡", "Инновация"),
+                ("🛡️", "Доверие" if not is_dark else "Скрытность")
+            ]
+            
+            for i, (icon, name) in enumerate(upgrade_types, 1):
+                upgrade_btn = QPushButton(f"{icon} {i}")
+                upgrade_btn.setFixedSize(50, 50)
+                upgrade_btn.setStyleSheet(f"""
+                    QPushButton {{
+                        background-color: {PANEL_BG.name()};
+                        border: 2px solid {PURPLE_PRIMARY.name()};
+                        border-radius: 8px;
+                        color: {TEXT_PRIMARY.name()};
+                        font-size: 10px;
+                    }}
+                    QPushButton:hover {{
+                        background-color: {PURPLE_PRIMARY.name()};
+                    }}
+                """)
+                current_level = business_data.get(f'upgrade_{i}', 1)
+                upgrade_btn.setToolTip(f"{name}\nУровень: {current_level}")
+                upgrade_btn.clicked.connect(lambda checked, idx=i, b=business_data: self.upgrade_business(b, idx))
+                upgrades_layout.addWidget(upgrade_btn)
+            
+            layout.addLayout(upgrades_layout)
+        
+        # Кнопка перехода в темную сторону (для определенных бизнесов)
+        if is_owned and business_data.get('can_go_dark', False) and not is_dark:
+            dark_btn = AnimatedButton("🌑 Перейти в Тень")
+            dark_btn.setStyleSheet("background-color: #7f1d1d; color: white;")
+            dark_btn.clicked.connect(lambda: self.toggle_dark_side(business_data))
+            layout.addWidget(dark_btn)
+        
+        layout.addStretch()
         return card
+        
+    def load_my_businesses(self):
+        """Загрузка моих бизнесов"""
+        # Проверяем, инициализирован ли layout
+        if self.my_businesses_layout is None:
+            return
+            
+        # Очищаем layout - безопасно удаляем только виджеты
+        while self.my_businesses_layout.count():
+            item = self.my_businesses_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+            
+        # Добавляем бизнесы
+        row, col = 0, 0
+        max_cols = 2
+        
+        for business_data in self.business_manager.my_businesses:
+            card = self.create_business_card(business_data, is_owned=True)
+            self.my_businesses_layout.addWidget(card, row, col)
+            
+            col += 1
+            if col >= max_cols:
+                col = 0
+                row += 1
+                
+        # Если бизнесов нет, показываем сообщение
+        if not self.business_manager.my_businesses:
+            no_business_label = QLabel("У вас пока нет бизнесов. Посетите каталог для покупки!")
+            no_business_label.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 16px; text-align: center;")
+            no_business_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.my_businesses_layout.addWidget(no_business_label, 0, 0, 1, max_cols)
+        
+    def load_catalog(self):
+        """Загрузка каталога бизнесов"""
+        # Проверяем, инициализирован ли layout
+        if self.catalog_layout is None:
+            return
+            
+        # Очищаем layout - безопасно удаляем только виджеты
+        while self.catalog_layout.count():
+            item = self.catalog_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+            
+        # Добавляем бизнесы
+        row, col = 0, 0
+        max_cols = 2
+        
+        for business_data in self.business_manager.business_data:
+            # Пропускаем уже купленные бизнесы
+            if any(b['id'] == business_data['id'] for b in self.business_manager.my_businesses):
+                continue
+                
+            card = self.create_business_card(business_data, is_owned=False)
+            self.catalog_layout.addWidget(card, row, col)
+            
+            col += 1
+            if col >= max_cols:
+                col = 0
+                row += 1
+        
+    def filter_my_businesses(self, filter_type):
+        """Фильтрация моих бизнесов"""
+        self.current_filter = filter_type
+        # В реальной реализации здесь была бы фильтрация
+        # Пока просто перезагружаем, если layout инициализирован
+        if self.my_businesses_layout is not None:
+            self.load_my_businesses()
+        
+    def filter_catalog(self, filter_type):
+        """Фильтрация каталога"""
+        self.current_filter = filter_type
+        # В реальной реализации здесь была бы фильтрация
+        # Пока просто перезагружаем, если layout инициализирован
+        if self.catalog_layout is not None:
+            self.load_catalog()
+        
+    def handle_primary_action(self, business_data):
+        """Обработка основного действия"""
+        QMessageBox.information(self, "Действие", f"Выполнено: {business_data['primary_action']}")
+        
+    def show_hire_dialog(self, business_data):
+        """Диалог найма сотрудников"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Найм персонала - {business_data['name']}")
+        dialog.setFixedSize(300, 400)
+        dialog.setStyleSheet(f"background-color: {PANEL_BG.name()}; color: {TEXT_PRIMARY.name()};")
+        
+        layout = QVBoxLayout(dialog)
+        
+        roles_label = QLabel("Доступные роли:")
+        roles_label.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 16px; font-weight: bold;")
+        layout.addWidget(roles_label)
+        
+        roles = business_data.get('available_roles', [])
+        for role in roles:
+            role_frame = QFrame()
+            role_frame.setStyleSheet(f"border: 1px solid {PURPLE_PRIMARY.name()}; border-radius: 5px; padding: 10px; margin: 5px;")
+            role_layout = QHBoxLayout(role_frame)
+            
+            role_name = QLabel(f"{role['name']} - ${role['cost']:,}")
+            role_name.setStyleSheet(f"color: {TEXT_PRIMARY.name()};")
+            
+            hire_btn = AnimatedButton("Нанять")
+            hire_btn.setFixedSize(80, 30)
+            hire_btn.clicked.connect(lambda checked, r=role: self.hire_employee(r, business_data))
+            
+            role_layout.addWidget(role_name)
+            role_layout.addStretch()
+            role_layout.addWidget(hire_btn)
+            layout.addWidget(role_frame)
+        
+        # Чекбокс автонайма
+        auto_hire = QCheckBox("Автонаём")
+        auto_hire.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; padding: 10px;")
+        layout.addWidget(auto_hire)
+        
+        dialog.exec()
+        
+    def hire_employee(self, role, business_data):
+        """Нанять сотрудника"""
+        QMessageBox.information(self, "Найм", f"Нанят: {role['name']}")
+        
+    def show_upgrades(self, business_data):
+        """Показать улучшения"""
+        QMessageBox.information(self, "Улучшения", f"Открыты улучшения для {business_data['name']}")
+        
+    def activate_special_mode(self, mode, business_data):
+        """Активировать специальный режим"""
+        QMessageBox.information(self, "Специальный режим", f"Активирован: {mode['name']}")
+        
+    def upgrade_business(self, business_data, upgrade_type):
+        """Улучшить бизнес"""
+        if self.business_manager.upgrade_business(business_data['id'], upgrade_type):
+            QMessageBox.information(self, "Улучшение", f"Бизнес улучшен! Уровень {upgrade_type} повышен.")
+            self.load_my_businesses()  # Обновляем отображение
+        else:
+            QMessageBox.warning(self, "Ошибка", "Не удалось улучшить бизнес")
+            
+    def toggle_dark_side(self, business_data):
+        """Переключиться на темную сторону"""
+        reply = QMessageBox.question(self, "Переход в Тень", 
+                                   "Вы уверены, что хотите перевести бизнес на темную сторону?\n"
+                                   "Это даст больше дохода, но увеличит риски.")
+        if reply == QMessageBox.StandardButton.Yes:
+            business_data['type'] = 'dark'
+            business_data['income_per_hour'] = int(business_data['income_per_hour'] * 1.5)
+            QMessageBox.information(self, "Успех", "Бизнес переведен на темную сторону! Доход увеличен.")
+            self.load_my_businesses()
+            
+    def buy_business(self, business_data):
+        """Купить бизнес"""
+        if self.business_manager.buy_business(business_data):
+            QMessageBox.information(self, "Покупка", f"Бизнес '{business_data['name']}' успешно куплен!")
+            self.load_catalog()  # Обновляем каталог
+            self.load_my_businesses()  # Обновляем мои бизнесы
+        else:
+            QMessageBox.warning(self, "Ошибка", "Не удалось купить бизнес")
         
     def keyPressEvent(self, a0: QKeyEvent | None):
         if a0 is not None and a0.key() == Qt.Key.Key_Escape:

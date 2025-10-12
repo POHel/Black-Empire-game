@@ -192,9 +192,9 @@ class AnimatedButton(QPushButton):
             }}
         """
     
-    def enterEvent(self, a0):
+    def enterEvent(self, event):
         self.animate_hover()
-        super().enterEvent(a0)
+        super().enterEvent(event)
     
     def leaveEvent(self, a0):
         self.animate_leave()
@@ -238,7 +238,6 @@ class MenuButton(AnimatedButton):
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                     stop:0 {PURPLE_ACCENT.name()}, stop:1 {PURPLE_PRIMARY.name()});
                 border: 3px solid {LIGHT_PURPLE.name()};
-                transform: scale(1.05);
             }}
             QPushButton:pressed {{
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
@@ -346,8 +345,9 @@ class MainMenuScreen(QWidget):
             font-weight: bold;
             font-family: 'Arial';
             margin: 20px 0;
-            text-shadow: 0 0 20px {PURPLE_ACCENT.name()};
+            
         """)
+        #text-shadow: 0 0 20px var{PURPLE_ACCENT.name()};
         header_layout.addWidget(title_label)
         
         # Описание игры
@@ -860,13 +860,13 @@ class ClickerGame(QWidget):
         sequence.addAnimation(anim2)
         sequence.start()
         
-    def keyPressEvent(self, event: QKeyEvent):
-        if event.key() == Qt.Key.Key_Space:
+    def keyPressEvent(self, a0: QKeyEvent | None):
+        if a0 is not None and a0.key() == Qt.Key.Key_Space:
             self.handle_click()
-        elif event.key() == Qt.Key.Key_Escape:
+        elif a0 is not None and a0.key() == Qt.Key.Key_Escape:
             self.exit_to_menu()
         else:
-            super().keyPressEvent(event)
+            super().keyPressEvent(a0)
     
     def show_shops(self):
         self.exitToMenu.emit()
@@ -1092,11 +1092,11 @@ class InvestmentMenu(QWidget):
         widget.setLayout(layout)
         return widget
         
-    def keyPressEvent(self, event: QKeyEvent):
-        if event.key() == Qt.Key.Key_Escape:
+    def keyPressEvent(self, a0: QKeyEvent | None):
+        if a0 is not None and a0.key() == Qt.Key.Key_Escape:
             self.exitToMenu.emit()
         else:
-            super().keyPressEvent(event)
+            super().keyPressEvent(a0)
 
 class ShopSelectionMenu(QWidget):
     """Выбор магазина"""
@@ -1203,11 +1203,11 @@ class ShopSelectionMenu(QWidget):
         widget.setLayout(layout)
         return widget
         
-    def keyPressEvent(self, event: QKeyEvent):
-        if event.key() == Qt.Key.Key_Escape:
+    def keyPressEvent(self, a0: QKeyEvent | None):
+        if a0 is not None and a0.key() == Qt.Key.Key_Escape:
             self.exitToMenu.emit()
         else:
-            super().keyPressEvent(event)
+            super().keyPressEvent(a0)
 
 class LightShopMenu(QWidget):
     """Светлый магазин"""
@@ -1273,11 +1273,11 @@ class LightShopMenu(QWidget):
     def open_category(self, category):
         print(f"Открыта категория: {category}")
         
-    def keyPressEvent(self, event: QKeyEvent):
-        if event.key() == Qt.Key.Key_Escape:
+    def keyPressEvent(self, a0: QKeyEvent | None):
+        if a0 is not None and a0.key() == Qt.Key.Key_Escape:
             self.exitToMenu.emit()
         else:
-            super().keyPressEvent(event)
+            super().keyPressEvent(a0)
 
 class BusinessManager:
     def __init__(self):
@@ -1569,11 +1569,11 @@ class BusinessMenu(QWidget):
         card.setLayout(layout)
         return card
         
-    def keyPressEvent(self, event: QKeyEvent):
-        if event.key() == Qt.Key.Key_Escape:
+    def keyPressEvent(self, a0: QKeyEvent | None):
+        if a0 is not None and a0.key() == Qt.Key.Key_Escape:
             self.exitToMenu.emit()
         else:
-            super().keyPressEvent(event)
+            super().keyPressEvent(a0)
 
 class ProfileMenu(QWidget):
     """Меню профиля"""
@@ -1811,11 +1811,11 @@ class ProfileMenu(QWidget):
         widget.setLayout(layout)
         return widget
         
-    def keyPressEvent(self, event: QKeyEvent):
-        if event.key() == Qt.Key.Key_Escape:
+    def keyPressEvent(self, a0: QKeyEvent | None):
+        if a0 is not None and  a0.key() == Qt.Key.Key_Escape:
             self.exitToMenu.emit()
         else:
-            super().keyPressEvent(event)
+            super().keyPressEvent(a0)
 
 class SettingsMenu(QWidget):
     """Меню настроек"""
@@ -1954,11 +1954,11 @@ class SettingsMenu(QWidget):
         if reply == QMessageBox.StandardButton.Yes:
             QMessageBox.information(self, "Настройки", "Настройки сброшены!")
             
-    def keyPressEvent(self, event: QKeyEvent):
-        if event.key() == Qt.Key.Key_Escape:
+    def keyPressEvent(self, a0: QKeyEvent | None):
+        if a0 is not None and a0.key() == Qt.Key.Key_Escape:
             self.exitToMenu.emit()
         else:
-            super().keyPressEvent(event)
+            super().keyPressEvent(a0)
 
 class MainWindow(QMainWindow):
     """Главное окно приложения"""
@@ -2063,15 +2063,15 @@ class MainWindow(QMainWindow):
             # Здесь можно добавить черный рынок
             QMessageBox.information(self, "Черный рынок", "Черный рынок в разработке!")
         
-    def keyPressEvent(self, event: QKeyEvent):
+    def keyPressEvent(self, a0: QKeyEvent | None):
         """Глобальная обработка клавиш"""
-        if event.key() == Qt.Key.Key_Escape:
+        if a0 is not None and a0.key() == Qt.Key.Key_Escape:
             # Если мы не в главном меню, возвращаемся в него
             current_index = self.content_stack.currentIndex()
             if current_index != 1:  # Не главное меню
                 self.show_main_menu()
         else:
-            super().keyPressEvent(event)
+            super().keyPressEvent(a0)
 
 def main():
     app = QApplication(sys.argv)

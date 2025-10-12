@@ -825,7 +825,7 @@ class ClickerGame(QWidget):
         center_layout.addSpacing(30)
         
         # Кнопка клика
-        self.click_button = AnimatedButton("💰 КЛИК!")
+        self.click_button = AnimatedButton("💰КЛИК! ")
         self.click_button.setFixedSize(500, 500)
         self.click_button.setStyleSheet("""
             QPushButton {
@@ -834,7 +834,7 @@ class ClickerGame(QWidget):
                 border: 4px solid #8b5cf6;
                 border-radius: 250px;
                 color: white;
-                font-size: 24px;
+                font-size: 70px;
                 font-weight: bold;
             }
             QPushButton:hover {
@@ -2339,9 +2339,11 @@ class SettingsMenu(QWidget):
                 padding: 20px;
             }}
         """)
-        
+
         layout = QFormLayout()
         layout.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
+        layout.setVerticalSpacing(20)  # ← Увеличьте расстояние между строками
+        layout.setContentsMargins(10, 10, 10, 10)
         
         # Тема
         theme_combo = QComboBox()
@@ -2351,8 +2353,9 @@ class SettingsMenu(QWidget):
                 background-color: {DARK_BG.name()};
                 color: {TEXT_PRIMARY.name()};
                 border: 1px solid {PURPLE_PRIMARY.name()};
-                border-radius: 5px;
-                padding: 5px;
+                border-radius: 8px;
+                padding: 10px;
+                margin-top: 9px;
             }}
         """)
         layout.addRow("🎨 Тема:", theme_combo)
@@ -2397,7 +2400,7 @@ class SettingsMenu(QWidget):
                 background: {PURPLE_ACCENT.name()};
                 border: 1px solid {LIGHT_PURPLE.name()};
                 width: 18px;
-                margin: -5px 0;
+                margin: -5px 5;
                 border-radius: 9px;
             }}
             QSlider::sub-page:horizontal {{

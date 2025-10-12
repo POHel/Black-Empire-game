@@ -24,7 +24,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import (
     QFont, QPalette, QColor, QPainter, QLinearGradient, 
     QRadialGradient, QPen, QBrush, QFontDatabase, QPixmap,
-    QIcon, QMovie
+    QIcon, QMovie, QKeyEvent
 )
 
 # Константы игры
@@ -53,18 +53,14 @@ TEXT_MUTED = QColor(159, 176, 195)
 
 class ScreenState(Enum):
     LOADING = 0
-    MENU = 1
-    SETTINGS = 2
+    MAIN_MENU = 1
+    CLICKER = 2
     INVESTMENTS = 3
-    CLICKER = 4
-    SHOP_SELECTION = 5
-    SHOP = 6
-    SHOP_CATEGORY = 7
-    BLACK_MARKET = 8
-    BLACK_MARKET_CATEGORY = 9
-    BUSINESSES = 10
-    BUSINESS_CATEGORY = 11
-    PROFILE = 12
+    SHOP_SELECTION = 4
+    LIGHT_SHOP = 5
+    BUSINESS_MENU = 6
+    PROFILE_MENU = 7
+    SETTINGS_MENU = 8
 
 class GameConfig:
     def __init__(self):
@@ -79,7 +75,7 @@ class GameConfig:
             "title": 36
         }
 
-# Базовые классы для логики (заглушки)
+# Базовые классы для логики
 class Settings:
     def __init__(self):
         pass
@@ -218,6 +214,38 @@ class AnimatedButton(QPushButton):
         anim.setEndValue(QRect(self.x()+2, self.y()+2, self.width()-4, self.height()-4))
         anim.start()
 
+class MenuButton(AnimatedButton):
+    """Специальная кнопка для главного меню"""
+    
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+        self.setFixedSize(300, 70)
+        self.setStyleSheet(self.get_menu_style())
+        
+    def get_menu_style(self):
+        return f"""
+            QPushButton {{
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 {PURPLE_PRIMARY.name()}, stop:1 {DEEP_PURPLE.name()});
+                border: 3px solid {PURPLE_ACCENT.name()};
+                border-radius: 35px;
+                color: {TEXT_PRIMARY.name()};
+                font-size: 20px;
+                font-weight: bold;
+                padding: 15px 30px;
+            }}
+            QPushButton:hover {{
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 {PURPLE_ACCENT.name()}, stop:1 {PURPLE_PRIMARY.name()});
+                border: 3px solid {LIGHT_PURPLE.name()};
+                transform: scale(1.05);
+            }}
+            QPushButton:pressed {{
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 {DEEP_PURPLE.name()}, stop:1 {PURPLE_PRIMARY.name()});
+            }}
+        """
+
 class NavigationButton(AnimatedButton):
     """Кнопка навигации в левой панели"""
     
@@ -267,6 +295,163 @@ class GradientWidget(QWidget):
             painter.setPen(QPen(star_color, size))
             painter.drawPoint(x, y)
 
+class MainMenuScreen(QWidget):
+    """Главное меню игры"""
+    
+    playClicked = pyqtSignal()
+    settingsClicked = pyqtSignal()
+    exitClicked = pyqtSignal()
+    
+    def __init__(self):
+        super().__init__()
+        self.init_ui()
+        
+    def init_ui(self):
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Фоновый виджет с градиентом
+        background = GradientWidget(self)
+        layout.addWidget(background)
+        
+        # Основной контент поверх фона
+        content_layout = QVBoxLayout()
+        content_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        content_layout.setSpacing(40)
+        content_layout.setContentsMargins(100, 100, 100, 100)
+        
+        # Логотип и заголовок
+        header_layout = QVBoxLayout()
+        header_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header_layout.setSpacing(10)
+        
+        # Логотип SKATT x R3DAX
+        logo_label = QLabel("SKATT x R3DAX")
+        logo_label.setStyleSheet(f"""
+            color: {ACCENT2.name()};
+            font-size: 36px;
+            font-weight: bold;
+            font-family: 'Arial';
+            letter-spacing: 3px;
+        """)
+        header_layout.addWidget(logo_label)
+        
+        # Название игры
+        title_label = QLabel("Black Empire")
+        title_label.setStyleSheet(f"""
+            color: {TEXT_PRIMARY.name()};
+            font-size: 72px;
+            font-weight: bold;
+            font-family: 'Arial';
+            margin: 20px 0;
+            text-shadow: 0 0 20px {PURPLE_ACCENT.name()};
+        """)
+        header_layout.addWidget(title_label)
+        
+        # Описание игры
+        desc_label = QLabel("Построй империю от старта до корпорации")
+        desc_label.setStyleSheet(f"""
+            color: {TEXT_SECONDARY.name()};
+            font-size: 24px;
+            font-weight: normal;
+            font-family: 'Arial';
+            text-align: center;
+        """)
+        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        desc_label.setWordWrap(True)
+        header_layout.addWidget(desc_label)
+        
+        content_layout.addLayout(header_layout)
+        
+        # Разделительная линия
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        line.setStyleSheet(f"""
+            background-color: {PURPLE_PRIMARY.name()};
+            color: {PURPLE_PRIMARY.name()};
+            min-height: 2px;
+            max-height: 2px;
+            margin: 40px 100px;
+        """)
+        content_layout.addWidget(line)
+        
+        # Описание геймплея
+        gameplay_desc = QLabel("""Стартуй маленьким бизнесом: закупи сырье, управляй активами, инвестируй в улучшения своего бизнеса. Пройди — это вызов — старт.""")
+        gameplay_desc.setStyleSheet(f"""
+            color: {TEXT_SECONDARY.name()};
+            font-size: 18px;
+            font-weight: normal;
+            font-family: 'Arial';
+            text-align: center;
+            line-height: 1.5;
+        """)
+        gameplay_desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        gameplay_desc.setWordWrap(True)
+        gameplay_desc.setMaximumWidth(800)
+        content_layout.addWidget(gameplay_desc)
+        
+        # Кнопки меню
+        buttons_layout = QVBoxLayout()
+        buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        buttons_layout.setSpacing(20)
+        
+        # Кнопка Играть
+        play_btn = MenuButton("🎮 Играть")
+        play_btn.setFixedSize(350, 80)
+        play_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 {ACCENT2.name()}, stop:1 {ACCENT1.name()});
+                border: 3px solid {LIGHT_PURPLE.name()};
+                border-radius: 40px;
+                color: {DARK_BG.name()};
+                font-size: 24px;
+                font-weight: bold;
+                padding: 20px 40px;
+            }}
+            QPushButton:hover {{
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 {ACCENT1.name()}, stop:1 {ACCENT2.name()});
+                border: 3px solid {WHITE.name()};
+            }}
+        """)
+        play_btn.clicked.connect(self.playClicked.emit)
+        buttons_layout.addWidget(play_btn)
+        
+        # Дополнительные кнопки
+        menu_buttons = [
+            ("⚙️ Настройки", self.settingsClicked),
+            ("🚪 Выход", self.exitClicked)
+        ]
+        
+        for text, signal in menu_buttons:
+            btn = MenuButton(text)
+            btn.clicked.connect(signal.emit)
+            buttons_layout.addWidget(btn)
+        
+        content_layout.addLayout(buttons_layout)
+        
+        # Футер с версией
+        footer_label = QLabel(f"Version {GAME_VERSION}")
+        footer_label.setStyleSheet(f"""
+            color: {TEXT_TERTIARY.name()};
+            font-size: 14px;
+            font-family: 'Arial';
+            margin-top: 50px;
+        """)
+        footer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        content_layout.addWidget(footer_label)
+        
+        # Устанавливаем layout для background
+        background_layout = QVBoxLayout()
+        background_layout.addLayout(content_layout)
+        background.setLayout(background_layout)
+        
+        self.setLayout(layout)
+
 class LoadingScreen(QWidget):
     """Экран загрузки"""
     
@@ -280,11 +465,11 @@ class LoadingScreen(QWidget):
         
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_loading)
-        self.timer.start(50)
+        self.timer.start(100)  # Увеличил интервал для замедления загрузки
         
         self.rotation_timer = QTimer()
         self.rotation_timer.timeout.connect(self.update_rotation)
-        self.rotation_timer.start(50)
+        self.rotation_timer.start(100)
         
         self.dots_timer = QTimer()
         self.dots_timer.timeout.connect(self.update_dots)
@@ -418,6 +603,13 @@ class NavigationPanel(QWidget):
         
         layout.addStretch()
         
+        # Кнопка настроек
+        settings_btn = NavigationButton("⚙️ Настройки", "settings")
+        settings_btn.clicked.connect(lambda: self.navigationChanged.emit("settings"))
+        self.button_group.addButton(settings_btn)
+        self.buttons["settings"] = settings_btn
+        layout.addWidget(settings_btn)
+        
         # Версия игры
         version_label = QLabel(f"v{GAME_VERSION}")
         version_label.setStyleSheet(f"color: {TEXT_TERTIARY.name()}; font-size: 12px; text-align: center;")
@@ -434,6 +626,7 @@ class ClickerGame(QWidget):
     """Игровой кликер"""
     
     moneyChanged = pyqtSignal(int)
+    exitToMenu = pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -492,6 +685,28 @@ class ClickerGame(QWidget):
         stats_group.setLayout(stats_layout)
         left_layout.addWidget(stats_group)
         
+        # Кнопки навигации в кликере
+        nav_group = QGroupBox("Навигация")
+        nav_group.setStyleSheet(stats_group.styleSheet())
+        
+        nav_layout = QVBoxLayout()
+        
+        nav_buttons = [
+            ("🏪 Магазины", self.show_shops),
+            ("📈 Инвестиции", self.show_investments),
+            ("🏢 Бизнесы", self.show_businesses),
+            ("👤 Профиль", self.show_profile),
+            ("🚪 Выход в меню", self.exit_to_menu)
+        ]
+        
+        for text, callback in nav_buttons:
+            btn = AnimatedButton(text)
+            btn.clicked.connect(callback)
+            nav_layout.addWidget(btn)
+        
+        nav_group.setLayout(nav_layout)
+        left_layout.addWidget(nav_group)
+        
         left_layout.addStretch()
         left_panel.setLayout(left_layout)
         
@@ -532,7 +747,7 @@ class ClickerGame(QWidget):
         center_layout.addSpacing(20)
         
         # Инструкция
-        instruction = QLabel("Нажимайте на кнопку или используйте ПРОБЕЛ для заработка")
+        instruction = QLabel("Нажимайте на кнопку или используйте ПРОБЕЛ для заработка\nESC - выход в меню")
         instruction.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 14px;")
         instruction.setAlignment(Qt.AlignmentFlag.AlignCenter)
         center_layout.addWidget(instruction)
@@ -645,14 +860,66 @@ class ClickerGame(QWidget):
         sequence.addAnimation(anim2)
         sequence.start()
         
-    def keyPressEvent(self, a0):
-        if a0.key() == Qt.Key.Key_Space:
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() == Qt.Key.Key_Space:
             self.handle_click()
+        elif event.key() == Qt.Key.Key_Escape:
+            self.exit_to_menu()
         else:
-            super().keyPressEvent(a0)
+            super().keyPressEvent(event)
+    
+    def show_shops(self):
+        self.exitToMenu.emit()
+        # Сигнал будет обработан в MainWindow для перехода к магазинам
+    
+    def show_investments(self):
+        self.exitToMenu.emit()
+        # Сигнал будет обработан в MainWindow для перехода к инвестициям
+    
+    def show_businesses(self):
+        self.exitToMenu.emit()
+        # Сигнал будет обработан в MainWindow для перехода к бизнесам
+    
+    def show_profile(self):
+        self.exitToMenu.emit()
+        # Сигнал будет обработан в MainWindow для перехода к профилю
+    
+    def exit_to_menu(self):
+        self.exitToMenu.emit()
+
+@dataclass
+class Product:
+    id: int
+    name: str
+    price: int
+    description: str
+    category: str
+    stats: str = ""
+
+class ShopSystem:
+    def __init__(self):
+        self.export = ExportDB()
+        
+    def load_products(self, category):
+        """Загрузка товаров по категории"""
+        products = []
+        
+        if category == "islands":
+            data = self.export.get_shop_islands()
+            products.append(Product(data[0], data[1], data[2], data[3], "Острова"))
+        elif category == "boosters":
+            data = self.export.get_shop_boosters()
+            products.append(Product(data[0], data[1], data[2], data[3], "Бустеры"))
+        elif category == "cars":
+            data = self.export.get_shop_cars()
+            products.append(Product(data[0], data[1], data[2], data[3], "Машины", data[4]))
+            
+        return products
 
 class InvestmentMenu(QWidget):
     """Меню инвестиций"""
+    
+    exitToMenu = pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -670,6 +937,11 @@ class InvestmentMenu(QWidget):
         title.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 32px; font-weight: bold;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_layout.addWidget(title)
+        
+        # Кнопка возврата
+        back_btn = AnimatedButton("🚪 Назад в меню")
+        back_btn.clicked.connect(self.exitToMenu.emit)
+        main_layout.addWidget(back_btn)
         
         # Виджет портфеля
         portfolio_widget = self.create_portfolio_widget()
@@ -819,11 +1091,18 @@ class InvestmentMenu(QWidget):
         
         widget.setLayout(layout)
         return widget
+        
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() == Qt.Key.Key_Escape:
+            self.exitToMenu.emit()
+        else:
+            super().keyPressEvent(event)
 
 class ShopSelectionMenu(QWidget):
     """Выбор магазина"""
     
     shopSelected = pyqtSignal(str)
+    exitToMenu = pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -838,6 +1117,11 @@ class ShopSelectionMenu(QWidget):
         title.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 48px; font-weight: bold;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
+        
+        # Кнопка возврата
+        back_btn = AnimatedButton("🚪 Назад в меню")
+        back_btn.clicked.connect(self.exitToMenu.emit)
+        layout.addWidget(back_btn)
         
         subtitle = QLabel("Выберите магазин для покупок")
         subtitle.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 24px;")
@@ -918,9 +1202,17 @@ class ShopSelectionMenu(QWidget):
         
         widget.setLayout(layout)
         return widget
+        
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() == Qt.Key.Key_Escape:
+            self.exitToMenu.emit()
+        else:
+            super().keyPressEvent(event)
 
 class LightShopMenu(QWidget):
     """Светлый магазин"""
+    
+    exitToMenu = pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -936,6 +1228,11 @@ class LightShopMenu(QWidget):
         title.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 32px; font-weight: bold;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
+        
+        # Кнопка возврата
+        back_btn = AnimatedButton("🚪 Назад в меню")
+        back_btn.clicked.connect(self.exitToMenu.emit)
+        layout.addWidget(back_btn)
         
         # Категории товаров
         categories_layout = QGridLayout()
@@ -975,38 +1272,29 @@ class LightShopMenu(QWidget):
         
     def open_category(self, category):
         print(f"Открыта категория: {category}")
+        
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() == Qt.Key.Key_Escape:
+            self.exitToMenu.emit()
+        else:
+            super().keyPressEvent(event)
 
-class ShopSystem:
+class BusinessManager:
     def __init__(self):
-        self.export = ExportDB()
+        self.my_businesses = []
         
-    def load_products(self, category):
-        """Загрузка товаров по категории"""
-        products = []
+    def buy_business(self, business_data):
+        # Логика покупки бизнеса
+        pass
         
-        if category == "islands":
-            data = self.export.get_shop_islands()
-            products.append(Product(data[0], data[1], data[2], data[3], "Острова"))
-        elif category == "boosters":
-            data = self.export.get_shop_boosters()
-            products.append(Product(data[0], data[1], data[2], data[3], "Бустеры"))
-        elif category == "cars":
-            data = self.export.get_shop_cars()
-            products.append(Product(data[0], data[1], data[2], data[3], "Машины", data[4]))
-            
-        return products
-
-@dataclass
-class Product:
-    id: int
-    name: str
-    price: int
-    description: str
-    category: str
-    stats: str = ""
+    def upgrade_business(self, business_id):
+        # Логика улучшения бизнеса
+        pass
 
 class BusinessMenu(QWidget):
     """Меню бизнесов"""
+    
+    exitToMenu = pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -1022,6 +1310,11 @@ class BusinessMenu(QWidget):
         title.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 32px; font-weight: bold;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
+        
+        # Кнопка возврата
+        back_btn = AnimatedButton("🚪 Назад в меню")
+        back_btn.clicked.connect(self.exitToMenu.emit)
+        layout.addWidget(back_btn)
         
         # Вкладки
         self.tab_widget = QTabWidget()
@@ -1236,7 +1529,7 @@ class BusinessMenu(QWidget):
         name_label = QLabel(name)
         name_label.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 18px; font-weight: bold;")
         
-        type_label = QLabel("🌑" if business_type == "dark" else "💡")
+        type_label = QLabel("🌑" if business_type == 'dark' else "💡")
         type_label.setStyleSheet("font-size: 16px;")
         
         header_layout.addWidget(name_label)
@@ -1275,21 +1568,17 @@ class BusinessMenu(QWidget):
         
         card.setLayout(layout)
         return card
-
-class BusinessManager:
-    def __init__(self):
-        self.my_businesses = []
         
-    def buy_business(self, business_data):
-        # Логика покупки бизнеса
-        pass
-        
-    def upgrade_business(self, business_id):
-        # Логика улучшения бизнеса
-        pass
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() == Qt.Key.Key_Escape:
+            self.exitToMenu.emit()
+        else:
+            super().keyPressEvent(event)
 
 class ProfileMenu(QWidget):
     """Меню профиля"""
+    
+    exitToMenu = pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -1304,6 +1593,11 @@ class ProfileMenu(QWidget):
         title.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 32px; font-weight: bold;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
+        
+        # Кнопка возврата
+        back_btn = AnimatedButton("🚪 Назад в меню")
+        back_btn.clicked.connect(self.exitToMenu.emit)
+        layout.addWidget(back_btn)
         
         # Основная информация
         info_widget = self.create_profile_info()
@@ -1516,9 +1810,17 @@ class ProfileMenu(QWidget):
         
         widget.setLayout(layout)
         return widget
+        
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() == Qt.Key.Key_Escape:
+            self.exitToMenu.emit()
+        else:
+            super().keyPressEvent(event)
 
 class SettingsMenu(QWidget):
     """Меню настроек"""
+    
+    exitToMenu = pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -1534,6 +1836,11 @@ class SettingsMenu(QWidget):
         title.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 32px; font-weight: bold;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
+        
+        # Кнопка возврата
+        back_btn = AnimatedButton("🚪 Назад в меню")
+        back_btn.clicked.connect(self.exitToMenu.emit)
+        layout.addWidget(back_btn)
         
         # Настройки
         settings_widget = self.create_settings_widget()
@@ -1646,6 +1953,12 @@ class SettingsMenu(QWidget):
                                    "Вы уверены, что хотите сбросить все настройки?")
         if reply == QMessageBox.StandardButton.Yes:
             QMessageBox.information(self, "Настройки", "Настройки сброшены!")
+            
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() == Qt.Key.Key_Escape:
+            self.exitToMenu.emit()
+        else:
+            super().keyPressEvent(event)
 
 class MainWindow(QMainWindow):
     """Главное окно приложения"""
@@ -1664,17 +1977,13 @@ class MainWindow(QMainWindow):
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
         
-        # Панель навигации
-        self.nav_panel = NavigationPanel()
-        self.nav_panel.navigationChanged.connect(self.handle_navigation)
-        main_layout.addWidget(self.nav_panel)
-        
-        # Область контента
+        # Стек виджетов для переключения между экранами
         self.content_stack = QStackedWidget()
         self.content_stack.setStyleSheet(f"background: transparent;")
         
         # Создаем экраны
         self.loading_screen = LoadingScreen()
+        self.main_menu = MainMenuScreen()
         self.clicker_game = ClickerGame()
         self.investment_menu = InvestmentMenu()
         self.shop_selection = ShopSelectionMenu()
@@ -1684,67 +1993,106 @@ class MainWindow(QMainWindow):
         self.settings_menu = SettingsMenu()
         
         # Добавляем экраны в стек
-        self.content_stack.addWidget(self.loading_screen)
-        self.content_stack.addWidget(self.clicker_game)
-        self.content_stack.addWidget(self.investment_menu)
-        self.content_stack.addWidget(self.shop_selection)
-        self.content_stack.addWidget(self.light_shop)
-        self.content_stack.addWidget(self.business_menu)
-        self.content_stack.addWidget(self.profile_menu)
-        self.content_stack.addWidget(self.settings_menu)
+        self.content_stack.addWidget(self.loading_screen)        # 0
+        self.content_stack.addWidget(self.main_menu)             # 1
+        self.content_stack.addWidget(self.clicker_game)          # 2
+        self.content_stack.addWidget(self.investment_menu)       # 3
+        self.content_stack.addWidget(self.shop_selection)        # 4
+        self.content_stack.addWidget(self.light_shop)            # 5
+        self.content_stack.addWidget(self.business_menu)         # 6
+        self.content_stack.addWidget(self.profile_menu)          # 7
+        self.content_stack.addWidget(self.settings_menu)         # 8
         
-        main_layout.addWidget(self.content_stack, 1)
+        main_layout.addWidget(self.content_stack)
         self.central_widget.setLayout(main_layout)
         
-        # Подключаем сигнал завершения загрузки
-        self.loading_screen.loadingFinished.connect(self.show_main_content)
+        # Подключаем сигналы
+        self.loading_screen.loadingFinished.connect(self.show_main_menu)
+        self.main_menu.playClicked.connect(self.show_clicker_game)
+        self.main_menu.settingsClicked.connect(self.show_settings)
+        self.main_menu.exitClicked.connect(self.close)
+        
+        # Подключаем сигналы выхода в меню
+        self.clicker_game.exitToMenu.connect(self.show_main_menu)
+        self.investment_menu.exitToMenu.connect(self.show_main_menu)
+        self.shop_selection.exitToMenu.connect(self.show_main_menu)
+        self.light_shop.exitToMenu.connect(self.show_main_menu)
+        self.business_menu.exitToMenu.connect(self.show_main_menu)
+        self.profile_menu.exitToMenu.connect(self.show_main_menu)
+        self.settings_menu.exitToMenu.connect(self.show_main_menu)
+        
+        # Подключаем навигацию между разделами
+        self.shop_selection.shopSelected.connect(self.handle_shop_selection)
         
         # Показываем экран загрузки
         self.content_stack.setCurrentIndex(0)
         
-    def show_main_content(self):
-        """Показывает основной контент после загрузки"""
-        self.content_stack.setCurrentIndex(1)  # Кликер
+    def show_main_menu(self):
+        """Показать главное меню"""
+        self.content_stack.setCurrentIndex(1)
         
-    def handle_navigation(self, action):
-        """Обрабатывает навигацию"""
-        screen_map = {
-            "clicker": 1,
-            "investments": 2,
-            "shops": 3,
-            "businesses": 5,
-            "profile": 6,
-            "settings": 7
-        }
+    def show_clicker_game(self):
+        """Показать игровой кликер"""
+        self.content_stack.setCurrentIndex(2)
         
-        if action in screen_map:
-            self.content_stack.setCurrentIndex(screen_map[action])
-            self.nav_panel.set_active_button(action)
-            
-        # Специальная обработка для магазинов
-        if action == "shops":
-            self.content_stack.setCurrentIndex(3)
+    def show_investments(self):
+        """Показать инвестиции"""
+        self.content_stack.setCurrentIndex(3)
+        
+    def show_shop_selection(self):
+        """Показать выбор магазина"""
+        self.content_stack.setCurrentIndex(4)
+        
+    def show_businesses(self):
+        """Показать бизнесы"""
+        self.content_stack.setCurrentIndex(6)
+        
+    def show_profile(self):
+        """Показать профиль"""
+        self.content_stack.setCurrentIndex(7)
+        
+    def show_settings(self):
+        """Показать настройки"""
+        self.content_stack.setCurrentIndex(8)
+        
+    def handle_shop_selection(self, shop_type):
+        """Обработать выбор магазина"""
+        if shop_type == "legal":
+            self.content_stack.setCurrentIndex(5)  # Light shop
+        elif shop_type == "black_market":
+            # Здесь можно добавить черный рынок
+            QMessageBox.information(self, "Черный рынок", "Черный рынок в разработке!")
+        
+    def keyPressEvent(self, event: QKeyEvent):
+        """Глобальная обработка клавиш"""
+        if event.key() == Qt.Key.Key_Escape:
+            # Если мы не в главном меню, возвращаемся в него
+            current_index = self.content_stack.currentIndex()
+            if current_index != 1:  # Не главное меню
+                self.show_main_menu()
+        else:
+            super().keyPressEvent(event)
 
 def main():
     app = QApplication(sys.argv)
     
-    # Устанавливаем темную тему для всего приложения
-    app.setStyle('Fusion')
+    # Устанавливаем стиль приложения
+    app.setStyle("Fusion")
     
+    # Настройка палитры
     palette = QPalette()
     palette.setColor(QPalette.ColorRole.Window, DARK_BG)
     palette.setColor(QPalette.ColorRole.WindowText, TEXT_PRIMARY)
     palette.setColor(QPalette.ColorRole.Base, PANEL_BG)
-    palette.setColor(QPalette.ColorRole.AlternateBase, DARK_BG)
-    palette.setColor(QPalette.ColorRole.ToolTipBase, TEXT_PRIMARY)
-    palette.setColor(QPalette.ColorRole.ToolTipText, TEXT_PRIMARY)
+    palette.setColor(QPalette.ColorRole.AlternateBase, DEEP_PURPLE)
+    palette.setColor(QPalette.ColorRole.ToolTipBase, WHITE)
+    palette.setColor(QPalette.ColorRole.ToolTipText, WHITE)
     palette.setColor(QPalette.ColorRole.Text, TEXT_PRIMARY)
-    palette.setColor(QPalette.ColorRole.Button, PANEL_BG)
+    palette.setColor(QPalette.ColorRole.Button, PURPLE_PRIMARY)
     palette.setColor(QPalette.ColorRole.ButtonText, TEXT_PRIMARY)
-    palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
-    palette.setColor(QPalette.ColorRole.Highlight, PURPLE_PRIMARY)
-    palette.setColor(QPalette.ColorRole.HighlightedText, TEXT_PRIMARY)
-    
+    palette.setColor(QPalette.ColorRole.BrightText, ACCENT2)
+    palette.setColor(QPalette.ColorRole.Highlight, PURPLE_ACCENT)
+    palette.setColor(QPalette.ColorRole.HighlightedText, BLACK)
     app.setPalette(palette)
     
     window = MainWindow()

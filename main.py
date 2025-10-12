@@ -313,13 +313,13 @@ class GradientWidget(QWidget):
         
         self.update()
     
-    def resizeEvent(self, event):
+    def resizeEvent(self, a0):
         """Пересоздаем звезды при изменении размера окна"""
-        super().resizeEvent(event)
+        super().resizeEvent(a0)
         self.stars.clear()
         self.init_stars()
     
-    def paintEvent(self, event):
+    def paintEvent(self, a0):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
@@ -572,7 +572,7 @@ class LoadingScreen(QWidget):
         
         self.update()
     
-    def paintEvent(self, event):
+    def paintEvent(self, a0):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
@@ -950,7 +950,7 @@ class ClickerGame(QWidget):
             self.exit_to_menu()
         else:
             super().keyPressEvent(a0)
-
+    """
     def show_shops(self):
         self.exitToMenu.emit()
         # Сигнал будет обработан в MainWindow для перехода к магазинам
@@ -969,7 +969,7 @@ class ClickerGame(QWidget):
     
     def exit_to_menu(self):
         self.exitToMenu.emit()
-    
+    """
     def show_shops(self):
         self.navigationRequested.emit("shops")
     
@@ -984,9 +984,6 @@ class ClickerGame(QWidget):
     
     def exit_to_menu(self):
         self.navigationRequested.emit("main_menu")
-
-
-    
 
 @dataclass
 class Product:

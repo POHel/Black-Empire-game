@@ -1020,7 +1020,7 @@ class ShopSystem:
 class InvestmentMenu(QWidget):
     """Меню инвестиций"""
     
-    exitToMenu = pyqtSignal()
+    exitToClicker = pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -1041,7 +1041,7 @@ class InvestmentMenu(QWidget):
         
         # Кнопка возврата
         back_btn = AnimatedButton("🚪 Назад в меню")
-        back_btn.clicked.connect(self.exitToMenu.emit)
+        back_btn.clicked.connect(self.exitToClicker.emit)
         main_layout.addWidget(back_btn)
         
         # Виджет портфеля
@@ -1203,7 +1203,8 @@ class ShopSelectionMenu(QWidget):
     """Выбор магазина"""
     
     shopSelected = pyqtSignal(str)
-    exitToMenu = pyqtSignal()
+    navigationRequested = pyqtSignal(str)
+    exitToClicker = pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -1221,7 +1222,7 @@ class ShopSelectionMenu(QWidget):
         
         # Кнопка возврата
         back_btn = AnimatedButton("🚪 Назад в меню")
-        back_btn.clicked.connect(self.exitToMenu.emit)
+        back_btn.clicked.connect(self.exitToClicker)
         layout.addWidget(back_btn)
         
         subtitle = QLabel("Выберите магазин для покупок")
@@ -1310,10 +1311,13 @@ class ShopSelectionMenu(QWidget):
         else:
             super().keyPressEvent(a0)
 
+    def show_clicker_game(self):
+        self.navigationRequested.emit("clicker")
+
 class LightShopMenu(QWidget):
     """Светлый магазин"""
     
-    exitToMenu = pyqtSignal()
+    exitToShopSelectionMenu = pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -1332,7 +1336,7 @@ class LightShopMenu(QWidget):
         
         # Кнопка возврата
         back_btn = AnimatedButton("🚪 Назад в меню")
-        back_btn.clicked.connect(self.exitToMenu.emit)
+        back_btn.clicked.connect(self.exitToShopSelectionMenu.emit)
         layout.addWidget(back_btn)
         
         # Категории товаров
@@ -1395,7 +1399,7 @@ class BusinessManager:
 class BusinessMenu(QWidget):
     """Меню бизнесов"""
     
-    exitToMenu = pyqtSignal()
+    exitToClicker = pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -1414,7 +1418,7 @@ class BusinessMenu(QWidget):
         
         # Кнопка возврата
         back_btn = AnimatedButton("🚪 Назад в меню")
-        back_btn.clicked.connect(self.exitToMenu.emit)
+        back_btn.clicked.connect(self.exitToClicker.emit)
         layout.addWidget(back_btn)
         
         # Вкладки
@@ -1679,7 +1683,7 @@ class BusinessMenu(QWidget):
 class ProfileMenu(QWidget):
     """Меню профиля"""
     
-    exitToMenu = pyqtSignal()
+    exitToClicker = pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -1697,7 +1701,7 @@ class ProfileMenu(QWidget):
         
         # Кнопка возврата
         back_btn = AnimatedButton("🚪 Назад в меню")
-        back_btn.clicked.connect(self.exitToMenu.emit)
+        back_btn.clicked.connect(self.exitToClicker.emit)
         layout.addWidget(back_btn)
         
         # Основная информация
@@ -2115,11 +2119,11 @@ class MainWindow(QMainWindow):
         
         # Подключаем сигналы выхода в меню
         self.clicker_game.exitToMenu.connect(self.show_main_menu)
-        self.investment_menu.exitToMenu.connect(self.show_main_menu)
-        self.shop_selection.exitToMenu.connect(self.show_main_menu)
-        self.light_shop.exitToMenu.connect(self.show_main_menu)
-        self.business_menu.exitToMenu.connect(self.show_main_menu)
-        self.profile_menu.exitToMenu.connect(self.show_main_menu)
+        self.investment_menu.exitToClicker.connect(self.show_clicker_game)
+        self.shop_selection.exitToClicker.connect(self.show_clicker_game)
+        self.light_shop.exitToShopSelectionMenu.connect(self.show_shop_selection)
+        self.business_menu.exitToClicker.connect(self.show_clicker_game)
+        self.profile_menu.exitToClicker.connect(self.show_clicker_game)
         self.settings_menu.exitToMenu.connect(self.show_main_menu)
         
         # Подключаем навигацию между разделами

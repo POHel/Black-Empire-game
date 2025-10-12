@@ -949,13 +949,8 @@ class ClickerGame(QWidget):
         elif a0 is not None and a0.key() == Qt.Key.Key_Escape:
             self.exit_to_menu()
         else:
-<<<<<<< HEAD
             super().keyPressEvent(a0)
-    
-=======
-            super().keyPressEvent(event)
 
->>>>>>> 2a7fdbbf06064c1d2a2d65edd7560e8495352662
     def show_shops(self):
         self.exitToMenu.emit()
         # Сигнал будет обработан в MainWindow для перехода к магазинам

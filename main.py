@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import (
     Qt, QTimer, pyqtSignal, QPropertyAnimation, QEasingCurve, 
     QRect, QPoint, QSize, QDateTime, QSequentialAnimationGroup,
-    QParallelAnimationGroup
+    QParallelAnimationGroup, qInstallMessageHandler
 )
 from PyQt6.QtGui import (
     QFont, QPalette, QColor, QPainter, QLinearGradient, 
@@ -536,7 +536,7 @@ class MainMenuScreen(QWidget):
         background_layout = QVBoxLayout()
         background_layout.addLayout(content_layout)
         background.setLayout(background_layout)
-        
+
         self.setLayout(layout)
 
 class LoadingScreen(QWidget):
@@ -2410,7 +2410,6 @@ class BusinessMenu(QWidget):
     def create_my_businesses_tab(self):
         widget = QWidget()
         layout = QVBoxLayout(widget)  # Устанавливаем layout непосредственно для widget
-        widget.setLayout(layout)
         
         # Фильтры для моих бизнесов
         filter_layout = QHBoxLayout()
@@ -2557,9 +2556,8 @@ class BusinessMenu(QWidget):
             card.setFixedSize(450, 400)
 
         layout = QVBoxLayout()
-        card.setLayout(layout)
+        card.setLayout(layout)  # Устанавливаем layout для карточки
         
-        # Верхняя панель
         header_layout = QHBoxLayout()
         
         # Иконка и название
@@ -2590,8 +2588,6 @@ class BusinessMenu(QWidget):
             bio_label = QLabel("🦿 Био")
             bio_label.setStyleSheet("color: #3b82f6; font-size: 12px;")
             header_layout.addWidget(bio_label)
-            
-        layout.addLayout(header_layout)
         
         # Индикатор риска для темных бизнесов
         if is_dark:
@@ -2599,8 +2595,7 @@ class BusinessMenu(QWidget):
             risk_label.setStyleSheet("color: #ef4444; font-size: 12px;")
             header_layout.addWidget(risk_label)
         
-        header_layout.addLayout(title_layout)
-        header_layout.addWidget(level_label)
+        # Добавляем header_layout в основной layout только ОДИН раз
         layout.addLayout(header_layout)
         
         # Панель состояния
@@ -2760,13 +2755,26 @@ class BusinessMenu(QWidget):
             self.my_businesses_layout.addWidget(no_business_label, 0, 0, 1, max_cols)
 
     def clear_layout(self, layout):
-        """Безопасная очистка layout"""
-        if layout is not None:
-            while layout.count():
-                item = layout.takeAt(0)
-                widget = item.widget()
-                if widget is not None:
-                    widget.deleteLater()
+        """Безопасная рекурсивная очистка layout"""
+        if layout is None:
+            return
+            
+        while layout.count():
+            item = layout.takeAt(0)
+            if item is None:
+                continue
+                
+            widget = item.widget()
+            if widget is not None:
+                # Если это виджет - удаляем его
+                widget.deleteLater()
+            else:
+                # Если это вложенный layout - очищаем его рекурсивно
+                nested_layout = item.layout()
+                if nested_layout is not None:
+                    self.clear_layout(nested_layout)
+                    # Удаляем сам layout
+                    nested_layout.deleteLater()
         
     def handle_crypto_trading(self, business_data):
         """Запуск крипто-трейдинга"""
@@ -2805,13 +2813,9 @@ class BusinessMenu(QWidget):
         if self.catalog_layout is None:
             return
             
-        # Очищаем layout - безопасно удаляем только виджеты
-        while self.catalog_layout.count():
-            item = self.catalog_layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.deleteLater()
-            
+        # Очищаем layout - безопасно удаляем все элементы
+        self.clear_layout(self.catalog_layout)
+        
         # Добавляем бизнесы
         row, col = 0, 0
         max_cols = 2
@@ -3647,6 +3651,15 @@ class MainWindow(QMainWindow):
             super().keyPressEvent(a0)
 
 def main():
+    def qt_debug_handler(msg_type, context, message):
+        if "QLayout::addChildLayout" in message:
+            import traceback
+            print("⚠️ Ошибка QLayout:", message)
+            traceback.print_stack(limit=6)
+        else:
+            print(message)
+
+    qInstallMessageHandler(qt_debug_handler)
     app = QApplication(sys.argv)
     
     # Устанавливаем стиль приложения

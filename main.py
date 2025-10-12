@@ -424,6 +424,7 @@ class IconRenderer:
         return self._draw_image_icon(surface, x, y, size, "shop_icon_img", self.draw_shop_icon)
 
     # Fallback методы для отрисовки векторных иконок
+    """
     def draw_play_icon(self, surface, x, y, size=30):
         cache_key = ("play", size)
         if cache_key not in self.icon_cache:
@@ -449,7 +450,7 @@ class IconRenderer:
                 pygame.draw.line(icon_surf, TEXT_PRIMARY, (x1, y1), (x2, y2), 2)
             self.icon_cache[cache_key] = icon_surf
         surface.blit(self.icon_cache[cache_key], (x, y))
-
+            """
     def draw_clicker_icon(self, surface, x, y, size=30):
         # Контур пальца
         icon_surf = pygame.Surface((size, size), pygame.SRCALPHA)
@@ -1850,6 +1851,15 @@ class ShopSelectionMenu:
         button_width, button_height = 300, 80
         center_x = SCREEN_WIDTH // 2
         center_y = SCREEN_HEIGHT // 2
+        self.back_button = Button(
+            pygame.Rect(300, 50, 200, 60),
+            "Назад в магазины",
+            None, 
+            lambda: self.game.open_shop_selection()
+        )
+        # Добавляем атрибуты для кнопки назад
+        self.back_button.is_active = False
+        self.back_button.hovered = False
         
         self.buttons = [
             Button(
@@ -4563,7 +4573,7 @@ class Game:
         for nav_button in self.nav_buttons:
             nav_button.draw(surface)
             if hasattr(nav_button, 'icon_function'):
-                button.icon_function(surface, nav_button.rect)
+                nav_button.icon_function(surface, nav_button.rect)
 
     def update_navigation_state(self, active_button_text):
         """Обновляет состояние кнопок навигации во всех меню"""

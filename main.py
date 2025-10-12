@@ -3336,13 +3336,11 @@ class SettingsMenu(QWidget):
 
         layout = QFormLayout()
         layout.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
-        layout.setVerticalSpacing(20)  # ← Увеличьте расстояние между строками
+        layout.setVerticalSpacing(20)
         layout.setContentsMargins(10, 10, 10, 10)
         
-        # Тема
-        theme_combo = QComboBox()
-        theme_combo.addItems(self.settings_manager.show_themes())
-        theme_combo.setStyleSheet(f"""
+        # Общий стиль для всех ComboBox с настройкой ширины
+        combo_style = f"""
             QComboBox {{
                 background-color: {DARK_BG.name()};
                 color: {TEXT_PRIMARY.name()};
@@ -3350,60 +3348,157 @@ class SettingsMenu(QWidget):
                 border-radius: 8px;
                 padding: 10px;
                 margin-top: 9px;
+                min-width: 400px;           /* Минимальная ширина в неактивном состоянии */
+                max-width: 450px;           /* Максимальная ширина в неактивном состоянии */
             }}
-        """)
+            QComboBox:hover {{
+                border: 1px solid {LIGHT_PURPLE.name()};
+            }}
+            QComboBox::drop-down {{
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 25px;
+                border-left: 1px solid {PURPLE_PRIMARY.name()};
+                border-top-right-radius: 8px;
+                border-bottom-right-radius: 8px;
+            }}
+            QComboBox::down-arrow {{
+                image: none;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 5px solid {LIGHT_PURPLE.name()};
+                width: 0px;
+                height: 0px;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: {DARK_BG.name()};
+                border: 1px solid {PURPLE_ACCENT.name()};
+                border-radius: 8px;
+                padding: 5px;
+                outline: none;
+                min-width: 400px;           /* Минимальная ширина выпадающего списка */
+                max-width: 450px;           /* Максимальная ширина выпадающего списка */
+            }}
+            QComboBox QAbstractItemView::item {{
+                color: {TEXT_PRIMARY.name()};
+                background-color: transparent;
+                padding: 8px 12px;
+                border-radius: 4px;
+                margin: 2px;
+            }}
+            QComboBox QAbstractItemView::item:selected {{
+                background-color: {PURPLE_PRIMARY.name()};
+                color: white;
+            }}
+            QComboBox QAbstractItemView::item:hover {{
+                background-color: {PURPLE_ACCENT.name()};
+                color: white;
+            }}
+        """
+        
+        # Тема
+        theme_combo = QComboBox()
+        theme_combo.addItems(self.settings_manager.show_themes())
+        theme_combo.setStyleSheet(combo_style)
+        # Можно также установить фиксированную ширину для конкретного комбобокса
+        theme_combo.setFixedWidth(250)  # Ширина в неактивном состоянии
         layout.addRow("🎨 Тема:", theme_combo)
         
         # Разрешение
         resolution_combo = QComboBox()
         resolutions = [f"{w}x{h}" for w, h in self.settings_manager.show_window_sizes()]
         resolution_combo.addItems(resolutions)
-        resolution_combo.setStyleSheet(theme_combo.styleSheet())
+        resolution_combo.setStyleSheet(combo_style)
+        resolution_combo.setFixedWidth(250)
         layout.addRow("🖥️ Разрешение:", resolution_combo)
         
         # FPS
         fps_combo = QComboBox()
         fps_combo.addItems([f"{fps} FPS" for fps in self.settings_manager.show_fps()])
-        fps_combo.setStyleSheet(theme_combo.styleSheet())
+        fps_combo.setStyleSheet(combo_style)
+        fps_combo.setFixedWidth(250)
         layout.addRow("🎯 FPS:", fps_combo)
         
         # Язык
         language_combo = QComboBox()
         language_combo.addItems(self.settings_manager.show_langs())
-        language_combo.setStyleSheet(theme_combo.styleSheet())
+        language_combo.setStyleSheet(combo_style)
+        language_combo.setFixedWidth(250)
         layout.addRow("🌐 Язык:", language_combo)
         
         # Качество графики
         quality_combo = QComboBox()
         quality_combo.addItems(["Низкое", "Среднее", "Высокое", "Ультра"])
-        quality_combo.setStyleSheet(theme_combo.styleSheet())
+        quality_combo.setStyleSheet(combo_style)
+        quality_combo.setFixedWidth(250)
         layout.addRow("🎨 Качество графики:", quality_combo)
         
-        # Громкость
+        # Громкость - используем обычную строку формы
         volume_slider = QSlider(Qt.Orientation.Horizontal)
         volume_slider.setRange(0, 100)
         volume_slider.setValue(80)
+        
+        # НАСТРОЙКИ РАЗМЕРА
+        volume_slider.setFixedWidth(400)  # Ширина ползунка
+        volume_slider.setMinimumHeight(40)  # Минимальная высота
+        
+        # Стиль ползунка
         volume_slider.setStyleSheet(f"""
             QSlider::groove:horizontal {{
-                border: 1px solid {PURPLE_PRIMARY.name()};
-                height: 8px;
-                background: {DARK_BG.name()};
-                border-radius: 4px;
+                border: 2px solid {PURPLE_PRIMARY.name()};
+                height: 15px;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 {DARK_BG.name()}, stop:0.3 {DEEP_PURPLE.name()}, stop:1 {PURPLE_PRIMARY.name()});
+                border-radius: 7px;
             }}
             QSlider::handle:horizontal {{
-                background: {PURPLE_ACCENT.name()};
-                border: 1px solid {LIGHT_PURPLE.name()};
-                width: 18px;
-                margin: -5px 5;
-                border-radius: 9px;
+                background: qradialgradient(cx:0.5, cy:0.5, radius:0.8,
+                    stop:0 white, stop:0.6 {LIGHT_PURPLE.name()}, stop:1 {PURPLE_ACCENT.name()});
+                border: 2px solid white;
+                width: 28px;
+                height: 28px;
+                margin: -8px 0;
+                border-radius: 14px;
             }}
             QSlider::sub-page:horizontal {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 {ACCENT1.name()}, stop:1 {ACCENT2.name()});
-                border-radius: 4px;
+                    stop:0 {ACCENT1.name()}, stop:0.5 {PURPLE_ACCENT.name()}, stop:1 {ACCENT2.name()});
+                border-radius: 7px;
             }}
         """)
-        layout.addRow("🔊 Громкость:", volume_slider)
+        
+        # Контейнер для ползунка и значения
+        slider_container = QWidget()
+        slider_layout = QHBoxLayout(slider_container)
+        slider_layout.setContentsMargins(0, 0, 0, 0)
+        slider_layout.setSpacing(15)
+        
+        slider_layout.addWidget(volume_slider)
+        
+        # Значение громкости
+        volume_value = QLabel("80%")
+        volume_value.setStyleSheet(f"""
+            QLabel {{
+                color: {LIGHT_PURPLE.name()};
+                font-size: 14px;
+                font-weight: bold;
+                background-color: {DARK_BG.name()};
+                border: 1px solid {PURPLE_PRIMARY.name()};
+                border-radius: 5px;
+                padding: 8px 12px;
+                min-width: 50px;
+            }}
+        """)
+        volume_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        slider_layout.addWidget(volume_value)
+        slider_layout.addStretch()  # Чтобы прижалось к левому краю
+        
+        # Обновление значения
+        volume_slider.valueChanged.connect(lambda v: volume_value.setText(f"{v}%"))
+        
+        # Добавляем в форму - ползунок будет выровнен с другими элементами
+        layout.addRow("🔊 Громкость:", slider_container)
         
         widget.setLayout(layout)
         return widget

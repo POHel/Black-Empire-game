@@ -267,33 +267,120 @@ class NavigationButton(AnimatedButton):
         return icons.get(self.icon_name, "●")
 
 class GradientWidget(QWidget):
-    """Виджет с градиентным фоном"""
+    """Виджет с анимированным градиентным фоном и падающими звездами"""
     
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.stars = []
+        self.animation_timer = QTimer()
+        self.animation_timer.timeout.connect(self.update_stars)
+        self.animation_timer.start(50)  # Обновление каждые 50ms
         
-    def paintEvent(self, a0):
+        self.init_stars()
+        
+    def init_stars(self):
+        """Инициализация звезд"""
+        for _ in range(100):  # Увеличил количество звезд
+            star = {
+                'x': random.randint(0, self.width()),
+                'y': random.randint(0, self.height()),
+                'size': random.uniform(0.5, 3),
+                'speed': random.uniform(0.1, 2),
+                'alpha': random.randint(50, 255),
+                'twinkle_speed': random.uniform(0.02, 0.1),
+                'twinkle_direction': 1
+            }
+            self.stars.append(star)
+    
+    def update_stars(self):
+        """Обновление позиций и анимации звезд"""
+        for star in self.stars:
+            # Движение вниз
+            star['y'] += star['speed']
+            
+            # Мерцание
+            star['alpha'] += star['twinkle_speed'] * star['twinkle_direction']
+            if star['alpha'] >= 255:
+                star['alpha'] = 255
+                star['twinkle_direction'] = -1
+            elif star['alpha'] <= 50:
+                star['alpha'] = 50
+                star['twinkle_direction'] = 1
+            
+            # Если звезда ушла за нижнюю границу, создаем новую сверху
+            if star['y'] > self.height():
+                star['y'] = 0
+                star['x'] = random.randint(0, self.width())
+        
+        self.update()
+    
+    def resizeEvent(self, event):
+        """Пересоздаем звезды при изменении размера окна"""
+        super().resizeEvent(event)
+        self.stars.clear()
+        self.init_stars()
+    
+    def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
-        # Градиентный фон
+        # Улучшенный градиентный фон
         gradient = QLinearGradient(0, 0, self.width(), self.height())
-        gradient.setColorAt(0, DARK_BG)
-        gradient.setColorAt(0.5, PANEL_BG)
-        gradient.setColorAt(1, DARK_BG)
+        gradient.setColorAt(0, QColor(2, 2, 15))  # Более темный синий
+        gradient.setColorAt(0.3, QColor(8, 8, 40))  # Фиолетовый оттенок
+        gradient.setColorAt(0.7, QColor(15, 5, 35))  # Пурпурный
+        gradient.setColorAt(1, QColor(2, 2, 15))  # Более темный синий
         
         painter.fillRect(self.rect(), gradient)
         
-        # Звезды на фоне
-        painter.setPen(QPen(WHITE, 1))
-        for _ in range(50):
-            x = random.randint(0, self.width())
-            y = random.randint(0, self.height())
-            size = random.randint(1, 3)
-            alpha = random.randint(50, 200)
-            star_color = QColor(255, 255, 255, alpha)
-            painter.setPen(QPen(star_color, size))
-            painter.drawPoint(x, y)
+        # Добавляем туманность/небулярность
+        self.draw_nebula(painter)
+        
+        # Рисуем звезды
+        self.draw_stars(painter)
+        
+        # Добавляем легкий градиент поверх для глубины
+        overlay_gradient = QLinearGradient(0, 0, 0, self.height())
+        overlay_gradient.setColorAt(0, QColor(0, 0, 0, 80))
+        overlay_gradient.setColorAt(1, QColor(80, 20, 120, 40))
+        painter.fillRect(self.rect(), overlay_gradient)
+    
+    def draw_nebula(self, painter):
+        """Рисует туманности для глубины"""
+        # Большая туманность в центре
+        radial = QRadialGradient(self.width() // 2, self.height() // 2, self.width() // 2)
+        radial.setColorAt(0, QColor(30, 10, 60, 30))
+        radial.setColorAt(0.7, QColor(10, 5, 30, 10))
+        radial.setColorAt(1, QColor(0, 0, 0, 0))
+        painter.fillRect(self.rect(), radial)
+        
+        # Несколько маленьких туманностей
+        nebulae = [
+            (self.width() // 4, self.height() // 3, 200, QColor(40, 20, 80, 40)),
+            (self.width() * 3 // 4, self.height() * 2 // 3, 150, QColor(60, 10, 40, 30)),
+            (self.width() // 5, self.height() * 4 // 5, 180, QColor(20, 30, 70, 35))
+        ]
+        
+        for x, y, radius, color in nebulae:
+            radial = QRadialGradient(x, y, radius)
+            radial.setColorAt(0, color)
+            radial.setColorAt(1, QColor(0, 0, 0, 0))
+            painter.fillRect(self.rect(), radial)
+    
+    def draw_stars(self, painter):
+        """Рисует анимированные звезды"""
+        for star in self.stars:
+            star_color = QColor(255, 255, 255, int(star['alpha']))
+            painter.setPen(QPen(star_color, star['size']))
+            
+            # Основная точка звезды
+            painter.drawPoint(int(star['x']), int(star['y']))
+            
+            # Добавляем свечение для больших звезд
+            if star['size'] > 1.5:
+                glow_color = QColor(255, 255, 255, int(star['alpha'] * 0.3))
+                painter.setPen(QPen(glow_color, star['size'] * 2))
+                painter.drawPoint(int(star['x']), int(star['y']))
 
 class MainMenuScreen(QWidget):
     """Главное меню игры"""
@@ -453,7 +540,7 @@ class MainMenuScreen(QWidget):
         self.setLayout(layout)
 
 class LoadingScreen(QWidget):
-    """Экран загрузки"""
+    """Экран загрузки с улучшенной анимацией"""
     
     loadingFinished = pyqtSignal()
     
@@ -463,43 +550,38 @@ class LoadingScreen(QWidget):
         self.dots = 0
         self.rotation_angle = 0
         
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.update_loading)
-        self.timer.start(100)  # Увеличил интервал для замедления загрузки
+        # Используем один таймер для всех анимаций
+        self.animation_timer = QTimer()
+        self.animation_timer.timeout.connect(self.update_animations)
+        self.animation_timer.start(30)  # 30 FPS для плавной анимации
         
-        self.rotation_timer = QTimer()
-        self.rotation_timer.timeout.connect(self.update_rotation)
-        self.rotation_timer.start(100)
-        
-        self.dots_timer = QTimer()
-        self.dots_timer.timeout.connect(self.update_dots)
-        self.dots_timer.start(300)
-        
-    def update_loading(self):
-        self.progress += 1
-        if self.progress >= 100:
-            self.timer.stop()
-            self.rotation_timer.stop()
-            self.dots_timer.stop()
+    def update_animations(self):
+        """Обновление всех анимаций"""
+        # Прогресс загрузки
+        if self.progress < 100:
+            self.progress += 0.5  # Замедляем загрузку для демонстрации
+        else:
+            self.animation_timer.stop()
             self.loadingFinished.emit()
-        self.update()
         
-    def update_rotation(self):
-        self.rotation_angle = (self.rotation_angle + 5) % 360
-        self.update()
+        # Вращение
+        self.rotation_angle = (self.rotation_angle + 3) % 360
         
-    def update_dots(self):
+        # Мерцание точек
         self.dots = (self.dots + 1) % 4
-        self.update()
         
-    def paintEvent(self, a0):
+        self.update()
+    
+    def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
-        # Фон
+        # Фон как в GradientWidget
         gradient = QLinearGradient(0, 0, self.width(), self.height())
-        gradient.setColorAt(0, DARK_BG)
-        gradient.setColorAt(1, PANEL_BG)
+        gradient.setColorAt(0, QColor(2, 2, 15))
+        gradient.setColorAt(0.3, QColor(8, 8, 40))
+        gradient.setColorAt(0.7, QColor(15, 5, 35))
+        gradient.setColorAt(1, QColor(2, 2, 15))
         painter.fillRect(self.rect(), gradient)
         
         # Вращающийся логотип
@@ -627,6 +709,7 @@ class ClickerGame(QWidget):
     
     moneyChanged = pyqtSignal(int)
     exitToMenu = pyqtSignal()
+    navigationRequested = pyqtSignal(str)  # Новый сигнал для навигации
     
     def __init__(self):
         super().__init__()
@@ -867,7 +950,7 @@ class ClickerGame(QWidget):
             self.exit_to_menu()
         else:
             super().keyPressEvent(event)
-    
+
     def show_shops(self):
         self.exitToMenu.emit()
         # Сигнал будет обработан в MainWindow для перехода к магазинам
@@ -886,6 +969,24 @@ class ClickerGame(QWidget):
     
     def exit_to_menu(self):
         self.exitToMenu.emit()
+    
+    def show_shops(self):
+        self.navigationRequested.emit("shops")
+    
+    def show_investments(self):
+        self.navigationRequested.emit("investments")
+    
+    def show_businesses(self):
+        self.navigationRequested.emit("businesses")
+    
+    def show_profile(self):
+        self.navigationRequested.emit("profile")
+    
+    def exit_to_menu(self):
+        self.navigationRequested.emit("main_menu")
+
+
+    
 
 @dataclass
 class Product:
@@ -2023,9 +2124,24 @@ class MainWindow(QMainWindow):
         
         # Подключаем навигацию между разделами
         self.shop_selection.shopSelected.connect(self.handle_shop_selection)
+
+        self.clicker_game.navigationRequested.connect(self.handle_navigation)
         
         # Показываем экран загрузки
         self.content_stack.setCurrentIndex(0)
+
+    def handle_navigation(self, destination):
+        """Обрабатывает навигационные запросы из кликера"""
+        if destination == "main_menu":
+            self.show_main_menu()
+        elif destination == "shops":
+            self.show_shop_selection()
+        elif destination == "investments":
+            self.show_investments()
+        elif destination == "businesses":
+            self.show_businesses()
+        elif destination == "profile":
+            self.show_profile()
         
     def show_main_menu(self):
         """Показать главное меню"""

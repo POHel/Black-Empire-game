@@ -970,6 +970,7 @@ class ClickerGame(QWidget):
     def exit_to_menu(self):
         self.exitToMenu.emit()
     """
+    
     def show_shops(self):
         self.navigationRequested.emit("shops")
     
@@ -1018,6 +1019,7 @@ class InvestmentMenu(QWidget):
     """Меню инвестиций"""
     
     exitToClicker = pyqtSignal()
+    exitToMenu = pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -1202,6 +1204,7 @@ class ShopSelectionMenu(QWidget):
     shopSelected = pyqtSignal(str)
     navigationRequested = pyqtSignal(str)
     exitToClicker = pyqtSignal()
+    exitToMenu = pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -1315,6 +1318,7 @@ class LightShopMenu(QWidget):
     """Светлый магазин"""
     
     exitToShopSelectionMenu = pyqtSignal()
+    exitToMenu = pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -1397,6 +1401,7 @@ class BusinessMenu(QWidget):
     """Меню бизнесов"""
     
     exitToClicker = pyqtSignal()
+    exitToMenu = pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -1681,6 +1686,7 @@ class ProfileMenu(QWidget):
     """Меню профиля"""
     
     exitToClicker = pyqtSignal()
+    exitToMenu = pyqtSignal()
     
     def __init__(self):
         super().__init__()

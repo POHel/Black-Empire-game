@@ -24,7 +24,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import (
     QFont, QPalette, QColor, QPainter, QLinearGradient, 
     QRadialGradient, QPen, QBrush, QFontDatabase, QPixmap,
-    QIcon, QMovie, QKeyEvent
+    QIcon, QMovie, QKeyEvent, QCursor
 )
 
 # Константы игры
@@ -737,6 +737,9 @@ class ClickerGame(QWidget):
         self.total_clicks = 0
         self.config = GameConfig()
         
+        # Список для хранения активных анимаций
+        self.active_animations = []
+        
         self.init_ui()
         
     def init_ui(self):
@@ -824,23 +827,32 @@ class ClickerGame(QWidget):
         
         center_layout.addSpacing(30)
         
-        # Кнопка клика
+        # Кнопка клика с улучшенным градиентом
         self.click_button = AnimatedButton("💰КЛИК! ")
         self.click_button.setFixedSize(500, 500)
         self.click_button.setStyleSheet("""
             QPushButton {
-                background: qradialgradient(cx:0.5, cy:0.5, radius:0.8,
-                    stop:0 #7828c8, stop:1 #371e72);
-                border: 4px solid #8b5cf6;
-                border-radius: 250px;
+                background: qradialgradient(cx:0.5, cy:0.5, radius:0.9,
+                    stop:0 #8b5cf6, stop:0.3 #7c3aed, stop:0.6 #6d28d9, stop:1 #4c1d95);
+                border: 6px solid qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #c4b5fd, stop:1 #8b5cf6);
+                border-radius: 100px;
                 color: white;
                 font-size: 70px;
                 font-weight: bold;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
             }
             QPushButton:hover {
-                background: qradialgradient(cx:0.5, cy:0.5, radius:0.8,
-                    stop:0 #9333ea, stop:1 #482880);
-                border: 4px solid #a78bfa;
+                background: qradialgradient(cx:0.5, cy:0.5, radius:0.9,
+                    stop:0 #a78bfa, stop:0.3 #8b5cf6, stop:0.6 #7c3aed, stop:1 #5b21b6);
+                border: 6px solid qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #ddd6fe, stop:1 #a78bfa);
+            }
+            QPushButton:pressed {
+                background: qradialgradient(cx:0.5, cy:0.5, radius:0.9,
+                    stop:0 #7c3aed, stop:0.3 #6d28d9, stop:0.6 #5b21b6, stop:1 #371e72);
+                border: 6px solid qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #a78bfa, stop:1 #7c3aed);
             }
         """)
         self.click_button.clicked.connect(self.handle_click)
@@ -936,31 +948,155 @@ class ClickerGame(QWidget):
         self.clicks_label.setText(f"Всего кликов: {self.total_clicks}")
         
     def animate_click(self):
-        # Анимация увеличения кнопки
-        anim = QPropertyAnimation(self.click_button, b"geometry")
-        anim.setDuration(100)
-        anim.setStartValue(self.click_button.geometry())
-        anim.setEndValue(QRect(
-            self.click_button.x() - 5, 
-            self.click_button.y() - 5,
-            self.click_button.width() + 10,
-            self.click_button.height() + 10
+        # Комплексная анимация с несколькими эффектами
+        self.animate_button_scale()
+        self.animate_button_brightness()
+        self.show_click_effect()
+        
+    def animate_button_scale(self):
+        """Анимация масштабирования кнопки"""
+        # Первая анимация - уменьшение (эффект нажатия)
+        scale_down = QPropertyAnimation(self.click_button, b"geometry")
+        scale_down.setDuration(80)
+        scale_down.setEasingCurve(QEasingCurve.Type.OutCubic)
+        scale_down.setStartValue(self.click_button.geometry())
+        scale_down.setEndValue(QRect(
+            self.click_button.x() + 10, 
+            self.click_button.y() + 10,
+            self.click_button.width() - 20,
+            self.click_button.height() - 20
         ))
         
-        anim2 = QPropertyAnimation(self.click_button, b"geometry")
-        anim2.setDuration(100)
-        anim2.setStartValue(QRect(
-            self.click_button.x() - 5, 
-            self.click_button.y() - 5,
-            self.click_button.width() + 10,
-            self.click_button.height() + 10
+        # Вторая анимация - возврат к нормальному размеру
+        scale_up = QPropertyAnimation(self.click_button, b"geometry")
+        scale_up.setDuration(120)
+        scale_up.setEasingCurve(QEasingCurve.Type.OutElastic)
+        scale_up.setStartValue(QRect(
+            self.click_button.x() + 10, 
+            self.click_button.y() + 10,
+            self.click_button.width() - 20,
+            self.click_button.height() - 20
         ))
-        anim2.setEndValue(self.click_button.geometry())
+        scale_up.setEndValue(self.click_button.geometry())
         
         sequence = QSequentialAnimationGroup()
-        sequence.addAnimation(anim)
-        sequence.addAnimation(anim2)
+        sequence.addAnimation(scale_down)
+        sequence.addAnimation(scale_up)
         sequence.start()
+        
+    def animate_button_brightness(self):
+        """Анимация изменения яркости кнопки"""
+        self.click_button.setStyleSheet("""
+            QPushButton {
+                background: qradialgradient(cx:0.5, cy:0.5, radius:0.9,
+                    stop:0 #c4b5fd, stop:0.3 #a78bfa, stop:0.6 #8b5cf6, stop:1 #6d28d9);
+                border: 6px solid qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #ede9fe, stop:1 #c4b5fd);
+                border-radius: 250px;
+                color: white;
+                font-size: 70px;
+                font-weight: bold;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            }
+        """)
+        
+        # Таймер для возврата обычного стиля
+        QTimer.singleShot(150, self.reset_button_style)
+        
+    def reset_button_style(self):
+        """Восстановление обычного стиля кнопки"""
+        self.click_button.setStyleSheet("""
+            QPushButton {
+                background: qradialgradient(cx:0.5, cy:0.5, radius:0.9,
+                    stop:0 #8b5cf6, stop:0.3 #7c3aed, stop:0.6 #6d28d9, stop:1 #4c1d95);
+                border: 6px solid qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #c4b5fd, stop:1 #8b5cf6);
+                border-radius: 250px;
+                color: white;
+                font-size: 70px;
+                font-weight: bold;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            }
+            QPushButton:hover {
+                background: qradialgradient(cx:0.5, cy:0.5, radius:0.9,
+                    stop:0 #a78bfa, stop:0.3 #8b5cf6, stop:0.6 #7c3aed, stop:1 #5b21b6);
+                border: 6px solid qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #ddd6fe, stop:1 #a78bfa);
+            }
+            QPushButton:pressed {
+                background: qradialgradient(cx:0.5, cy:0.5, radius:0.9,
+                    stop:0 #7c3aed, stop:0.3 #6d28d9, stop:0.6 #5b21b6, stop:1 #371e72);
+                border: 6px solid qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #a78bfa, stop:1 #7c3aed);
+            }
+        """)
+        
+    def show_click_effect(self):
+        """Визуальный эффект при клике с плавным исчезновением и движением вверх"""
+        # Получаем позицию курсора относительно кнопки
+        cursor_pos = self.click_button.mapFromGlobal(QCursor.pos())
+        
+        # Создаем эффектную метку
+        effect_label = QLabel(f"+${self.per_click}", self)
+        effect_label.setStyleSheet(f"""
+            QLabel {{
+                color: #10b981;
+                font-size: 28px;
+                font-weight: bold;
+                background: transparent;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+                border: none;
+                padding: 0px;
+            }}
+        """)
+        effect_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Устанавливаем позицию в точке клика
+        global_pos = self.click_button.mapTo(self, cursor_pos)
+        effect_label.move(global_pos.x() - 40, global_pos.y() - 20)
+        effect_label.resize(80, 40)
+        effect_label.show()
+        effect_label.raise_()
+        
+        # Создаем анимационную группу для плавного исчезновения
+        animation_group = QParallelAnimationGroup()
+        
+        # Анимация движения вверх
+        move_animation = QPropertyAnimation(effect_label, b"pos")
+        move_animation.setDuration(1200)
+        move_animation.setStartValue(effect_label.pos())
+        move_animation.setEndValue(QPoint(
+            effect_label.x(),
+            effect_label.y() - 80  # Двигаемся выше
+        ))
+        move_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+        
+        # Анимация прозрачности (исчезновение)
+        fade_animation = QPropertyAnimation(effect_label, b"windowOpacity")
+        fade_animation.setDuration(1200)
+        fade_animation.setStartValue(1.0)
+        fade_animation.setEndValue(0.0)
+        fade_animation.setEasingCurve(QEasingCurve.Type.InCubic)
+        
+        # Добавляем анимации в группу
+        animation_group.addAnimation(move_animation)
+        animation_group.addAnimation(fade_animation)
+        
+        # Удаление лейбла после завершения анимации
+        animation_group.finished.connect(lambda: effect_label.deleteLater())
+        
+        # Запускаем анимацию
+        animation_group.start()
+        
+        # Сохраняем ссылку на анимацию
+        self.active_animations.append(animation_group)
+        
+    def remove_effect_label(self, label):
+        """Безопасное удаление лейбла эффекта"""
+        if label:
+            label.deleteLater()
+        # Удаляем завершенные анимации из списка
+        self.active_animations = [anim for anim in self.active_animations if anim.state() != QAnimation.State.Stopped]
         
     def keyPressEvent(self, a0: QKeyEvent | None):
         if a0 is not None and a0.key() == Qt.Key.Key_Space:
@@ -969,26 +1105,6 @@ class ClickerGame(QWidget):
             self.exit_to_menu()
         else:
             super().keyPressEvent(a0)
-    """
-    def show_shops(self):
-        self.exitToMenu.emit()
-        # Сигнал будет обработан в MainWindow для перехода к магазинам
-    
-    def show_investments(self):
-        self.exitToMenu.emit()
-        # Сигнал будет обработан в MainWindow для перехода к инвестициям
-    
-    def show_businesses(self):
-        self.exitToMenu.emit()
-        # Сигнал будет обработан в MainWindow для перехода к бизнесам
-    
-    def show_profile(self):
-        self.exitToMenu.emit()
-        # Сигнал будет обработан в MainWindow для перехода к профилю
-    
-    def exit_to_menu(self):
-        self.exitToMenu.emit()
-    """
     
     def show_shops(self):
         self.navigationRequested.emit("shops")
@@ -2760,7 +2876,7 @@ class SettingsMenu(QWidget):
         
     def init_ui(self):
         layout = QVBoxLayout()
-        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setContentsMargins(600, 100, 600, 250)
         
         # Заголовок
         title = QLabel("⚙️ Настройки")

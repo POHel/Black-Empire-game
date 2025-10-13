@@ -267,19 +267,32 @@ class Settings:
 	def __init__(self):
 		# Сохраняем полученные значения в атрибуты объекта
 		self.current_theme = self.get_current_theme()
+		self.current_state = self.get_window_state()
 		self.current_window_size = self.get_current_window_size()
 		self.current_fps = self.get_current_fps()
 		self.current_lang = self.get_current_lang()
+		self.current_volume = self.get_current_volume()
 		self.themes = self.show_themes()
 		self.window_sizes = self.show_window_sizes()
 		self.fps_options = self.show_fps()
 		self.languages = self.show_langs()
+		self.state = self.show_states()
 
 	#импортирование текущей темы
 	def get_current_theme(self):
 		with open("data/config.json", 'r', encoding='utf-8') as file:
 			config_current_theme = json.load(file)
 		return config_current_theme["current_theme"]
+	
+	def get_current_volume(self):
+		with open("data/config.json", 'r', encoding='utf-8') as file:
+			config_current_volume = json.load(file)
+		return config_current_volume["current_volume"]
+	
+	def get_window_state(self):
+		with open("data/config.json", 'r', encoding='utf-8') as file:
+			config_current_state = json.load(file)
+		return config_current_state["current_state"]
     
     #импортирование текущей размера экрана
 	def get_current_window_size(self):
@@ -319,6 +332,17 @@ class Settings:
 			json.dump(config, file, ensure_ascii=False, indent=4)
 			file.truncate()
 		self.current_window_size = [height, width]  # Обновляем текущее значение
+		return "Done"
+	
+	#установка размера экрана
+	def set_current_window_state(self, state: str):
+		with open("data/config.json", "r+", encoding="utf-8") as file:
+			config = json.load(file)
+			config["current_state"] = [state]
+			file.seek(0)
+			json.dump(config, file, ensure_ascii=False, indent=4)
+			file.truncate()
+		self.current_state = [state]  # Обновляем текущее значение
 		return "Done"
 
     #установка фпс
@@ -370,3 +394,9 @@ class Settings:
 			config_langs = json.load(file)
 			result_langs = config_langs["languages"]
 		return result_langs
+	
+	def show_states(self):
+		with open("data/config.json", 'r', encoding='utf-8') as file:
+			config_states = json.load(file)
+			result_states = config_states["state"]
+		return result_states

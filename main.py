@@ -4,6 +4,7 @@ import random
 import time
 import json
 import sqlite3
+import coreLogic
 from dataclasses import dataclass
 from enum import Enum
 from typing import List, Dict, Optional, Tuple
@@ -24,13 +25,19 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import (
     QFont, QPalette, QColor, QPainter, QLinearGradient, 
     QRadialGradient, QPen, QBrush, QFontDatabase, QPixmap,
-    QIcon, QMovie, QKeyEvent
+    QIcon, QMovie, QKeyEvent, QGuiApplication
 )
 
+AppLogic = coreLogic.AppLogic()
+Settings = coreLogic.Settings()
+ExportDB = coreLogic.ExportDB()
+UpdateDB = coreLogic.UpdateDB()
+
+
 # Константы игры
-GAME_VERSION = "0.0.1"
-SCREEN_WIDTH = 1920
-SCREEN_HEIGHT = 1080
+GAME_VERSION = AppLogic.version
+SCREEN_WIDTH = Settings.get_current_window_size()[0]
+SCREEN_HEIGHT = Settings.get_current_window_size()[1]
 
 # Цветовая палитра
 WHITE = QColor(255, 255, 255)
@@ -64,8 +71,8 @@ class ScreenState(Enum):
 
 class GameConfig:
     def __init__(self):
-        self.screen_width = 1920
-        self.screen_height = 1080
+        self.screen_width = Settings.get_current_window_size()[0]
+        self.screen_height = Settings.get_current_window_size()[1]
         self.button_height = 70
         self.font_sizes = {
             "small": 14,
@@ -74,91 +81,6 @@ class GameConfig:
             "xlarge": 32,
             "title": 36
         }
-
-# Базовые классы для логики
-class Settings:
-    def __init__(self):
-        pass
-    
-    def show_themes(self):
-        return ["Темная", "Светлая", "Фиолетовая"]
-    
-    def show_window_sizes(self):
-        return [(1280, 720), (1450, 830), (1920, 1080)]
-    
-    def show_fps(self):
-        return [30, 60, 120]
-    
-    def show_langs(self):
-        return ["Русский", "English", "Deutsch"]
-    
-    def get_current_theme(self):
-        return "Темная"
-    
-    def get_current_window_size(self):
-        return (1450, 830)
-    
-    def get_current_fps(self):
-        return 60
-    
-    def get_current_lang(self):
-        return "Русский"
-    
-    def set_current_theme(self, theme):
-        pass
-    
-    def set_current_fps(self, fps):
-        pass
-    
-    def set_current_lang(self, lang):
-        pass
-
-class ExportDB:
-    def __init__(self):
-        pass
-    
-    def get_bag(self):
-        return (1000000, 5, 5000, 15, 2000, 30000)
-    
-    def get_actives(self):
-        return ["Акция A", "Акция B", "Акция C"]
-    
-    def get_homes(self):
-        return ["Квартира", "Дом", "Вилла"]
-    
-    def get_crypto(self):
-        return ["Bitcoin", "Ethereum", "Dogecoin"]
-    
-    def balance(self):
-        return 1500000
-    
-    def get_shop_islands(self):
-        return (1, "Тропический остров", 5000000, "Райский остров в океане")
-    
-    def get_shop_boosters(self):
-        return (1, "Бустер дохода", 5000, "Увеличивает доход на 24 часа")
-    
-    def get_shop_nft(self):
-        return (1, "Редкое NFT", 25000, "Уникальный цифровой актив")
-    
-    def get_shop_cars(self):
-        return (1, "Спортивный автомобиль", 120000, "Быстрая и стильная машина", "Спортивный", 320)
-    
-    def get_shop_u_items(self):
-        return (1, "Золотой слиток", 50000, "Ценный инвестиционный актив")
-    
-    def get_shop_yachts(self):
-        return (1, "Роскошная яхта", 2000000, "Яхта класса люкс")
-    
-    def get_shop_planes(self):
-        return (1, "Частный самолет", 5000000, "Собственный авиатранспорт")
-    
-    def get_shop_jewelry(self):
-        return (1, "Бриллиантовое колье", 150000, "Эксклюзивное украшение")
-
-class UpdateDB:
-    def __init__(self):
-        pass
 
 class AnimatedButton(QPushButton):
     """Анимированная кнопка с эффектами"""
@@ -274,7 +196,7 @@ class GradientWidget(QWidget):
         self.animation_timer = QTimer()
         self.animation_timer.timeout.connect(self.update_stars)
         self.animation_timer.start(50)  # Обновление каждые 50ms
-        
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.init_stars()
         
     def init_stars(self):
@@ -425,7 +347,8 @@ class MainMenuScreen(QWidget):
         header_layout.addWidget(logo_label)
         
         # Название игры
-        title_label = QLabel("Black Empire")
+        GAME_NAME = AppLogic.name
+        title_label = QLabel(GAME_NAME)
         title_label.setStyleSheet(f"""
             color: {TEXT_PRIMARY.name()};
             font-size: 72px;
@@ -1016,7 +939,7 @@ class Product:
 
 class ShopSystem:
     def __init__(self):
-        self.export = ExportDB()
+        self.export = coreLogic.ExportDB()
         
     def load_products(self, category):
         """Загрузка товаров по категории"""
@@ -1024,13 +947,16 @@ class ShopSystem:
         
         if category == "islands":
             data = self.export.get_shop_islands()
-            products.append(Product(data[0], data[1], data[2], data[3], "Острова"))
+            if data is not None:
+                products.append(Product(data[0], data[1], data[2], data[3], "Острова"))
         elif category == "boosters":
             data = self.export.get_shop_boosters()
-            products.append(Product(data[0], data[1], data[2], data[3], "Бустеры"))
+            if data is not None:
+                products.append(Product(data[0], data[1], data[2], data[3], "Бустеры"))
         elif category == "cars":
             data = self.export.get_shop_cars()
-            products.append(Product(data[0], data[1], data[2], data[3], "Машины", data[4]))
+            if data is not None:
+                products.append(Product(data[0], data[1], data[2], data[3], "Машины", data[4]))
             
         return products
 
@@ -1042,7 +968,7 @@ class InvestmentMenu(QWidget):
     
     def __init__(self):
         super().__init__()
-        self.export = ExportDB()
+        self.export = coreLogic.ExportDB()
         self.current_tab = "stocks"
         
         self.init_ui()
@@ -1120,11 +1046,14 @@ class InvestmentMenu(QWidget):
         layout = QHBoxLayout()
         
         portfolio_data = self.export.get_bag()
+        if portfolio_data is None:
+            portfolio_data = [0, 0, 0, 0, 0]
         stats = [
             f"💰 Стоимость портфеля: ${portfolio_data[0]:,}",
             f"📊 Дивидендная доходность: {portfolio_data[1]}%",
-            f"💵 Стабильный доход: ${portfolio_data[2]:,}/мес",
+            f"💵 Стабильный доход: ${portfolio_data[2]:,}/час",
             f"🚀 Потенциал роста: {portfolio_data[3]}%"
+            f"🏠 Арендная доходность: ${portfolio_data[4]}/час"
         ]
         
         for stat in stats:
@@ -2750,12 +2679,10 @@ class ProfileMenu(QWidget):
 
 class SettingsMenu(QWidget):
     """Меню настроек"""
-    
     exitToMenu = pyqtSignal()
-    
     def __init__(self):
         super().__init__()
-        self.settings_manager = Settings()
+        self.settings_manager = coreLogic.Settings()
         self.init_ui()
         
     def init_ui(self):
@@ -2773,10 +2700,9 @@ class SettingsMenu(QWidget):
         back_btn.clicked.connect(self.exitToMenu.emit)
         layout.addWidget(back_btn)
         
-        # Настройки
-        settings_widget = self.create_settings_widget()
-        layout.addWidget(settings_widget)
-        
+        # Сохраняем только виджет
+        self.settings_widget = self.create_settings_widget()
+        layout.addWidget(self.settings_widget)
         layout.addStretch()
         
         # Кнопки
@@ -2810,7 +2736,6 @@ class SettingsMenu(QWidget):
         layout.setVerticalSpacing(20)
         layout.setContentsMargins(10, 10, 10, 10)
         
-        # Общий стиль для всех ComboBox с настройкой ширины
         combo_style = f"""
             QComboBox {{
                 background-color: {DARK_BG.name()};
@@ -2819,8 +2744,8 @@ class SettingsMenu(QWidget):
                 border-radius: 8px;
                 padding: 10px;
                 margin-top: 9px;
-                min-width: 400px;           /* Минимальная ширина в неактивном состоянии */
-                max-width: 450px;           /* Максимальная ширина в неактивном состоянии */
+                min-width: 400px;
+                max-width: 450px;
             }}
             QComboBox:hover {{
                 border: 1px solid {LIGHT_PURPLE.name()};
@@ -2847,8 +2772,8 @@ class SettingsMenu(QWidget):
                 border-radius: 8px;
                 padding: 5px;
                 outline: none;
-                min-width: 400px;           /* Минимальная ширина выпадающего списка */
-                max-width: 450px;           /* Максимальная ширина выпадающего списка */
+                min-width: 400px;
+                max-width: 450px;
             }}
             QComboBox QAbstractItemView::item {{
                 color: {TEXT_PRIMARY.name()};
@@ -2867,53 +2792,111 @@ class SettingsMenu(QWidget):
             }}
         """
         
+        # Сохраняем ссылки на комбобоксы для использования в apply_settings
+        self.comboboxes = {}
+        
         # Тема
         theme_combo = QComboBox()
-        theme_combo.addItems(self.settings_manager.show_themes())
+        available_themes = self.settings_manager.show_themes()
+        theme_combo.addItems(available_themes)
         theme_combo.setStyleSheet(combo_style)
-        # Можно также установить фиксированную ширину для конкретного комбобокса
-        theme_combo.setFixedWidth(250)  # Ширина в неактивном состоянии
-        layout.addRow("🎨 Тема:", theme_combo)
+        theme_combo.setFixedWidth(250)
         
+        # Устанавливаем текущую тему
+        current_theme = self.settings_manager.get_current_theme()
+        if current_theme in available_themes:
+            theme_combo.setCurrentText(current_theme)
+        
+        layout.addRow("🎨 Тема:", theme_combo)
+        self.comboboxes['theme'] = theme_combo
+        
+        # Размер окна (окно/полный экран)
+        state_combo = QComboBox()
+        available_states = [f"{s}" for s in self.settings_manager.show_states()]
+        state_combo.addItems(available_states)
+        state_combo.setStyleSheet(combo_style)
+        state_combo.setFixedWidth(250)
+        
+        # Устанавливаем текущий размер окна
+        current_state = self.settings_manager.get_window_state()
+        if current_state in available_states:
+            state_combo.setCurrentText(current_state)
+        
+        layout.addRow("🖥️ Режим окна:", state_combo)
+        self.comboboxes['state'] = state_combo
+
         # Разрешение
         resolution_combo = QComboBox()
-        resolutions = [f"{w}x{h}" for w, h in self.settings_manager.show_window_sizes()]
-        resolution_combo.addItems(resolutions)
+        available_resolutions = [f"{w}x{h}" for w, h in self.settings_manager.show_window_sizes()]
+        resolution_combo.addItems(available_resolutions)
         resolution_combo.setStyleSheet(combo_style)
         resolution_combo.setFixedWidth(250)
-        layout.addRow("🖥️ Разрешение:", resolution_combo)
+        
+        # Устанавливаем текущее разрешение
+        current_size = self.settings_manager.get_current_window_size()
+        current_resolution = f"{current_size[0]}x{current_size[1]}"
+        if current_resolution in available_resolutions:
+            resolution_combo.setCurrentText(current_resolution)
+        
+        layout.addRow("📏 Разрешение:", resolution_combo)
+        self.comboboxes['resolution'] = resolution_combo
         
         # FPS
         fps_combo = QComboBox()
-        fps_combo.addItems([f"{fps} FPS" for fps in self.settings_manager.show_fps()])
+        available_fps = [f"{fps} FPS" for fps in self.settings_manager.show_fps()]
+        fps_combo.addItems(available_fps)
         fps_combo.setStyleSheet(combo_style)
         fps_combo.setFixedWidth(250)
+        
+        # Устанавливаем текущий FPS
+        current_fps = self.settings_manager.get_current_fps()
+        current_fps_text = f"{current_fps} FPS"
+        if current_fps_text in available_fps:
+            fps_combo.setCurrentText(current_fps_text)
+        
         layout.addRow("🎯 FPS:", fps_combo)
+        self.comboboxes['fps'] = fps_combo
         
         # Язык
         language_combo = QComboBox()
-        language_combo.addItems(self.settings_manager.show_langs())
+        available_langs = self.settings_manager.show_langs()
+        language_combo.addItems(available_langs)
         language_combo.setStyleSheet(combo_style)
         language_combo.setFixedWidth(250)
+        
+        # Устанавливаем текущий язык
+        current_lang = self.settings_manager.get_current_lang()
+        if current_lang in available_langs:
+            language_combo.setCurrentText(current_lang)
+        
         layout.addRow("🌐 Язык:", language_combo)
+        self.comboboxes['language'] = language_combo
         
         # Качество графики
         quality_combo = QComboBox()
-        quality_combo.addItems(["Низкое", "Среднее", "Высокое", "Ультра"])
+        available_qualities = ["Низкое", "Среднее", "Высокое", "Ультра"]
+        quality_combo.addItems(available_qualities)
         quality_combo.setStyleSheet(combo_style)
         quality_combo.setFixedWidth(250)
-        layout.addRow("🎨 Качество графики:", quality_combo)
         
-        # Громкость - используем обычную строку формы
+        # Устанавливаем текущее качество (если есть в системе)
+        # Если нет системы хранения качества, устанавливаем "Высокое" по умолчанию
+        quality_combo.setCurrentText("Высокое")
+        
+        layout.addRow("🎨 Качество графики:", quality_combo)
+        self.comboboxes['quality'] = quality_combo
+        
+        # Громкость
         volume_slider = QSlider(Qt.Orientation.Horizontal)
         volume_slider.setRange(0, 100)
-        volume_slider.setValue(80)
         
-        # НАСТРОЙКИ РАЗМЕРА
-        volume_slider.setFixedWidth(400)  # Ширина ползунка
-        volume_slider.setMinimumHeight(40)  # Минимальная высота
+        # Устанавливаем текущую громкость
+        current_volume = self.settings_manager.get_current_volume()  # Если есть такой метод
+        volume_slider.setValue(current_volume if hasattr(self.settings_manager, 'get_current_volume') else 80)
         
-        # Стиль ползунка
+        volume_slider.setFixedWidth(400)
+        volume_slider.setMinimumHeight(40)
+        
         volume_slider.setStyleSheet(f"""
             QSlider::groove:horizontal {{
                 border: 2px solid {PURPLE_PRIMARY.name()};
@@ -2947,7 +2930,7 @@ class SettingsMenu(QWidget):
         slider_layout.addWidget(volume_slider)
         
         # Значение громкости
-        volume_value = QLabel("80%")
+        volume_value = QLabel(f"{volume_slider.value()}%")
         volume_value.setStyleSheet(f"""
             QLabel {{
                 color: {LIGHT_PURPLE.name()};
@@ -2963,19 +2946,140 @@ class SettingsMenu(QWidget):
         volume_value.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         slider_layout.addWidget(volume_value)
-        slider_layout.addStretch()  # Чтобы прижалось к левому краю
+        slider_layout.addStretch()
         
         # Обновление значения
         volume_slider.valueChanged.connect(lambda v: volume_value.setText(f"{v}%"))
         
-        # Добавляем в форму - ползунок будет выровнен с другими элементами
         layout.addRow("🔊 Громкость:", slider_container)
+        self.comboboxes['volume'] = volume_slider
         
         widget.setLayout(layout)
         return widget
         
     def apply_settings(self):
-        QMessageBox.information(self, "Настройки", "Настройки успешно применены!")
+        # Получаем текущие значения ДО применения
+        old_theme = self.settings_manager.get_current_theme()
+        old_language = self.settings_manager.get_current_lang()
+        old_size = self.settings_manager.get_current_window_size()
+        old_resolution = f"{old_size[0]}x{old_size[1]}"
+        old_state = self.settings_manager.get_window_state()
+        
+        # Получаем новые значения
+        selected_theme = self.comboboxes['theme'].currentText()
+        selected_state = self.comboboxes['state'].currentText()
+        selected_resolution = self.comboboxes['resolution'].currentText()
+        selected_fps = self.comboboxes['fps'].currentText().replace(' FPS', '')
+        selected_language = self.comboboxes['language'].currentText()
+        selected_quality = self.comboboxes['quality'].currentText()
+        selected_volume = self.comboboxes['volume'].value()
+        
+        # Применяем настройки
+        self.settings_manager.set_current_theme(selected_theme)
+        self.settings_manager.set_current_window_state(selected_state)
+        
+        width, height = map(int, selected_resolution.split('x'))
+        self.settings_manager.set_current_window_size(width, height)
+        
+        self.settings_manager.set_current_fps(int(selected_fps))
+        self.settings_manager.set_current_lang(selected_language)
+        
+        # Проверяем изменения, требующие перезапуска
+        restart_required = False
+        changed_settings = []
+        
+        if selected_theme != old_theme:
+            restart_required = True
+            changed_settings.append(f"Тема: {old_theme} → {selected_theme}")
+        
+        if selected_language != old_language:
+            restart_required = True
+            changed_settings.append(f"Язык: {old_language} → {selected_language}")
+        
+        if selected_resolution != old_resolution:
+            restart_required = True
+            changed_settings.append(f"Разрешение: {old_resolution} → {selected_resolution}")
+
+        if selected_state != old_state:
+            restart_required = True
+            changed_settings.append(f"Состояние: {old_state} → {selected_state}")
+        
+        if selected_fps != self.settings_manager.get_current_fps():
+            restart_required = True
+            changed_settings.append(f"FPS: {self.settings_manager.get_current_fps()} → {selected_fps}")
+        
+        #if selected_quality != self.settings_manager.get_current_quality():
+        #    restart_required = True
+        #    changed_settings.append(f"Качество: {self.settings_manager.get_current_quality()} → {selected_quality}")
+        
+        if selected_volume != self.settings_manager.get_current_volume():
+            restart_required = True
+            changed_settings.append(f"Громкость: {self.settings_manager.get_current_volume()} → {selected_volume}")
+        
+        if restart_required:
+            self.show_restart_dialog(changed_settings)
+        else:
+            # Настройки, не требующие перезапуска
+            print("Настройки применены без перезапуска")
+            QMessageBox.information(self, "Настройки", "Настройки успешно применены!")
+
+    def show_restart_dialog(self, changed_settings):
+        """Показывает диалог перезапуска"""
+        settings_text = "\n".join(changed_settings)
+        
+        dialog = QMessageBox(self)
+        dialog.setWindowTitle("Требуется перезапуск")
+        dialog.setIcon(QMessageBox.Icon.Question)
+        dialog.setText(
+            "Для применения следующих настроек требуется перезапуск:\n\n"
+            f"{settings_text}\n\n"
+            "Вы хотите перезапустить приложение сейчас?"
+        )
+        
+        # Добавляем кнопки
+        restart_now = dialog.addButton("Перезапустить сейчас", QMessageBox.ButtonRole.YesRole)
+        restart_later = dialog.addButton("Позже", QMessageBox.ButtonRole.NoRole)
+        cancel = dialog.addButton("Отмена", QMessageBox.ButtonRole.RejectRole)
+        
+        dialog.exec()
+        
+        clicked_button = dialog.clickedButton()
+        
+        if clicked_button == restart_now:
+            self.restart_application()
+        elif clicked_button == restart_later:
+            QMessageBox.information(
+                self, 
+                "Настройки сохранены", 
+                "Настройки сохранены и будут применены после перезапуска."
+            )
+        else:  # Cancel - откатываем изменения
+            self.reset_settings()
+            QMessageBox.information(
+                self, 
+                "Изменения отменены", 
+                "Изменения, требующие перезапуска, были отменены.")
+
+    def restart_application(self):
+        """Перезапускает приложение"""
+        try:
+            # Закрываем текущее приложение
+            QApplication.quit()
+            
+            # Запускаем новое
+            import subprocess
+            import sys
+            import os
+            
+            # Перезапускаем с теми же аргументами
+            subprocess.Popen([sys.executable] + sys.argv)
+            
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Ошибка перезапуска",
+                f"Не удалось перезапустить приложение: {str(e)}"
+            )
         
     def reset_settings(self):
         reply = QMessageBox.question(self, "Сброс настроек", 
@@ -2994,8 +3098,31 @@ class MainWindow(QMainWindow):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(f"Black Empire v{GAME_VERSION}")
-        self.setGeometry(100, 100, SCREEN_WIDTH, SCREEN_HEIGHT)
+        self.setWindowTitle(f"{AppLogic.name} v{GAME_VERSION}")
+        self.setWindowIcon(QIcon("images/icon.ico"))
+        
+        # Устанавливаем минимальный размер окна
+        if Settings.get_window_state() == "MAXIMIZED":
+            self.setWindowState(Qt.WindowState.WindowMaximized)
+        else:
+            self.setMinimumSize(800, 600)
+            
+            # Получаем размеры экрана
+            screen = QGuiApplication.primaryScreen()
+            if screen:
+                screen_geometry = screen.availableGeometry()
+                # Устанавливаем начальный размер (80% от экрана)
+                initial_width = int(screen_geometry.width() * 0.8)
+                initial_height = int(screen_geometry.height() * 0.8)
+                
+                # Центрируем окно
+                x = (screen_geometry.width() - initial_width) // 2
+                y = (screen_geometry.height() - initial_height) // 2
+                
+                self.setGeometry(x, y, initial_width, initial_height)
+            else:
+                # Значения по умолчанию
+                self.resize(1200, 800)
         
         # Центральный виджет с градиентным фоном
         self.central_widget = GradientWidget()
@@ -3052,12 +3179,48 @@ class MainWindow(QMainWindow):
         
         # Подключаем навигацию между разделами
         self.shop_selection.shopSelected.connect(self.handle_shop_selection)
-
         self.clicker_game.navigationRequested.connect(self.handle_navigation)
         
         # Показываем экран загрузки
         self.content_stack.setCurrentIndex(0)
+        
+        # Флаг для отслеживания полноэкранного режима
+        self.is_fullscreen = False
 
+    def toggle_fullscreen(self):
+        """Переключение между полноэкранным и оконным режимом"""
+        if self.is_fullscreen:
+            self.showNormal()
+            # Восстанавливаем разумный размер при выходе из полноэкранного режима
+            screen = QGuiApplication.primaryScreen()
+            if screen:
+                screen_geometry = screen.availableGeometry()
+                width = int(screen_geometry.width() * 0.8)
+                height = int(screen_geometry.height() * 0.8)
+                self.resize(width, height)
+                self.center_window()
+            self.is_fullscreen = False
+        else:
+            self.showFullScreen()
+            self.is_fullscreen = True
+
+    def center_window(self):
+        """Центрирование окна на экране"""
+        screen = QGuiApplication.primaryScreen()
+        if screen:
+            screen_geometry = screen.availableGeometry()
+            window_geometry = self.frameGeometry()
+            center_point = screen_geometry.center()
+            window_geometry.moveCenter(center_point)
+            self.move(window_geometry.topLeft())
+
+    def resizeEvent(self, a0):
+        """Обработчик изменения размера окна"""
+        super().resizeEvent(a0)
+        # Принудительное обновление layout
+        if self.central_widget and self.central_widget.layout():
+            self.central_widget.layout().activate()
+        
     def handle_navigation(self, destination):
         """Обрабатывает навигационные запросы из кликера"""
         if destination == "main_menu":
@@ -3104,16 +3267,22 @@ class MainWindow(QMainWindow):
         if shop_type == "legal":
             self.content_stack.setCurrentIndex(5)  # Light shop
         elif shop_type == "black_market":
-            # Здесь можно добавить черный рынок
             QMessageBox.information(self, "Черный рынок", "Черный рынок в разработке!")
         
     def keyPressEvent(self, a0: QKeyEvent | None):
         """Глобальная обработка клавиш"""
         if a0 is not None and a0.key() == Qt.Key.Key_Escape:
-            # Если мы не в главном меню, возвращаемся в него
-            current_index = self.content_stack.currentIndex()
-            if current_index != 1:  # Не главное меню
-                self.show_main_menu()
+            if self.is_fullscreen:
+                # Выход из полноэкранного режима
+                self.toggle_fullscreen()
+            else:
+                # Если мы не в главном меню, возвращаемся в него
+                current_index = self.content_stack.currentIndex()
+                if current_index != 1:  # Не главное меню
+                    self.show_main_menu()
+        elif a0 is not None and a0.key() == Qt.Key.Key_F11:
+            # Переключение полноэкранного режима по F11
+            self.toggle_fullscreen()
         else:
             super().keyPressEvent(a0)
 

@@ -30,5 +30,5 @@ print('start')
 # Изменяем настройки
 #settings.set_current_theme("light")
 #settings.set_current_fps(120)
-print(export.get_bag())
+print(settings.get_window_state())
 print('end')

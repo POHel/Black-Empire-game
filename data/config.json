@@ -14,15 +14,23 @@
         ]
     ],
     "current_window_size": [
-        2560,
-        1440
+        1920,
+        1080
     ],
     "themes": [
         "Темная",
         "Светлая",
         "Системная"
     ],
-    "current_theme": "Системная",
+    "current_theme": "Темная",
+    "current_volume": 80,
+    "state": [
+        "MINIMIZED",
+        "MAXIMIZED"
+    ],
+    "current_state": [
+        "MAXIMIZED"
+    ],
     "languages": [
         "Русский",
         "Английский"

@@ -757,6 +757,8 @@ class ClickerGame(QWidget):
         self.clicks_label = QLabel("Всего кликов: 0")
         for label in [self.money_label, self.per_click_label, self.clicks_label]:
             OPENTYPE_MANAGER.apply_styles(label, 14, QFont.Weight.Normal)
+            label.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 14px; padding: 5px;")
+            stats_layout.addWidget(label)
         
         stats_group.setLayout(stats_layout)
         left_layout.addWidget(stats_group)

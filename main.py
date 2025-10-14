@@ -1,4 +1,5 @@
 import sys
+import os
 import math
 import random
 import time
@@ -26,8 +27,55 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import (
     QFont, QPalette, QColor, QPainter, QLinearGradient, 
     QRadialGradient, QPen, QBrush, QFontDatabase, QPixmap,
-    QIcon, QMovie, QKeyEvent, QGuiApplication,QIcon, QMovie, QKeyEvent, QCursor
+    QGuiApplication,QIcon, QMovie, QKeyEvent, QCursor
 )
+
+class OpenType:
+    def __init__(self):
+        self.loaded_fonts = []
+        self.main_font_family = None
+    
+    def init_fonts(self):
+        """Инициализация системы шрифтов с поддержкой OpenType"""
+        font_priority = [
+            "Segoe UI Variable",
+            "Segoe UI", 
+            "Arial",
+            "system-ui",
+            "Tahoma",
+            "MS UI Gothic",
+            "SimSun",
+            "Segoe UI Emoji",
+            "Segoi UI Simbol"
+        ]
+        
+        # ФИКС: используем статический метод
+        available_fonts = QFontDatabase.families()
+        selected_font = "Arial"
+        
+        for font_name in font_priority:
+            if font_name in available_fonts:
+                selected_font = font_name
+                break
+        
+        print(f"🎨 Основной шрифт: {selected_font}")
+        return selected_font
+    
+    def create_font(self, size=12, weight=QFont.Weight.Normal, italic=False):
+        """Создает шрифт с настройками OpenType"""
+        font = QFont(self.main_font_family, size, weight, italic)
+        font.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)
+        return font
+    
+    def apply_styles(self, widget, font_size=12, weight=QFont.Weight.Normal):
+        """Применяет шрифт к виджету"""
+        font = self.create_font(font_size, weight)
+        widget.setFont(font)
+
+# Глобальный экземпляр (теперь будет работать)
+OPENTYPE_MANAGER = OpenType()
+
+
 
 AppLogic = coreLogic.AppLogic()
 Settings = coreLogic.Settings()
@@ -338,6 +386,7 @@ class MainMenuScreen(QWidget):
         
         # Логотип SKATT x R3DAX
         logo_label = QLabel("SKATT x R3DAX")
+        OPENTYPE_MANAGER.apply_styles(logo_label, 36, QFont.Weight.Bold)
         logo_label.setStyleSheet(f"""
             color: {ACCENT2.name()};
             font-size: 36px;
@@ -350,6 +399,7 @@ class MainMenuScreen(QWidget):
         # Название игры
         GAME_NAME = AppLogic.name
         title_label = QLabel(GAME_NAME)
+        OPENTYPE_MANAGER.apply_styles(title_label, 72, QFont.Weight.Bold)
         title_label.setStyleSheet(f"""
             color: {TEXT_PRIMARY.name()};
             font-size: 72px;
@@ -542,7 +592,7 @@ class LoadingScreen(QWidget):
         text_y = self.height() // 2 + 10
         
         # Текущий текст (без дергания)
-        loading_texts = ["Загрузка", "Загрузка.", "Загрузка..", "Загрузка...", "Загрузка..."]
+        loading_texts = ["Загрузка", "Загрузка.", "Загрузка..", "Загрузка..."]
         current_text = loading_texts[self.dots]
         
         painter.drawText(text_x, text_y, current_text)
@@ -705,10 +755,8 @@ class ClickerGame(QWidget):
         self.money_label = QLabel("Капитал: $0")
         self.per_click_label = QLabel("Доход за клик: $1")
         self.clicks_label = QLabel("Всего кликов: 0")
-        
         for label in [self.money_label, self.per_click_label, self.clicks_label]:
-            label.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 14px; padding: 5px;")
-            stats_layout.addWidget(label)
+            OPENTYPE_MANAGER.apply_styles(label, 14, QFont.Weight.Normal)
         
         stats_group.setLayout(stats_layout)
         left_layout.addWidget(stats_group)
@@ -744,6 +792,7 @@ class ClickerGame(QWidget):
         
         # Заголовок
         title = QLabel("Корпоративный Кликер")
+        OPENTYPE_MANAGER.apply_styles(title, 32, QFont.Weight.Bold)
         title.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 32px; font-weight: bold;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         center_layout.addWidget(title)
@@ -761,6 +810,7 @@ class ClickerGame(QWidget):
         
         # Инструкция
         instruction = QLabel("Нажимайте на кнопку или используйте ПРОБЕЛ для заработка\nESC - выход в меню")
+        OPENTYPE_MANAGER.apply_styles(instruction, 14, QFont.Weight.Normal)
         instruction.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 14px;")
         instruction.setAlignment(Qt.AlignmentFlag.AlignCenter)
         center_layout.addWidget(instruction)
@@ -970,7 +1020,8 @@ class ClickerGame(QWidget):
         if label:
             label.deleteLater()
         # Удаляем завершенные анимации из списка
-        self.active_animations = [anim for anim in self.active_animations if anim.state() != QPropertyAnimation.State.Stopped]
+        self.active_animations = [anim for anim in self.active_animations 
+                                if anim.state() != QPropertyAnimation.State.Stopped]
         
     def keyPressEvent(self, a0):
         if a0 is not None and a0.key() == Qt.Key.Key_Space:
@@ -2754,7 +2805,7 @@ class SettingsMenu(QWidget):
         
     def init_ui(self):
         layout = QVBoxLayout()
-        layout.setContentsMargins(600, 100, 600, 250)
+        layout.setContentsMargins(600, 100, 600, 200)
         
         # Заголовок
         title = QLabel("⚙️ Настройки")
@@ -3354,7 +3405,13 @@ class MainWindow(QMainWindow):
             super().keyPressEvent(a0)
 
 def main():
+    # ОТКЛЮЧАЕМ НЕНУЖНЫЕ ПРЕДУПРЕЖДЕНИЯ QT
+    os.environ["QT_LOGGING_RULES"] = "qt.text.font=false"
+    
     def qt_debug_handler(msg_type, context, message):
+        # Игнорируем сообщения про шрифты
+        if "OpenType support missing" in message:
+            return
         if "QLayout::addChildLayout" in message:
             import traceback
             print("⚠️ Ошибка QLayout:", message)
@@ -3364,10 +3421,16 @@ def main():
 
     qInstallMessageHandler(qt_debug_handler)
     app = QApplication(sys.argv)
+
+    # ТЕПЕРЬ инициализируем шрифты ПОСЛЕ создания app
+    global OPENTYPE_MANAGER, MAIN_FONT_FAMILY
+    OPENTYPE_MANAGER = OpenType()
+    OPENTYPE_MANAGER.init_fonts()  # ← ВЫЗЫВАЕМ ПОСЛЕ app!
+    MAIN_FONT_FAMILY = OPENTYPE_MANAGER.main_font_family
     
     # Устанавливаем стиль приложения
     app.setStyle("Fusion")
-    
+
     # Настройка палитры
     palette = QPalette()
     palette.setColor(QPalette.ColorRole.Window, DARK_BG)

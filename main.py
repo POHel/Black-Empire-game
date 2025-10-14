@@ -970,7 +970,7 @@ class ClickerGame(QWidget):
         if label:
             label.deleteLater()
         # Удаляем завершенные анимации из списка
-        self.active_animations = [anim for anim in self.active_animations if anim.state() != QAnimation.State.Stopped]
+        self.active_animations = [anim for anim in self.active_animations if anim.state() != QPropertyAnimation.State.Stopped]
         
     def keyPressEvent(self, a0):
         if a0 is not None and a0.key() == Qt.Key.Key_Space:

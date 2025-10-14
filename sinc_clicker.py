@@ -1,90 +1,15 @@
 import sys
-import random
 import math
+import random
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                            QHBoxLayout, QLabel, QPushButton, QFrame)
-from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QRect, pyqtProperty
-from PyQt6.QtGui import QPainter, QColor, QPalette, QKeyEvent, QFont
+                            QHBoxLayout, QLabel, QFrame)
+from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, pyqtProperty
+from PyQt6.QtGui import QFont, QPalette, QColor, QLinearGradient, QRadialGradient, QPainter
 
 
-class FloatingText(QLabel):
-    def __init__(self, text, color, parent=None):
+class AnimatedLabel(QLabel):
+    def __init__(self, text="", parent=None):
         super().__init__(text, parent)
-        self.color = color
-        self.setStyleSheet(f"""
-            color: {color}; 
-            font-weight: 700; 
-            font-size: 20px; 
-            background: transparent;
-            padding: 4px 12px;
-            border-radius: 12px;
-            background-color: rgba(255,255,255,0.1);
-        """)
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-        
-        # Анимация движения и исчезновения
-        self.pos_animation = QPropertyAnimation(self, b"geometry")
-        self.pos_animation.setDuration(1000)
-        self.opacity_animation = QPropertyAnimation(self, b"windowOpacity")
-        self.opacity_animation.setDuration(1000)
-        self.opacity_animation.setStartValue(1.0)
-        self.opacity_animation.setEndValue(0.0)
-        
-        self.pos_animation.finished.connect(self.deleteLater)
-        
-    def start_animation(self, start_pos):
-        start_x, start_y = start_pos
-        end_rect = QRect(start_x, start_y - 100, self.width(), self.height())
-        
-        self.pos_animation.setStartValue(self.geometry())
-        self.pos_animation.setEndValue(end_rect)
-        
-        self.pos_animation.start()
-        self.opacity_animation.start()
-
-
-class Particle(QWidget):
-    def __init__(self, color, parent=None):
-        super().__init__(parent)
-        self.color = color
-        size = random.randint(4, 8)
-        self.setFixedSize(size, size)
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-        
-        self.animation = QPropertyAnimation(self, b"geometry")
-        self.animation.setDuration(800)
-        self.opacity_animation = QPropertyAnimation(self, b"windowOpacity")
-        self.opacity_animation.setDuration(800)
-        self.opacity_animation.setStartValue(1.0)
-        self.opacity_animation.setEndValue(0.0)
-        
-        self.animation.finished.connect(self.deleteLater)
-        
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        
-        painter.setBrush(QColor(*self.color))
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawEllipse(0, 0, self.width(), self.height())
-        
-    def start_animation(self, start_pos, angle, distance):
-        start_x, start_y = start_pos
-        end_x = start_x + math.cos(angle) * distance
-        end_y = start_y + math.sin(angle) * distance
-        
-        end_geometry = QRect(int(end_x), int(end_y), self.width(), self.height())
-        
-        self.animation.setStartValue(self.geometry())
-        self.animation.setEndValue(end_geometry)
-        
-        self.animation.start()
-        self.opacity_animation.start()
-
-
-class AnimatedButton(QPushButton):
-    def __init__(self, parent=None):
-        super().__init__(parent)
         self._scale = 1.0
         
     def get_scale(self):
@@ -95,23 +20,16 @@ class AnimatedButton(QPushButton):
         self.update()
         
     scale = pyqtProperty(float, get_scale, set_scale)
-        
-    def mousePressEvent(self, event):
-        # Анимация нажатия
-        self.animation = QPropertyAnimation(self, b"scale")
-        self.animation.setDuration(150)
-        self.animation.setStartValue(1.0)
-        self.animation.setEndValue(0.98)
-        self.animation.start()
-        super().mousePressEvent(event)
-        
-    def mouseReleaseEvent(self, event):
-        self.animation = QPropertyAnimation(self, b"scale")
-        self.animation.setDuration(150)
-        self.animation.setStartValue(0.98)
-        self.animation.setEndValue(1.0)
-        self.animation.start()
-        super().mouseReleaseEvent(event)
+    
+    def paintEvent(self, event):
+        if self._scale != 1.0:
+            painter = QPainter(self)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.translate(self.width() / 2, self.height() / 2)
+            painter.scale(self._scale, self._scale)
+            painter.translate(-self.width() / 2, -self.height() / 2)
+            
+        super().paintEvent(event)
 
 
 class ClickerGame(QMainWindow):
@@ -120,250 +38,225 @@ class ClickerGame(QMainWindow):
         self.money = 0
         self.per_click = 1
         self.total_clicks = 0
-        
-        # Современная цветовая схема
-        self.colors = {
-            'bg': '#0f172a',
-            'panel': '#1e293b',
-            'card': '#334155',
-            'primary': '#3b82f6',
-            'primary_hover': '#2563eb',
-            'success': '#10b981',
-            'text_primary': '#f8fafc',
-            'text_secondary': '#cbd5e1',
-            'text_muted': '#64748b',
-            'border': '#475569'
-        }
-        
+        self.floating_texts = []
         self.init_ui()
         
     def init_ui(self):
-        self.setWindowTitle('Finance Clicker • Инвестиционный симулятор')
-        self.setFixedSize(1200, 800)
+        self.setWindowTitle("Black Empire — Кликер")
+        self.setFixedSize(800, 600)
         
-        # Центральный виджет
+        # Устанавливаем тёмный фон с градиентами
+        self.setStyleSheet("""
+            QMainWindow {
+                background: qlineargradient(spread:pad, x1:0.1, y1:0.2, x2:0.9, y2:0.8, 
+                                          stop:0 rgba(122, 47, 255, 0.05), stop:1 transparent),
+                          qlineargradient(spread:pad, x1:0.9, y1:0.8, x2:0.1, y2:0.2, 
+                                          stop:0 rgba(60, 20, 100, 0.04), stop:1 transparent),
+                          #070613;
+            }
+        """)
+        
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         
-        # Устанавливаем фон
-        central_widget.setStyleSheet(f"background: {self.colors['bg']};")
-        
-        # Основной layout
         layout = QVBoxLayout(central_widget)
         layout.setContentsMargins(40, 40, 40, 40)
-        layout.setSpacing(30)
+        layout.setSpacing(20)
         
-        # Панель игры
+        # Game panel
         self.game_panel = QFrame()
-        self.game_panel.setObjectName("gamePanel")
-        self.game_panel.setStyleSheet(f"""
-            QFrame#gamePanel {{
-                background: {self.colors['panel']};
-                border-radius: 20px;
-                border: 1px solid {self.colors['border']};
-            }}
+        self.game_panel.setStyleSheet("""
+            QFrame {
+                background: qlineargradient(spread:pad, x1:0.5, y1:0, x2:0.5, y2:1,
+                                          stop:0 rgba(255, 255, 255, 0.02),
+                                          stop:1 rgba(255, 255, 255, 0.01));
+                border-radius: 24px;
+                border: 1px solid rgba(255, 255, 255, 0.03);
+            }
         """)
+        self.game_panel.setMinimumHeight(500)
         
         panel_layout = QVBoxLayout(self.game_panel)
-        panel_layout.setContentsMargins(40, 40, 40, 40)
-        panel_layout.setSpacing(30)
+        panel_layout.setContentsMargins(30, 30, 30, 30)
+        panel_layout.setSpacing(20)
         
-        # Заголовок
+        # Header
         header_layout = QVBoxLayout()
-        header_layout.setSpacing(8)
+        self.brand_label = QLabel("Black Empire")
+        self.brand_label.setStyleSheet("""
+            QLabel {
+                color: #7a2fff;
+                font-weight: 800;
+                font-size: 14px;
+                letter-spacing: 1px;
+            }
+        """)
+        self.brand_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        self.title_label = QLabel("Finance Clicker")
-        self.title_label.setStyleSheet(f"""
-            color: {self.colors['text_primary']};
-            font-weight: 700;
-            font-size: 36px;
+        self.title_label = QLabel("Корпоративный Кликер")
+        self.title_label.setStyleSheet("""
+            QLabel {
+                color: #f7f7fb;
+                font-weight: 800;
+                font-size: 32px;
+                margin: 10px 0px;
+            }
         """)
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        self.subtitle_label = QLabel("Создайте свою финансовую империю")
-        self.subtitle_label.setStyleSheet(f"""
-            color: {self.colors['text_secondary']};
-            font-weight: 400;
-            font-size: 18px;
-        """)
-        self.subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
+        header_layout.addWidget(self.brand_label)
         header_layout.addWidget(self.title_label)
-        header_layout.addWidget(self.subtitle_label)
         panel_layout.addLayout(header_layout)
         
-        # Статистика
+        # Stats
         stats_layout = QHBoxLayout()
-        stats_layout.setSpacing(20)
+        stats_layout.setSpacing(15)
         
-        self.money_stat = self.create_stat_widget("💰 Капитал", "$0", self.colors['success'])
-        self.per_click_stat = self.create_stat_widget("📈 Доход за клик", "$1", self.colors['primary'])
-        self.total_clicks_stat = self.create_stat_widget("👆 Всего кликов", "0", self.colors['text_secondary'])
+        self.money_stat = self.create_stat_widget("Капитал", "$0")
+        self.per_click_stat = self.create_stat_widget("Доход за клик", "$1")
+        self.total_clicks_stat = self.create_stat_widget("Всего кликов", "0")
         
         stats_layout.addWidget(self.money_stat)
         stats_layout.addWidget(self.per_click_stat)
         stats_layout.addWidget(self.total_clicks_stat)
         panel_layout.addLayout(stats_layout)
         
-        # Область клика
+        # Click area
         click_layout = QVBoxLayout()
-        click_layout.setSpacing(25)
+        click_layout.setSpacing(20)
         
-        # Основная кнопка
-        self.click_button = AnimatedButton()
-        self.click_button.setFixedHeight(300)
-        self.click_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.click_button.setStyleSheet(f"""
-            AnimatedButton {{
-                background: {self.colors['primary']};
-                border-radius: 20px;
-                border: none;
-                color: white;
-                font-weight: 600;
-                font-size: 18px;
-            }}
-            AnimatedButton:hover {{
-                background: {self.colors['primary_hover']};
-            }}
-            AnimatedButton:pressed {{
-                background: {self.colors['primary_hover']};
-            }}
+        self.click_button = QFrame()
+        self.click_button.setStyleSheet("""
+            QFrame {
+                background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1,
+                                          stop:0 rgba(122, 47, 255, 0.18),
+                                          stop:1 rgba(58, 14, 88, 0.12));
+                border-radius: 40px;
+                border: 1px solid rgba(255, 255, 255, 0.02);
+            }
         """)
+        self.click_button.setMinimumHeight(300)
+        self.click_button.mousePressEvent = self.handle_click
         
-        # Внутренний layout кнопки
+        # Добавляем анимацию пульсации
+        self.pulse_animation = QPropertyAnimation(self.click_button, b"windowOpacity")
+        self.pulse_animation.setDuration(2000)
+        self.pulse_animation.setLoopCount(-1)
+        self.pulse_animation.setStartValue(0.9)
+        self.pulse_animation.setEndValue(1.0)
+        self.pulse_animation.setEasingCurve(QEasingCurve.Type.InOutSine)
+        self.pulse_animation.start()
+        
         button_layout = QVBoxLayout(self.click_button)
-        button_layout.setSpacing(15)
         button_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        button_layout.setSpacing(20)
         
-        # Иконка и текст кнопки
-        button_icon = QLabel("💼")
-        button_icon.setStyleSheet("""
-            font-size: 64px;
-            background: transparent;
+        # Play icon simulation
+        play_icon = QLabel("▶")
+        play_icon.setStyleSheet("""
+            QLabel {
+                background: qlineargradient(spread:pad, x1:0.5, y1:0, x2:0.5, y2:1,
+                                          stop:0 #7a2fff, stop:1 #3b0f5e);
+                border-radius: 20px;
+                color: white;
+                font-size: 24px;
+                padding: 20px;
+                min-width: 80px;
+                min-height: 80px;
+                max-width: 80px;
+                max-height: 80px;
+            }
         """)
-        button_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        play_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        button_label = QLabel("Инвестировать")
-        button_label.setStyleSheet("""
-            color: white;
-            font-weight: 600;
-            font-size: 28px;
-            background: transparent;
+        self.button_label = QLabel("Инвестировать")
+        self.button_label.setStyleSheet("""
+            QLabel {
+                color: white;
+                font-weight: 800;
+                font-size: 32px;
+            }
         """)
-        button_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.button_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        # Доход за клик
         gain_layout = QVBoxLayout()
-        gain_layout.setSpacing(5)
-        
-        self.click_gain_label = QLabel("+$1")
-        self.click_gain_label.setStyleSheet("""
-            color: rgba(255,255,255,0.9);
-            font-weight: 600;
-            font-size: 20px;
-            background: transparent;
+        self.click_gain = QLabel("+$1")
+        self.click_gain.setStyleSheet("""
+            QLabel {
+                color: white;
+                font-weight: 800;
+                font-size: 28px;
+            }
         """)
-        self.click_gain_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.click_gain.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        click_subtitle = QLabel("за клик")
-        click_subtitle.setStyleSheet(f"""
-            color: rgba(255,255,255,0.7);
-            font-size: 14px;
-            background: transparent;
+        self.click_subtitle = QLabel("За клик")
+        self.click_subtitle.setStyleSheet("""
+            QLabel {
+                color: #9aa0ad;
+                font-size: 16px;
+            }
         """)
-        click_subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.click_subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        gain_layout.addWidget(self.click_gain_label)
-        gain_layout.addWidget(click_subtitle)
+        gain_layout.addWidget(self.click_gain)
+        gain_layout.addWidget(self.click_subtitle)
         
-        button_layout.addWidget(button_icon)
-        button_layout.addWidget(button_label)
+        button_layout.addWidget(play_icon)
+        button_layout.addWidget(self.button_label)
         button_layout.addLayout(gain_layout)
         
         click_layout.addWidget(self.click_button)
         
-        # Прогресс бар для следующего улучшения
-        self.progress_container = QWidget()
-        self.progress_container.setStyleSheet("background: transparent;")
-        progress_layout = QVBoxLayout(self.progress_container)
-        progress_layout.setSpacing(8)
-        
-        progress_text = QLabel("До следующего улучшения:")
-        progress_text.setStyleSheet(f"""
-            color: {self.colors['text_secondary']};
-            font-size: 14px;
-            background: transparent;
-        """)
-        progress_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
-        self.progress_bar = QFrame()
-        self.progress_bar.setFixedHeight(8)
-        self.progress_bar.setStyleSheet(f"""
-            QFrame {{
-                background: {self.colors['card']};
-                border-radius: 4px;
-            }}
-        """)
-        
-        self.progress_fill = QFrame(self.progress_bar)
-        self.progress_fill.setFixedHeight(8)
-        self.progress_fill.setStyleSheet(f"""
-            QFrame {{
-                background: {self.colors['success']};
-                border-radius: 4px;
-            }}
-        """)
-        self.update_progress_bar()
-        
-        progress_layout.addWidget(progress_text)
-        progress_layout.addWidget(self.progress_bar)
-        
-        click_layout.addWidget(self.progress_container)
-        
-        # Инструкции
-        instructions = QLabel("💡 Нажимайте на кнопку или используйте Пробел для инвестирования")
-        instructions.setStyleSheet(f"""
-            color: {self.colors['text_muted']};
-            font-size: 14px;
-            padding: 12px;
-            background: {self.colors['card']};
-            border-radius: 10px;
+        # Instructions
+        instructions = QLabel("Нажимайте на кнопку или используйте пробел для инвестирования")
+        instructions.setStyleSheet("""
+            QLabel {
+                color: #9aa0ad;
+                font-size: 14px;
+            }
         """)
         instructions.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        instructions.setMaximumHeight(50)
         click_layout.addWidget(instructions)
         
         panel_layout.addLayout(click_layout)
         layout.addWidget(self.game_panel)
         
-        # Подключаем обработчики
-        self.click_button.clicked.connect(self.handle_click)
+        # Таймер для анимаций
+        self.animation_timer = QTimer()
+        self.animation_timer.timeout.connect(self.update_animations)
+        self.animation_timer.start(16)  # ~60 FPS
         
-    def create_stat_widget(self, label, value, color):
+    def create_stat_widget(self, label, value):
         widget = QFrame()
-        widget.setStyleSheet(f"""
-            QFrame {{
-                background: {self.colors['card']};
-                border-radius: 15px;
-                padding: 20px;
-            }}
+        widget.setStyleSheet("""
+            QFrame {
+                background: rgba(255, 255, 255, 0.03);
+                border-radius: 12px;
+                padding: 15px;
+            }
         """)
         
         layout = QVBoxLayout(widget)
-        layout.setSpacing(8)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         value_label = QLabel(value)
-        value_label.setStyleSheet(f"""
-            color: {color};
-            font-weight: 700;
-            font-size: 24px;
+        value_label.setStyleSheet("""
+            QLabel {
+                color: white;
+                font-weight: 800;
+                font-size: 24px;
+                margin-bottom: 5px;
+            }
         """)
         value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         label_label = QLabel(label)
-        label_label.setStyleSheet(f"""
-            color: {self.colors['text_secondary']};
-            font-size: 14px;
+        label_label.setStyleSheet("""
+            QLabel {
+                color: #9aa0ad;
+                font-size: 12px;
+            }
         """)
         label_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
@@ -372,145 +265,163 @@ class ClickerGame(QMainWindow):
         
         return widget
     
-    def update_progress_bar(self):
-        clicks_to_next = 50 - (self.total_clicks % 50)
-        progress = (50 - clicks_to_next) / 50 * 100
-        
-        fill_width = int(self.progress_bar.width() * progress / 100)
-        self.progress_fill.setFixedWidth(fill_width)
-        self.progress_fill.move(0, 0)
-    
-    def format_number(self, n):
-        if n >= 1000000:
-            return f'${n/1000000:.1f}M'
-        elif n >= 1000:
-            return f'${n/1000:.1f}K'
-        return f'${math.floor(n)}'
+    def format_money(self, amount):
+        if amount >= 1000000:
+            return f"${amount / 1000000:.1f}M"
+        elif amount >= 1000:
+            return f"${amount / 1000:.1f}K"
+        return f"${int(amount)}"
     
     def update_ui(self):
         # Обновляем статистику
-        money_widget = self.money_stat.layout()
-        per_click_widget = self.per_click_stat.layout()
-        total_clicks_widget = self.total_clicks_stat.layout()
+        money_widget = self.money_stat.layout().itemAt(0).widget()
+        money_widget.setText(self.format_money(self.money))
         
-        if money_widget and money_widget.itemAt(0):
-            money_value = money_widget.itemAt(0).widget()
-            if money_value:
-                money_value.setText(self.format_number(self.money))
+        per_click_widget = self.per_click_stat.layout().itemAt(0).widget()
+        per_click_widget.setText(self.format_money(self.per_click))
         
-        if per_click_widget and per_click_widget.itemAt(0):
-            per_click_value = per_click_widget.itemAt(0).widget()
-            if per_click_value:
-                per_click_value.setText(self.format_number(self.per_click))
+        total_clicks_widget = self.total_clicks_stat.layout().itemAt(0).widget()
+        total_clicks_widget.setText(str(self.total_clicks))
         
-        if total_clicks_widget and total_clicks_widget.itemAt(0):
-            total_clicks_value = total_clicks_widget.itemAt(0).widget()
-            if total_clicks_value:
-                total_clicks_value.setText(str(self.total_clicks))
-        
-        self.click_gain_label.setText(f"+{self.format_number(self.per_click)}")
-        self.update_progress_bar()
+        # Обновляем отображение дохода за клик
+        self.click_gain.setText(f"+{self.format_money(self.per_click)}")
     
-    def handle_click(self):
+    def handle_click(self, event):
         self.money += self.per_click
         self.total_clicks += 1
-        self.update_ui()
         
-        # Создаем визуальные эффекты
-        button_center = self.click_button.rect().center()
-        global_pos = self.click_button.mapToGlobal(button_center)
-        self.create_floating_text((global_pos.x(), global_pos.y()), f"+{self.format_number(self.per_click)}", "#10b981")
-        self.create_particles((global_pos.x(), global_pos.y()))
+        # Анимация кнопки
+        self.animate_button_click()
         
-        # Увеличиваем доход каждые 50 кликов
+        # Создаем плавающий текст
+        button_pos = self.click_button.mapTo(self, self.click_button.rect().center())
+        self.create_floating_text(button_pos.x(), button_pos.y(), f"+{self.format_money(self.per_click)}")
+        
+        # Проверяем улучшение
         if self.total_clicks % 50 == 0:
             self.per_click += 1
-            self.update_ui()
-            self.create_floating_text((global_pos.x(), global_pos.y()), "✨ Уровеньアップ!", "#f59e0b")
+            self.create_floating_text(button_pos.x(), button_pos.y(), "Доход увеличен!", "#7aff7a")
+        
+        self.update_ui()
     
-    def create_floating_text(self, position, text, color):
-        floating = FloatingText(text, color, self)
-        floating.move(int(position[0] - 60), int(position[1] - 20))
-        floating.show()
-        floating.start_animation((int(position[0] - 60), int(position[1] - 20)))
+    def animate_button_click(self):
+        # Анимация нажатия кнопки
+        self.click_button.setStyleSheet("""
+            QFrame {
+                background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1,
+                                          stop:0 rgba(122, 47, 255, 0.25),
+                                          stop:1 rgba(58, 14, 88, 0.18));
+                border-radius: 40px;
+                border: 1px solid rgba(255, 255, 255, 0.03);
+            }
+        """)
+        
+        QTimer.singleShot(150, lambda: self.click_button.setStyleSheet("""
+            QFrame {
+                background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1,
+                                          stop:0 rgba(122, 47, 255, 0.18),
+                                          stop:1 rgba(58, 14, 88, 0.12));
+                border-radius: 40px;
+                border: 1px solid rgba(255, 255, 255, 0.02);
+            }
+        """))
     
-    def create_particles(self, position, count=12):
-        for _ in range(count):
-            angle = random.uniform(0, 2 * math.pi)
-            distance = 40 + random.uniform(0, 60)
-            
-            # Случайный цвет из палитры
-            colors = [
-                (59, 130, 246),  # primary blue
-                (16, 185, 129),  # success green
-                (245, 158, 11),  # amber
-                (139, 92, 246),  # violet
-            ]
-            color = random.choice(colors)
-            
-            particle = Particle(color, self)
-            particle.move(int(position[0] - 3), int(position[1] - 3))
-            particle.show()
-            particle.start_animation((position[0], position[1]), angle, distance)
-    
-    def keyPressEvent(self, event: QKeyEvent):
-        if event.key() == Qt.Key.Key_Space:
-            event.accept()
-            self.handle_click()
-            
-            # Визуальная обратная связь для клавиатуры
-            self.click_button.setStyleSheet(f"""
-                AnimatedButton {{
-                    background: {self.colors['primary_hover']};
-                    border-radius: 20px;
-                    border: 2px solid rgba(255,255,255,0.3);
-                    color: white;
-                    font-weight: 600;
-                    font-size: 18px;
-                }}
-            """)
-            
-            QTimer.singleShot(100, self.reset_button_style)
-        else:
-            super().keyPressEvent(event)
-    
-    def reset_button_style(self):
-        self.click_button.setStyleSheet(f"""
-            AnimatedButton {{
-                background: {self.colors['primary']};
-                border-radius: 20px;
+    def create_floating_text(self, x, y, text, color="#bda8ff"):
+        text_label = AnimatedLabel(text)
+        text_label.setStyleSheet(f"""
+            QLabel {{
+                color: {color};
+                font-weight: 800;
+                font-size: 24px;
+                background: transparent;
                 border: none;
-                color: white;
-                font-weight: 600;
-                font-size: 18px;
-            }}
-            AnimatedButton:hover {{
-                background: {self.colors['primary_hover']};
             }}
         """)
+        text_label.move(x - 50, y - 50)
+        text_label.show()
+        
+        # Анимация движения вверх и исчезновения
+        anim = QPropertyAnimation(text_label, b"scale")
+        anim.setDuration(900)
+        anim.setStartValue(1.0)
+        anim.setEndValue(1.15)
+        anim.setEasingCurve(QEasingCurve.Type.OutBack)
+        anim.start()
+        
+        # Сохраняем для управления анимацией
+        self.floating_texts.append({
+            'label': text_label,
+            'start_y': y - 50,
+            'start_time': self.get_current_time(),
+            'duration': 900
+        })
+    
+    def get_current_time(self):
+        return QTimer().remainingTime()  # Примерное время
+    
+    def update_animations(self):
+        current_time = self.get_current_time()
+        texts_to_remove = []
+        
+        for i, text_data in enumerate(self.floating_texts):
+            label = text_data['label']
+            start_y = text_data['start_y']
+            start_time = text_data['start_time']
+            duration = text_data['duration']
+            
+            # Вычисляем прогресс анимации
+            progress = (current_time - start_time) / duration
+            
+            if progress >= 1.0:
+                label.deleteLater()
+                texts_to_remove.append(i)
+            else:
+                # Двигаем текст вверх и изменяем прозрачность
+                new_y = start_y - progress * 120
+                opacity = 1.0 - progress
+                
+                label.move(label.x(), int(new_y))
+                label.setStyleSheet(label.styleSheet() + f" opacity: {opacity};")
+        
+        # Удаляем завершенные анимации
+        for i in reversed(texts_to_remove):
+            if i < len(self.floating_texts):
+                self.floating_texts.pop(i)
+    
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Space:
+            self.handle_click(None)
+            # Визуальная обратная связь для клавиатуры
+            self.click_button.setStyleSheet("""
+                QFrame {
+                    background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1,
+                                              stop:0 rgba(122, 47, 255, 0.3),
+                                              stop:1 rgba(58, 14, 88, 0.22));
+                    border-radius: 40px;
+                    border: 2px solid rgba(122, 47, 255, 0.3);
+                }
+            """)
+            QTimer.singleShot(100, lambda: self.click_button.setStyleSheet("""
+                QFrame {
+                    background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1,
+                                              stop:0 rgba(122, 47, 255, 0.18),
+                                              stop:1 rgba(58, 14, 88, 0.12));
+                    border-radius: 40px;
+                    border: 1px solid rgba(255, 255, 255, 0.02);
+                }
+            """))
+        else:
+            super().keyPressEvent(event)
 
 
-def main():
+if __name__ == "__main__":
     app = QApplication(sys.argv)
     
-    # Устанавливаем стиль приложения
-    app.setStyle('Fusion')
-    
-    # Настраиваем палитру для темной темы
-    palette = QPalette()
-    palette.setColor(QPalette.ColorRole.Window, QColor(15, 23, 42))
-    palette.setColor(QPalette.ColorRole.WindowText, QColor(248, 250, 252))
-    app.setPalette(palette)
-    
-    # Устанавливаем глобальный шрифт
-    font = QFont("Segoe UI", 10)
+    # Устанавливаем шрифт
+    font = QFont("Inter", 10)
     app.setFont(font)
     
     game = ClickerGame()
     game.show()
     
     sys.exit(app.exec())
-
-
-if __name__ == '__main__':
-    main()

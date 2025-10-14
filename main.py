@@ -750,33 +750,10 @@ class ClickerGame(QWidget):
         
         center_layout.addSpacing(30)
         
-        # Кнопка клика с улучшенным градиентом
-        self.click_button = AnimatedButton("💰КЛИК! ")
-        self.click_button.setFixedSize(500, 500)
-        self.click_button.setStyleSheet("""
-            QPushButton {
-                background: qradialgradient(cx:0.5, cy:0.5, radius:0.9,
-                    stop:0 #8b5cf6, stop:0.3 #7c3aed, stop:0.6 #6d28d9, stop:1 #4c1d95);
-                border: 6px solid qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #c4b5fd, stop:1 #8b5cf6);
-                border-radius: 100px;
-                color: white;
-                font-size: 70px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background: qradialgradient(cx:0.5, cy:0.5, radius:0.9,
-                    stop:0 #a78bfa, stop:0.3 #8b5cf6, stop:0.6 #7c3aed, stop:1 #5b21b6);
-                border: 6px solid qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #ddd6fe, stop:1 #a78bfa);
-            }
-            QPushButton:pressed {
-                background: qradialgradient(cx:0.5, cy:0.5, radius:0.9,
-                    stop:0 #7c3aed, stop:0.3 #6d28d9, stop:0.6 #5b21b6, stop:1 #371e72);
-                border: 6px solid qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #a78bfa, stop:1 #7c3aed);
-            }
-        """)
+        # НОВАЯ КНОПКА КЛИКА С ИМПОРТИРОВАННЫМ СТИЛЕМ
+        self.click_button = AnimatedButton("𓀐𓂸ඞ НАЖМИ ЕСЛИ СОСАЛ")
+        self.click_button.setFixedSize(600, 600)
+        self.apply_imported_button_style()
         self.click_button.clicked.connect(self.handle_click)
         center_layout.addWidget(self.click_button, alignment=Qt.AlignmentFlag.AlignCenter)
         
@@ -834,14 +811,72 @@ class ClickerGame(QWidget):
         
         self.setLayout(main_layout)
         
+        # Добавляем анимацию пульсации
+        self.pulse_animation = QPropertyAnimation(self.click_button, b"windowOpacity")
+        self.pulse_animation.setDuration(2000)
+        self.pulse_animation.setLoopCount(-1)
+        self.pulse_animation.setStartValue(0.9)
+        self.pulse_animation.setEndValue(1.0)
+        self.pulse_animation.setEasingCurve(QEasingCurve.Type.InOutSine)
+        self.pulse_animation.start()
+        
+    def apply_imported_button_style(self):
+        """Применяет импортированный стиль к кнопке"""
+        self.click_button.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1,
+                                          stop:0 rgba(122, 47, 255, 0.18),
+                                          stop:1 rgba(58, 14, 88, 0.12));
+                border-radius: 40px;
+                border: 1px solid rgba(255, 255, 255, 0.02);
+                color: white;
+                font-size: 32px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1,
+                                          stop:0 rgba(122, 47, 255, 0.22),
+                                          stop:1 rgba(58, 14, 88, 0.16));
+                border: 1px solid rgba(255, 255, 255, 0.04);
+            }
+            QPushButton:pressed {
+                background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1,
+                                          stop:0 rgba(122, 47, 255, 0.25),
+                                          stop:1 rgba(58, 14, 88, 0.18));
+                border: 1px solid rgba(255, 255, 255, 0.03);
+            }
+        """)
+        
     def handle_click(self):
         self.money += self.per_click
         self.total_clicks += 1
         self.update_display()
         self.moneyChanged.emit(self.money)
         
-        # Анимация клика
-        self.animate_click()
+        # Анимация клика с новым стилем
+        self.animate_click_imported()
+        
+    def animate_click_imported(self):
+        """Анимация клика с импортированным стилем"""
+        # Анимация нажатия кнопки
+        self.click_button.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1,
+                                          stop:0 rgba(122, 47, 255, 0.25),
+                                          stop:1 rgba(58, 14, 88, 0.18));
+                border-radius: 40px;
+                border: 1px solid rgba(255, 255, 255, 0.03);
+                color: white;
+                font-size: 32px;
+                font-weight: bold;
+            }
+        """)
+        
+        # Таймер для возврата обычного стиля
+        QTimer.singleShot(150, self.apply_imported_button_style)
+        
+        # Показываем эффект клика
+        self.show_click_effect()
         
     def handle_upgrade(self, action):
         cost = 0
@@ -850,6 +885,7 @@ class ClickerGame(QWidget):
             if self.money >= cost:
                 self.money -= cost
                 self.per_click += 1
+                self.update_display()
         elif action == "speed_boost":
             cost = 500
             if self.money >= cost:
@@ -869,88 +905,7 @@ class ClickerGame(QWidget):
         self.per_click_label.setText(f"Доход за клик: ${self.per_click}")
         self.clicks_label.setText(f"Всего кликов: {self.total_clicks}")
         
-    def animate_click(self):
-        # Комплексная анимация с несколькими эффектами
-        self.animate_button_scale()
-        self.animate_button_brightness()
-        self.show_click_effect()
-        
-    def animate_button_scale(self):
-        """Анимация масштабирования кнопки"""
-        # Первая анимация - уменьшение (эффект нажатия)
-        scale_down = QPropertyAnimation(self.click_button, b"geometry")
-        scale_down.setDuration(80)
-        scale_down.setEasingCurve(QEasingCurve.Type.OutCubic)
-        scale_down.setStartValue(self.click_button.geometry())
-        scale_down.setEndValue(QRect(
-            self.click_button.x() + 10, 
-            self.click_button.y() + 10,
-            self.click_button.width() - 20,
-            self.click_button.height() - 20
-        ))
-        
-        # Вторая анимация - возврат к нормальному размеру
-        scale_up = QPropertyAnimation(self.click_button, b"geometry")
-        scale_up.setDuration(120)
-        scale_up.setEasingCurve(QEasingCurve.Type.OutElastic)
-        scale_up.setStartValue(QRect(
-            self.click_button.x() + 10, 
-            self.click_button.y() + 10,
-            self.click_button.width() - 20,
-            self.click_button.height() - 20
-        ))
-        scale_up.setEndValue(self.click_button.geometry())
-        
-        sequence = QSequentialAnimationGroup()
-        sequence.addAnimation(scale_down)
-        sequence.addAnimation(scale_up)
-        sequence.start()
-        
-    def animate_button_brightness(self):
-        """Анимация изменения яркости кнопки"""
-        self.click_button.setStyleSheet("""
-            QPushButton {
-                background: qradialgradient(cx:0.5, cy:0.5, radius:0.9,
-                    stop:0 #c4b5fd, stop:0.3 #a78bfa, stop:0.6 #8b5cf6, stop:1 #6d28d9);
-                border: 6px solid qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #ede9fe, stop:1 #c4b5fd);
-                border-radius: 250px;
-                color: white;
-                font-size: 70px;
-                font-weight: bold;
-            }
-        """)
-        
-        # Таймер для возврата обычного стиля
-        QTimer.singleShot(150, self.reset_button_style)
-        
-    def reset_button_style(self):
-        """Восстановление обычного стиля кнопки"""
-        self.click_button.setStyleSheet("""
-            QPushButton {
-                background: qradialgradient(cx:0.5, cy:0.5, radius:0.9,
-                    stop:0 #8b5cf6, stop:0.3 #7c3aed, stop:0.6 #6d28d9, stop:1 #4c1d95);
-                border: 6px solid qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #c4b5fd, stop:1 #8b5cf6);
-                border-radius: 250px;
-                color: white;
-                font-size: 70px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background: qradialgradient(cx:0.5, cy:0.5, radius:0.9,
-                    stop:0 #a78bfa, stop:0.3 #8b5cf6, stop:0.6 #7c3aed, stop:1 #5b21b6);
-                border: 6px solid qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #ddd6fe, stop:1 #a78bfa);
-            }
-            QPushButton:pressed {
-                background: qradialgradient(cx:0.5, cy:0.5, radius:0.9,
-                    stop:0 #7c3aed, stop:0.3 #6d28d9, stop:0.6 #5b21b6, stop:1 #371e72);
-                border: 6px solid qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #a78bfa, stop:1 #7c3aed);
-            }
-        """)
-        
+    # Остальные методы остаются без изменений
     def show_click_effect(self):
         """Визуальный эффект при клике с плавным исчезновением и движением вверх"""
         # Получаем позицию курсора относительно кнопки
@@ -960,7 +915,7 @@ class ClickerGame(QWidget):
         effect_label = QLabel(f"+${self.per_click}", self)
         effect_label.setStyleSheet(f"""
             QLabel {{
-                color: #10b981;
+                color: #bda8ff;
                 font-size: 28px;
                 font-weight: bold;
                 background: transparent;

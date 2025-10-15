@@ -2810,7 +2810,7 @@ class SettingsMenu(QWidget):
         
     def init_ui(self):
         layout = QVBoxLayout()
-        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setContentsMargins(600, 100, 600, 200)
         
         # Заголовок
         title = QLabel("⚙️ Настройки")

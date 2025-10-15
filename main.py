@@ -75,8 +75,6 @@ class OpenType:
 # Глобальный экземпляр (теперь будет работать)
 OPENTYPE_MANAGER = OpenType()
 
-
-
 AppLogic = coreLogic.AppLogic()
 Settings = coreLogic.Settings()
 ExportDB = coreLogic.ExportDB()
@@ -2807,7 +2805,7 @@ class SettingsMenu(QWidget):
         
     def init_ui(self):
         layout = QVBoxLayout()
-        layout.setContentsMargins(600, 100, 600, 200)
+        layout.setContentsMargins(20, 20, 20, 20)
         
         # Заголовок
         title = QLabel("⚙️ Настройки")
@@ -2994,7 +2992,7 @@ class SettingsMenu(QWidget):
         
         # Качество графики
         quality_combo = QComboBox()
-        available_qualities = ["Низкое", "Среднее", "Высокое", "Ультра"]
+        available_qualities = ["Низкое", "Среднее", "Высокое"]
         quality_combo.addItems(available_qualities)
         quality_combo.setStyleSheet(combo_style)
         quality_combo.setFixedWidth(250)
@@ -3076,7 +3074,7 @@ class SettingsMenu(QWidget):
         
         widget.setLayout(layout)
         return widget
-        
+
     def apply_settings(self):
         # Получаем текущие значения ДО применения
         old_theme = self.settings_manager.get_current_theme()
@@ -3084,6 +3082,9 @@ class SettingsMenu(QWidget):
         old_size = self.settings_manager.get_current_window_size()
         old_resolution = f"{old_size[0]}x{old_size[1]}"
         old_state = self.settings_manager.get_window_state()
+        old_fps = self.settings_manager.get_current_fps()
+        old_quality = self.settings_manager.get_current_quality()
+        old_volume = self.settings_manager.get_current_volume()
         
         # Получаем новые значения
         selected_theme = self.comboboxes['theme'].currentText()
@@ -3122,19 +3123,23 @@ class SettingsMenu(QWidget):
 
         if selected_state != old_state:
             restart_required = True
-            changed_settings.append(f"Состояние: {old_state} → {selected_state}")
-        
-        if selected_fps != self.settings_manager.get_current_fps():
+            changed_settings.append(f"Разрешение: {old_state} → {selected_state}")
+            
+        if selected_language != old_language:
             restart_required = True
-            changed_settings.append(f"FPS: {self.settings_manager.get_current_fps()} → {selected_fps}")
-        
-        #if selected_quality != self.settings_manager.get_current_quality():
-        #    restart_required = True
-        #    changed_settings.append(f"Качество: {self.settings_manager.get_current_quality()} → {selected_quality}")
-        
-        if selected_volume != self.settings_manager.get_current_volume():
+            changed_settings.append(f"Язык: {old_language} → {selected_language}")
+
+        if selected_fps != old_fps:
             restart_required = True
-            changed_settings.append(f"Громкость: {self.settings_manager.get_current_volume()} → {selected_volume}")
+            changed_settings.append(f"FPS: {old_fps} → {selected_fps}")
+
+        if selected_quality != old_quality:
+            restart_required = True
+            changed_settings.append(f"Качество: {old_quality} → {selected_quality}")
+
+        if selected_volume != old_volume:
+            restart_required = True
+            changed_settings.append(f"Громкость: {old_volume} → {selected_volume}")
         
         if restart_required:
             self.show_restart_dialog(changed_settings)
@@ -3142,6 +3147,59 @@ class SettingsMenu(QWidget):
             # Настройки, не требующие перезапуска
             print("Настройки применены без перезапуска")
             QMessageBox.information(self, "Настройки", "Настройки успешно применены!")
+
+    def check_if_restart_required(self, theme, language, resolution , state, fps, quality, volume):
+        """Проверяет, требуют ли изменения перезапуска"""
+        # Настройки, требующие перезапуска
+        restart_settings = ['theme', 'language', 'resolution', 'state', 'fps', 'quality', 'volume']
+        
+        # Сравниваем текущие значения с предыдущими
+        old_theme = self.settings_manager.get_current_theme()
+        old_language = self.settings_manager.get_current_lang()
+        old_size = self.settings_manager.get_current_window_size()
+        old_resolution = f"{old_size[0]}x{old_size[1]}"
+        old_state = self.settings_manager.get_window_state()
+        old_fps = self.settings_manager.get_current_fps()
+        old_quality = self.settings_manager.get_current_quality()
+        old_volume = self.settings_manager.get_current_volume()
+        
+        changes = []
+        if theme != old_theme:
+            changes.append("тема")
+        if language != old_language:
+            changes.append("язык")
+        if resolution != old_resolution:
+            changes.append("разрешение")
+        if state != old_state:
+            changes.append("состояние")
+        if fps != old_fps:
+            changes.append("fps")
+        if quality != old_quality:
+            changes.append("качество")
+        if volume != old_volume:
+            changes.append("громкость")
+        
+        if changes:
+            return True
+        return False
+
+    def restart_application(self):
+        """Перезапускает приложение"""
+        reply = QMessageBox.question(
+            self,
+            "Перезапуск требуется",
+            "Для применения некоторых настроек требуется перезапуск приложения.\n"
+            "Перезапустить сейчас?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            # Перезапускаем приложение
+            QApplication.quit()
+            import subprocess
+            import sys
+            subprocess.Popen([sys.executable] + sys.argv)
 
     def show_restart_dialog(self, changed_settings):
         """Показывает диалог перезапуска"""
@@ -3178,27 +3236,7 @@ class SettingsMenu(QWidget):
             QMessageBox.information(
                 self, 
                 "Изменения отменены", 
-                "Изменения, требующие перезапуска, были отменены.")
-
-    def restart_application(self):
-        """Перезапускает приложение"""
-        try:
-            # Закрываем текущее приложение
-            QApplication.quit()
-            
-            # Запускаем новое
-            import subprocess
-            import sys
-            import os
-            
-            # Перезапускаем с теми же аргументами
-            subprocess.Popen([sys.executable] + sys.argv)
-            
-        except Exception as e:
-            QMessageBox.critical(
-                self,
-                "Ошибка перезапуска",
-                f"Не удалось перезапустить приложение: {str(e)}"
+                "Изменения, требующие перезапуска, были отменены."
             )
         
     def reset_settings(self):
@@ -3221,30 +3259,30 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"{AppLogic.name} v{GAME_VERSION}")
         self.setWindowIcon(QIcon("images/icon.ico"))
         
-        # Устанавливаем минимальный размер окна
-        if Settings.get_window_state() == "MAXIMIZED":
-            self.setWindowState(Qt.WindowState.WindowMaximized)
+        # ФИКС: Правильная проверка полноэкранного режима
+        window_state = Settings.get_window_state()
+        # Если состояние в формате массива, берем первый элемент
+        if isinstance(window_state, list) and len(window_state) > 0:
+            window_state = window_state[0]
+        
+        if window_state == "MAXIMIZED":
+            self.showMaximized()
+        elif window_state == "FULLSCREEN":
+            self.showFullScreen()
+            self.is_fullscreen = True
         else:
+            # Оконный режим с нормальным размером
             self.setMinimumSize(800, 600)
-            
-            # Получаем размеры экрана
             screen = QGuiApplication.primaryScreen()
             if screen:
                 screen_geometry = screen.availableGeometry()
-                # Устанавливаем начальный размер (80% от экрана)
                 initial_width = int(screen_geometry.width() * 0.8)
                 initial_height = int(screen_geometry.height() * 0.8)
-                
-                # Центрируем окно
                 x = (screen_geometry.width() - initial_width) // 2
                 y = (screen_geometry.height() - initial_height) // 2
-                
                 self.setGeometry(x, y, initial_width, initial_height)
-            else:
-                # Значения по умолчанию
-                self.resize(1200, 800)
         
-        # Центральный виджет с градиентным фоном
+        # ФИКС: создаем central_widget как атрибут
         self.central_widget = GradientWidget()
         self.setCentralWidget(self.central_widget)
         
@@ -3335,12 +3373,11 @@ class MainWindow(QMainWindow):
             self.move(window_geometry.topLeft())
 
     def resizeEvent(self, a0):
-        """Обработчик изменения размера окна"""
         super().resizeEvent(a0)
-        # Принудительное обновление layout
-        if self.central_widget and self.central_widget.layout():
-            self.central_widget.layout().activate()
-        
+        # ФИКС: используем centralWidget() вместо central_widget
+        if self.centralWidget() and self.centralWidget().layout():
+            self.centralWidget().layout().activate()
+    
     def handle_navigation(self, destination):
         """Обрабатывает навигационные запросы из кликера"""
         if destination == "main_menu":
@@ -3357,6 +3394,23 @@ class MainWindow(QMainWindow):
     def show_main_menu(self):
         """Показать главное меню"""
         self.content_stack.setCurrentIndex(1)
+        self.apply_window_state()
+
+    def apply_window_state(self):
+        window_state = Settings.get_window_state()
+        # ФИКС: правильно обрабатываем список
+        if isinstance(window_state, list) and window_state:
+            window_state = window_state[0]
+        
+        if window_state == "MAXIMIZED":
+            self.showMaximized()
+            self.is_fullscreen = False
+        elif window_state == "FULLSCREEN":
+            self.showFullScreen()
+            self.is_fullscreen = True
+        else:
+            self.showNormal()
+            self.is_fullscreen = False
         
     def show_clicker_game(self):
         """Показать игровой кликер"""
@@ -3427,7 +3481,7 @@ def main():
     # ТЕПЕРЬ инициализируем шрифты ПОСЛЕ создания app
     global OPENTYPE_MANAGER, MAIN_FONT_FAMILY
     OPENTYPE_MANAGER = OpenType()
-    OPENTYPE_MANAGER.init_fonts()  # ← ВЫЗЫВАЕМ ПОСЛЕ app!
+    OPENTYPE_MANAGER.init_fonts()
     MAIN_FONT_FAMILY = OPENTYPE_MANAGER.main_font_family
     
     # Устанавливаем стиль приложения

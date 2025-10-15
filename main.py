@@ -9,8 +9,7 @@ import coreLogic
 from dataclasses import dataclass
 from enum import Enum
 from typing import List, Dict, Optional, Tuple
-from PyQt6.QtCore import QPropertyAnimation, Qt
-from PyQt6.QtWidgets import (
+from PyQt6.QtWidgets import (               #pyright: ignore[reportMissingImports]
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QPushButton, QLabel, QStackedWidget, QFrame, QScrollArea, 
     QGridLayout, QLineEdit, QSlider, QComboBox, QProgressBar,
@@ -19,12 +18,12 @@ from PyQt6.QtWidgets import (
     QSizePolicy, QSpacerItem, QButtonGroup, QRadioButton,
     QCheckBox, QDoubleSpinBox, QSpinBox, QFormLayout
 )
-from PyQt6.QtCore import (
+from PyQt6.QtCore import (                  #pyright: ignore[reportMissingImports]
     Qt, QTimer, pyqtSignal, QPropertyAnimation, QEasingCurve, 
     QRect, QPoint, QSize, QDateTime, QSequentialAnimationGroup, 
     QParallelAnimationGroup, qInstallMessageHandler
 )
-from PyQt6.QtGui import (
+from PyQt6.QtGui import (                   #pyright: ignore[reportMissingImports]
     QFont, QPalette, QColor, QPainter, QLinearGradient, 
     QRadialGradient, QPen, QBrush, QFontDatabase, QPixmap,
     QGuiApplication,QIcon, QMovie, QKeyEvent, QCursor
@@ -902,6 +901,10 @@ class ClickerGame(QWidget):
     def handle_click(self):
         self.money += self.per_click
         self.total_clicks += 1
+
+        # Увеличения дохода за клик на 0.1%
+        self.per_click *= 1.001
+
         self.update_display()
         self.moneyChanged.emit(self.money)
         
@@ -953,8 +956,8 @@ class ClickerGame(QWidget):
         self.moneyChanged.emit(self.money)
         
     def update_display(self):
-        self.money_label.setText(f"Капитал: ${self.money:,}")
-        self.per_click_label.setText(f"Доход за клик: ${self.per_click}")
+        self.money_label.setText(f"Капитал: ${self.money:.1f}")
+        self.per_click_label.setText(f"Доход за клик: ${self.per_click:.1f}")
         self.clicks_label.setText(f"Всего кликов: {self.total_clicks}")
         
     # Остальные методы остаются без изменений
@@ -964,7 +967,7 @@ class ClickerGame(QWidget):
         cursor_pos = self.click_button.mapFromGlobal(QCursor.pos())
         
         # Создаем эффектную метку
-        effect_label = QLabel(f"+${self.per_click}", self)
+        effect_label = QLabel(f"+${self.per_click:.2f}", self)
         effect_label.setStyleSheet(f"""
             QLabel {{
                 color: #bda8ff;
@@ -973,6 +976,8 @@ class ClickerGame(QWidget):
                 background: transparent;
                 border: none;
                 padding: 0px;
+                min-width: 100px;
+                max-width: 105px;
             }}
         """)
         effect_label.setAlignment(Qt.AlignmentFlag.AlignCenter)

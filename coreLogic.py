@@ -292,8 +292,18 @@ class Settings:
 	def get_window_state(self):
 		with open("data/config.json", 'r', encoding='utf-8') as file:
 			config_current_state = json.load(file)
-		return config_current_state["current_state"]
-    
+		state = config_current_state["current_state"]
+		if isinstance(state, list) and len(state) > 0:
+			state = state[0]
+		return state
+	
+	def get_current_quality(self):
+		with open("data/config.json", 'r', encoding='utf-8') as file:
+			config_current_quality = json.load(file)
+		quality = config_current_quality["current_quality"]
+		if isinstance(quality, list) and len(quality) > 0:
+			quality = quality[0]
+		return quality 
     #импортирование текущей размера экрана
 	def get_current_window_size(self):
 		with open("data/config.json", 'r', encoding='utf-8') as file:
@@ -335,14 +345,24 @@ class Settings:
 		return "Done"
 	
 	#установка размера экрана
-	def set_current_window_state(self, state: str):
+	def set_current_quality(self, quality: str):
 		with open("data/config.json", "r+", encoding="utf-8") as file:
 			config = json.load(file)
-			config["current_state"] = [state]
+			config["current_quality"] = quality
 			file.seek(0)
 			json.dump(config, file, ensure_ascii=False, indent=4)
 			file.truncate()
-		self.current_state = [state]  # Обновляем текущее значение
+		self.current_quality = quality  # Обновляем текущее значение
+		return "Done"
+	
+	def set_current_window_state(self, state: str):
+		with open("data/config.json", "r+", encoding="utf-8") as file:
+			config = json.load(file)
+			config["current_state"] = state
+			file.seek(0)
+			json.dump(config, file, ensure_ascii=False, indent=4)
+			file.truncate()
+		self.current_state = state  # Обновляем текущее значение
 		return "Done"
 
     #установка фпс

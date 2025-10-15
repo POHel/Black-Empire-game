@@ -1724,6 +1724,7 @@ class BusinessManager:
         
         pair = tuple(sorted([business1['name'], business2['name']]))
         return synergies.get(pair, 1.0)
+    
 
 class BusinessMenu(QWidget):
     """Меню бизнесов с полноценной системой карточек"""
@@ -2557,6 +2558,1778 @@ class BusinessMenu(QWidget):
         else:
             super().keyPressEvent(a0)
 
+class BusinessUpgradeSystem:
+    """Универсальная система улучшений для всех бизнесов"""
+    
+    UPGRADE_TYPES = {
+        1: {"name": "⚡ Производительность", "effect": "increase_speed", "icon": "⚡", "description": "Увеличивает скорость операций и доход"},
+        2: {"name": "🎯 Качество", "effect": "increase_quality", "icon": "🎯", "description": "Повышает качество продукции и снижает риски"},
+        3: {"name": "🤖 Автоматизация", "effect": "increase_automation", "icon": "🤖", "description": "Уменьшает потребность в работниках"},
+        4: {"name": "💡 Инновация", "effect": "unlock_features", "icon": "💡", "description": "Открывает уникальные возможности"},
+        5: {"name": "🛡️ Безопасность", "effect": "increase_security", "icon": "🛡️", "description": "Повышает защиту и снижает риски"}
+    }
+    
+    def __init__(self, business):
+        self.business = business
+        self.levels = {1: 1, 2: 1, 3: 1, 4: 1, 5: 1}
+        self.max_level = 5
+        
+    def get_upgrade_cost(self, upgrade_type, current_level):
+        """Расчет стоимости улучшения"""
+        base_cost = self.business.get('base_upgrade_cost', 15000)
+        return int(base_cost * (2.5 ** (current_level - 1)))
+    
+    def can_upgrade(self, upgrade_type):
+        """Можно ли улучшить"""
+        current_level = self.levels.get(upgrade_type, 1)
+        return current_level < self.max_level
+    
+    def upgrade(self, upgrade_type, player_balance):
+        """Улучшение с проверкой стоимости"""
+        if not self.can_upgrade(upgrade_type):
+            return False, "Максимальный уровень достигнут"
+            
+        current_level = self.levels[upgrade_type]
+        cost = self.get_upgrade_cost(upgrade_type, current_level)
+        
+        if player_balance < cost:
+            return False, f"Недостаточно средств. Нужно ${cost:,}"
+        
+        self.levels[upgrade_type] += 1
+        self.apply_upgrade_effect(upgrade_type, self.levels[upgrade_type])
+        return True, f"Улучшение {self.UPGRADE_TYPES[upgrade_type]['name']} повышено до уровня {self.levels[upgrade_type]}"
+    
+    def apply_upgrade_effect(self, upgrade_type, new_level):
+        """Применение эффектов улучшения"""
+        effects = {
+            1: self._apply_productivity_effect,
+            2: self._apply_quality_effect, 
+            3: self._apply_automation_effect,
+            4: self._apply_innovation_effect,
+            5: self._apply_security_effect
+        }
+        
+        if upgrade_type in effects:
+            effects[upgrade_type](new_level)
+    
+    def _apply_productivity_effect(self, level):
+        """Эффект производительности"""
+        multiplier = 1.0 + (level - 1) * 0.3  # +30% за уровень
+        if 'base_income' in self.business:
+            self.business['income_per_hour'] = int(self.business['base_income'] * multiplier)
+        self.business['efficiency'] = multiplier
+    
+    def _apply_quality_effect(self, level):
+        """Эффект качества"""
+        quality_bonus = (level - 1) * 0.2  # +20% за уровень
+        self.business['quality_level'] = 1.0 + quality_bonus
+        if 'risk' in self.business:
+            self.business['risk'] = max(5, self.business['base_risk'] - (level - 1) * 5)
+    
+    def _apply_automation_effect(self, level):
+        """Эффект автоматизации"""
+        automation_rate = (level - 1) * 0.25  # +25% автоматизации за уровень
+        self.business['automation_level'] = automation_rate
+        if 'base_workers' in self.business:
+            self.business['workers'] = max(1, int(self.business['base_workers'] * (1 - automation_rate)))
+    
+    def _apply_innovation_effect(self, level):
+        """Эффект инноваций"""
+        innovation_features = {
+            2: "basic_innovation",
+            3: "advanced_innovation", 
+            4: "premium_innovation",
+            5: "breakthrough_technology"
+        }
+        
+        if level in innovation_features:
+            feature = innovation_features[level]
+            if 'unlocked_features' not in self.business:
+                self.business['unlocked_features'] = []
+            self.business['unlocked_features'].append(feature)
+            self.unlock_business_specific_feature(feature, level)
+    
+    def _apply_security_effect(self, level):
+        """Эффект безопасности"""
+        security_bonus = (level - 1) * 0.15
+        self.business['security_level'] = security_bonus
+        if 'risk' in self.business:
+            self.business['risk'] = max(5, self.business['risk'] - (level - 1) * 3)
+    
+    def unlock_business_specific_feature(self, feature, level):
+        """Разблокировка уникальных фич для каждого бизнеса"""
+        business_type = self.business['type']
+        business_name = self.business['name']
+        
+        feature_map = {
+            'Биотех Лаборатория': {
+                'basic_innovation': {'research_speed': 1.2},
+                'advanced_innovation': {'clinical_trials': True},
+                'premium_innovation': {'gene_editing': True, 'income_multiplier': 1.4},
+                'breakthrough_technology': {'neuro_implants': True, 'bio_prosthetics': True, 'income_multiplier': 1.8}
+            },
+            'Автопром': {
+                'basic_innovation': {'production_speed': 1.3},
+                'advanced_innovation': {'hybrid_tech': True},
+                'premium_innovation': {'ev_platform': True, 'income_multiplier': 1.6},
+                'breakthrough_technology': {'autonomous_driving': True, 'flying_cars': True, 'income_multiplier': 2.0}
+            },
+            'AI разработки': {
+                'basic_innovation': {'training_speed': 1.25},
+                'advanced_innovation': {'neural_networks': True},
+                'premium_innovation': {'quantum_computing': True, 'income_multiplier': 1.7},
+                'breakthrough_technology': {'agi_development': True, 'income_multiplier': 2.2}
+            }
+        }
+        
+        if business_name in feature_map and feature in feature_map[business_name]:
+            feature_data = feature_map[business_name][feature]
+            self.business.update(feature_data)
+            
+            # Применяем множитель дохода если есть
+            if 'income_multiplier' in feature_data:
+                multiplier = feature_data['income_multiplier']
+                self.business['income_per_hour'] = int(self.business['base_income'] * multiplier)
+
+class BusinessSpecialization:
+    """Система специализации бизнесов"""
+    
+    SPECIALIZATIONS = {
+        'tech': {
+            'name': 'Технологическая специализация',
+            'icon': '💻',
+            'effects': {'research_bonus': 0.3, 'innovation_speed': 1.4}
+        },
+        'production': {
+            'name': 'Производственная специализация', 
+            'icon': '🏭',
+            'effects': {'production_bonus': 0.4, 'cost_reduction': 0.2}
+        },
+        'service': {
+            'name': 'Сервисная специализация',
+            'icon': '🛎️',
+            'effects': {'client_retention': 0.35, 'premium_pricing': 1.3}
+        },
+        'research': {
+            'name': 'Исследовательская специализация',
+            'icon': '🔬',
+            'effects': {'breakthrough_chance': 0.25, 'patent_income': 1.5}
+        }
+    }
+    
+    def __init__(self, business):
+        self.business = business
+        self.current_specialization = None
+        self.specialization_level = 0
+    
+    def set_specialization(self, specialization_type):
+        """Установка специализации"""
+        if specialization_type in self.SPECIALIZATIONS:
+            self.current_specialization = specialization_type
+            self.specialization_level = 1
+            self.apply_specialization_effects()
+            return True
+        return False
+    
+    def apply_specialization_effects(self):
+        """Применение эффектов специализации"""
+        if self.current_specialization:
+            effects = self.SPECIALIZATIONS[self.current_specialization]['effects']
+            self.business.update(effects)
+
+class BusinessResourceSystem:
+    """Система управления ресурсами бизнеса"""
+    
+    def __init__(self, business):
+        self.business = business
+        self.resources = {}
+        self.supply_chain = []
+        self.init_resources()
+    
+    def init_resources(self):
+        """Инициализация ресурсов в зависимости от типа бизнеса"""
+        business_type = self.business['type']
+        
+        resource_templates = {
+            'tech': {'servers': 0, 'bandwidth': 100, 'compute_power': 50},
+            'manufacturing': {'raw_materials': 100, 'energy': 80, 'logistics': 70},
+            'research': {'lab_equipment': 50, 'research_data': 30, 'talent': 80},
+            'service': {'client_base': 100, 'service_capacity': 70, 'reputation': 60}
+        }
+        
+        self.resources = resource_templates.get(business_type, {})
+    
+    def update_resources(self, delta_time):
+        """Обновление ресурсов со временем"""
+        for resource, value in self.resources.items():
+            # Логика потребления/восстановления ресурсов
+            if resource in ['energy', 'bandwidth']:
+                self.resources[resource] = max(0, value - delta_time * 0.1)
+            elif resource in ['client_base', 'reputation']:
+                self.resources[resource] = min(100, value + delta_time * 0.05)
+
+class AdvancedBusinessManager:
+    """Продвинутый менеджер бизнесов с комплексной экономикой"""
+    
+    def __init__(self):
+        self.my_businesses = []
+        self.available_businesses = self.create_business_templates()
+        self.synergies = {}
+        self.global_events = []
+        self.market_conditions = {'demand': 1.0, 'competition': 1.0, 'regulation': 1.0}
+        
+        # Игровые ресурсы
+        self.player_balance = 1000000
+        self.crypto_balance = 50000
+        self.reputation = 100
+        self.risk_level = 0
+        self.innovation_points = 0
+        
+        # Таймеры
+        self.economy_timer = QTimer()
+        self.economy_timer.timeout.connect(self.update_economy)
+        self.economy_timer.start(5000)  # Обновление каждые 5 секунд
+        
+        self.init_synergies()
+        self.init_global_events()
+    
+    def create_business_templates(self):
+        """Создание шаблонов всех бизнесов с глубокими механиками"""
+        businesses = []
+        
+        # 1. БИОТЕХ ЛАБОРАТОРИЯ
+        businesses.append({
+            'id': 1, 'name': 'Биотех Лаборатория', 'icon': '🔬', 'type': 'research',
+            'base_income': 12000, 'base_risk': 30, 'base_workers': 15,
+            'price': 200000, 'base_upgrade_cost': 25000,
+            'category': 'light', 'can_go_dark': True,
+            'description': 'Передовые исследования в генной инженерии и биотехнологиях',
+            'primary_action': 'Запустить исследование',
+            'special_mechanics': {
+                'research_projects': [
+                    {'name': 'Генная терапия', 'cost': 80000, 'duration': 48, 'reward': 1.6},
+                    {'name': 'Синтетическая биология', 'cost': 120000, 'duration': 72, 'reward': 2.2},
+                    {'name': 'Нейроимпланты', 'cost': 200000, 'duration': 96, 'reward': 3.0}
+                ],
+                'clinical_trials': True,
+                'patent_system': True
+            },
+            'unique_features': ['gene_sequencing', 'crispr_tech', 'bio_printing'],
+            'upgrade_system': None,
+            'specialization': None,
+            'resource_system': None,
+            'current_research': None,
+            'research_progress': 0,
+            'patents': [],
+            'unlocked_features': []
+        })
+        
+        # 2. АВТОПРОМ (EV ФОКУС)
+        businesses.append({
+            'id': 2, 'name': 'Автопром', 'icon': '🚗', 'type': 'manufacturing',
+            'base_income': 15000, 'base_risk': 25, 'base_workers': 20,
+            'price': 250000, 'base_upgrade_cost': 30000,
+            'category': 'light', 'can_go_dark': False,
+            'description': 'Производство электромобилей и автономного транспорта',
+            'primary_action': 'Запустить производство', 
+            'special_mechanics': {
+                'production_lines': [
+                    {'type': 'ICE', 'efficiency': 1.0, 'cost': 50000},
+                    {'type': 'Hybrid', 'efficiency': 1.4, 'cost': 100000},
+                    {'type': 'EV', 'efficiency': 2.0, 'cost': 200000},
+                    {'type': 'Autonomous', 'efficiency': 3.0, 'cost': 500000}
+                ],
+                'battery_tech': True,
+                'charging_network': True
+            },
+            'unique_features': ['ev_platform', 'battery_production', 'autonomous_ai'],
+            'upgrade_system': None,
+            'specialization': None,
+            'resource_system': None,
+            'current_production': 'ICE',
+            'battery_level': 1,
+            'charging_stations': 0,
+            'unlocked_features': []
+        })
+        
+        # 3. AI РАЗРАБОТКИ
+        businesses.append({
+            'id': 3, 'name': 'AI разработки', 'icon': '🤖', 'type': 'tech',
+            'base_income': 18000, 'base_risk': 35, 'base_workers': 12,
+            'price': 300000, 'base_upgrade_cost': 35000,
+            'category': 'light', 'can_go_dark': True,
+            'description': 'Разработка искусственного интеллекта и машинного обучения',
+            'primary_action': 'Запустить обучение',
+            'special_mechanics': {
+                'ai_models': [
+                    {'name': 'Компьютерное зрение', 'cost': 60000, 'training_time': 36},
+                    {'name': 'Обработка языка', 'cost': 80000, 'training_time': 48},
+                    {'name': 'Преобразующее обучение', 'cost': 150000, 'training_time': 72}
+                ],
+                'data_centers': True,
+                'cloud_services': True
+            },
+            'unique_features': ['neural_networks', 'deep_learning', 'quantum_ai'],
+            'upgrade_system': None,
+            'specialization': None,
+            'resource_system': None,
+            'current_training': None,
+            'training_progress': 0,
+            'servers': 0,
+            'data_centers': 0,
+            'unlocked_features': []
+        })
+        
+        # 4. КОСМИЧЕСКИЙ ТУРИЗМ
+        businesses.append({
+            'id': 4, 'name': 'Космический туризм', 'icon': '🚀', 'type': 'service',
+            'base_income': 25000, 'base_risk': 40, 'base_workers': 8,
+            'price': 500000, 'base_upgrade_cost': 50000,
+            'category': 'light', 'can_go_dark': False,
+            'description': 'Орбитальные полеты и космические отели',
+            'primary_action': 'Запустить полет',
+            'special_mechanics': {
+                'spacecrafts': [
+                    {'type': 'Суборбитальный', 'capacity': 6, 'cost': 300000},
+                    {'type': 'Орбитальный', 'capacity': 4, 'cost': 800000},
+                    {'type': 'Лунный', 'capacity': 2, 'cost': 2000000}
+                ],
+                'space_stations': True,
+                'zeroG_experiences': True
+            },
+            'unique_features': ['reusable_rockets', 'space_hotels', 'mars_missions'],
+            'upgrade_system': None,
+            'specialization': None,
+            'resource_system': None,
+            'current_craft': None,
+            'flights_completed': 0,
+            'space_stations': 0,
+            'unlocked_features': []
+        })
+        
+        # 5. ВИРТУАЛЬНАЯ РЕАЛЬНОСТЬ
+        businesses.append({
+            'id': 5, 'name': 'Виртуальная реальность', 'icon': '🥽', 'type': 'tech',
+            'base_income': 14000, 'base_risk': 20, 'base_workers': 10,
+            'price': 180000, 'base_upgrade_cost': 22000,
+            'category': 'light', 'can_go_dark': True,
+            'description': 'Иммерсивные VR/AR решения и метавселенные',
+            'primary_action': 'Запустить платформу',
+            'special_mechanics': {
+                'vr_platforms': [
+                    {'name': 'Социальная VR', 'cost': 40000, 'users': 10000},
+                    {'name': 'Образовательная VR', 'cost': 60000, 'users': 5000},
+                    {'name': 'Корпоративная VR', 'cost': 80000, 'users': 2000}
+                ],
+                'metaverse': True,
+                'haptic_tech': True
+            },
+            'unique_features': ['full_immersion', 'brain_computer', 'digital_twins'],
+            'upgrade_system': None,
+            'specialization': None,
+            'resource_system': None,
+            'active_platforms': [],
+            'user_base': 0,
+            'metaverse_development': 0,
+            'unlocked_features': []
+        })
+        
+        # 6. КРИПТО-МАЙНИНГ
+        businesses.append({
+            'id': 6, 'name': 'Крипто-майнинг', 'icon': '⛏️', 'type': 'tech',
+            'base_income': 16000, 'base_risk': 45, 'base_workers': 5,
+            'price': 150000, 'base_upgrade_cost': 20000,
+            'category': 'dark', 'can_go_dark': False,
+            'description': 'Добыча криптовалюты с передовыми фермами',
+            'primary_action': 'Запустить майнинг',
+            'special_mechanics': {
+                'mining_rigs': [
+                    {'type': 'GPU Ферма', 'hashrate': 500, 'cost': 50000},
+                    {'type': 'ASIC Майнер', 'hashrate': 2000, 'cost': 100000},
+                    {'type': 'Квантовый Майнер', 'hashrate': 10000, 'cost': 500000}
+                ],
+                'heat_recovery': True,
+                'green_mining': True
+            },
+            'unique_features': ['quantum_mining', 'decentralized_finance', 'smart_contracts'],
+            'upgrade_system': None,
+            'specialization': None,
+            'resource_system': None,
+            'mining_rigs': [],
+            'total_hashrate': 0,
+            'energy_efficiency': 1.0,
+            'unlocked_features': []
+        })
+        
+        # 7. КИБЕРБЕЗОПАСНОСТЬ
+        businesses.append({
+            'id': 7, 'name': 'Кибербезопасность', 'icon': '🛡️', 'type': 'tech',
+            'base_income': 17000, 'base_risk': 15, 'base_workers': 15,
+            'price': 220000, 'base_upgrade_cost': 28000,
+            'category': 'light', 'can_go_dark': True,
+            'description': 'Защита от кибератак и консалтинг по безопасности',
+            'primary_action': 'Запустить защиту', 
+            'special_mechanics': {
+                'security_services': [
+                    {'name': 'Pentesting', 'cost': 30000, 'clients': 10},
+                    {'name': 'SOC Мониторинг', 'cost': 50000, 'clients': 5},
+                    {'name': 'Криптография', 'cost': 80000, 'clients': 3}
+                ],
+                'threat_intelligence': True,
+                'zero_trust': True
+            },
+            'unique_features': ['quantum_encryption', 'ai_threat_detection', 'blockchain_security'],
+            'upgrade_system': None,
+            'specialization': None,
+            'resource_system': None,
+            'security_contracts': [],
+            'threat_level': 0,
+            'client_trust': 100,
+            'unlocked_features': []
+        })
+        
+        # Инициализация систем для каждого бизнеса
+        for business in businesses:
+            business['upgrade_system'] = BusinessUpgradeSystem(business)
+            business['specialization'] = BusinessSpecialization(business)
+            business['resource_system'] = BusinessResourceSystem(business)
+            business['income_per_hour'] = business['base_income']
+            business['risk'] = business['base_risk']
+            business['workers'] = business['base_workers']
+            business['level'] = 1
+            business['experience'] = 0
+            
+        return businesses
+    
+    def init_synergies(self):
+        """Инициализация синергий между бизнесами"""
+        self.synergies = {
+            ('Биотех Лаборатория', 'AI разработки'): {
+                'name': 'Био-ИИ Синергия',
+                'description': 'AI ускоряет генетические исследования',
+                'bonus': 1.4,
+                'requirements': {'biotech_level': 3, 'ai_level': 3},
+                'effects': {'research_speed': 1.5, 'breakthrough_chance': 0.3}
+            },
+            ('Автопром', 'Крипто-майнинг'): {
+                'name': 'Зеленая энергия',
+                'description': 'Тепло от майнинга питает EV заводы',
+                'bonus': 1.3,
+                'requirements': {'auto_level': 2, 'mining_level': 4},
+                'effects': {'energy_costs': 0.7, 'production_speed': 1.25}
+            },
+            ('Космический туризм', 'Виртуальная реальность'): {
+                'name': 'Космическая VR',
+                'description': 'VR симуляции космических полетов',
+                'bonus': 1.6,
+                'requirements': {'space_level': 3, 'vr_level': 4},
+                'effects': {'customer_demand': 1.8, 'premium_pricing': 1.4}
+            },
+            ('Кибербезопасность', 'Крипто-майнинг'): {
+                'name': 'Безопасный майнинг',
+                'description': 'Повышенная защита крипто-операций',
+                'bonus': 1.35,
+                'requirements': {'security_level': 4, 'mining_level': 3},
+                'effects': {'security_bonus': 0.5, 'risk_reduction': 0.4}
+            }
+        }
+    
+    def init_global_events(self):
+        """Инициализация глобальных событий"""
+        self.global_events = [
+            {
+                'name': 'Технологический прорыв',
+                'description': 'Новые открытия ускоряют развитие',
+                'duration': 24,
+                'effects': {'research_speed': 1.3, 'innovation_chance': 0.2},
+                'active': False
+            },
+            {
+                'name': 'Экономический кризис',
+                'description': 'Рынки нестабильны, риски повышены',
+                'duration': 48,
+                'effects': {'demand': 0.7, 'risk': 1.4},
+                'active': False
+            },
+            {
+                'name': 'Регуляторные изменения',
+                'description': 'Новые законы влияют на бизнес',
+                'duration': 36,
+                'effects': {'compliance_costs': 1.3, 'innovation_speed': 0.8},
+                'active': False
+            }
+        ]
+    
+    def start_research(self, business_id, research_project):
+        """Запуск исследовательского проекта"""
+        business = self.get_business_by_id(business_id)
+        if not business or business['type'] != 'research':
+            return False, "Бизнес не поддерживает исследования"
+        
+        project_data = next((p for p in business['special_mechanics']['research_projects'] 
+                           if p['name'] == research_project), None)
+        
+        if not project_data:
+            return False, "Проект не найден"
+        
+        if self.player_balance < project_data['cost']:
+            return False, f"Недостаточно средств. Нужно ${project_data['cost']:,}"
+        
+        business['current_research'] = research_project
+        business['research_progress'] = 0
+        business['research_cost'] = project_data['cost']
+        business['research_duration'] = project_data['duration']
+        business['research_reward'] = project_data['reward']
+        business['research_start_time'] = time.time()
+        
+        self.player_balance -= project_data['cost']
+        return True, f"Исследование '{research_project}' начато"
+    
+    def start_ai_training(self, business_id, model_name):
+        """Запуск обучения AI модели"""
+        business = self.get_business_by_id(business_id)
+        if not business or business['name'] != 'AI разработки':
+            return False, "Только AI бизнес может обучать модели"
+        
+        model_data = next((m for m in business['special_mechanics']['ai_models'] 
+                         if m['name'] == model_name), None)
+        
+        if not model_data:
+            return False, "Модель не найдена"
+        
+        if self.player_balance < model_data['cost']:
+            return False, f"Недостаточно средств. Нужно ${model_data['cost']:,}"
+        
+        business['current_training'] = model_name
+        business['training_progress'] = 0
+        business['training_cost'] = model_data['cost']
+        business['training_duration'] = model_data['training_time']
+        business['training_start_time'] = time.time()
+        
+        self.player_balance -= model_data['cost']
+        return True, f"Обучение модели '{model_name}' начато"
+    
+    def upgrade_production_line(self, business_id, line_type):
+        """Обновление производственной линии"""
+        business = self.get_business_by_id(business_id)
+        if not business or business['name'] != 'Автопром':
+            return False, "Только автопром может обновлять линии"
+        
+        line_data = next((l for l in business['special_mechanics']['production_lines'] 
+                        if l['type'] == line_type), None)
+        
+        if not line_data:
+            return False, "Тип линии не найден"
+        
+        if self.player_balance < line_data['cost']:
+            return False, f"Недостаточно средств. Нужно ${line_data['cost']:,}"
+        
+        business['current_production'] = line_type
+        business['production_efficiency'] = line_data['efficiency']
+        business['income_per_hour'] = int(business['base_income'] * line_data['efficiency'])
+        
+        self.player_balance -= line_data['cost']
+        return True, f"Производственная линия обновлена до {line_type}"
+    
+    def buy_mining_rig(self, business_id, rig_type):
+        """Покупка майнинг-рига"""
+        business = self.get_business_by_id(business_id)
+        if not business or business['name'] != 'Крипто-майнинг':
+            return False, "Только майнинг бизнес может покупать риги"
+        
+        rig_data = next((r for r in business['special_mechanics']['mining_rigs'] 
+                       if r['type'] == rig_type), None)
+        
+        if not rig_data:
+            return False, "Тип рига не найден"
+        
+        if self.player_balance < rig_data['cost']:
+            return False, f"Недостаточно средств. Нужно ${rig_data['cost']:,}"
+        
+        if 'mining_rigs' not in business:
+            business['mining_rigs'] = []
+        
+        business['mining_rigs'].append(rig_data)
+        business['total_hashrate'] += rig_data['hashrate']
+        business['income_per_hour'] = int(business['base_income'] * (1 + business['total_hashrate'] / 1000))
+        
+        self.player_balance -= rig_data['cost']
+        return True, f"Майнинг-риг {rig_type} приобретен"
+    
+    def update_economy(self):
+        """Обновление экономической системы"""
+        current_time = time.time()
+        
+        # Обновление прогресса исследований и тренировок
+        for business in self.my_businesses:
+            self.update_business_progress(business, current_time)
+            
+            # Обновление ресурсов
+            if business['resource_system']:
+                business['resource_system'].update_resources(5)  # 5 секунд прошло
+        
+        # Обновление глобальных событий
+        self.update_global_events()
+        
+        # Расчет пассивного дохода
+        self.calculate_passive_income()
+        
+        # Применение синергий
+        self.apply_synergies()
+    
+    def update_business_progress(self, business, current_time):
+        """Обновление прогресса бизнеса"""
+        # Исследования
+        if business.get('current_research') and business.get('research_start_time'):
+            elapsed_hours = (current_time - business['research_start_time']) / 3600
+            progress = min(100, (elapsed_hours / business['research_duration']) * 100)
+            business['research_progress'] = progress
+            
+            if progress >= 100:
+                self.complete_research(business)
+        
+        # AI тренировка
+        if business.get('current_training') and business.get('training_start_time'):
+            elapsed_hours = (current_time - business['training_start_time']) / 3600
+            progress = min(100, (elapsed_hours / business['training_duration']) * 100)
+            business['training_progress'] = progress
+            
+            if progress >= 100:
+                self.complete_training(business)
+    
+    def complete_research(self, business):
+        """Завершение исследования"""
+        reward_multiplier = business['research_reward']
+        business['income_per_hour'] = int(business['income_per_hour'] * reward_multiplier)
+        
+        # Начисление инновационных очков
+        self.innovation_points += 50
+        
+        QMessageBox.information(None, "Исследование завершено", 
+                              f"Исследование '{business['current_research']}' завершено!\n"
+                              f"Доход увеличен в {reward_multiplier}x раза")
+        
+        business['current_research'] = None
+        business['research_progress'] = 0
+    
+    def complete_training(self, business):
+        """Завершение обучения AI модели"""
+        model_name = business['current_training']
+        
+        # Увеличение дохода в зависимости от модели
+        income_boost = 1.0
+        if model_name == 'Компьютерное зрение':
+            income_boost = 1.4
+        elif model_name == 'Обработка языка':
+            income_boost = 1.6
+        elif model_name == 'Преобразующее обучение':
+            income_boost = 2.0
+        
+        business['income_per_hour'] = int(business['income_per_hour'] * income_boost)
+        self.innovation_points += 30
+        
+        QMessageBox.information(None, "Обучение завершено",
+                              f"Модель '{model_name}' обучена!\n"
+                              f"Доход увеличен в {income_boost}x раза")
+        
+        business['current_training'] = None
+        business['training_progress'] = 0
+    
+    def calculate_passive_income(self):
+        """Расчет пассивного дохода"""
+        total_income = sum(business['income_per_hour'] for business in self.my_businesses)
+        income_per_second = total_income / 3600
+        self.player_balance += income_per_second * 5  # За 5 секунд
+    
+    def apply_synergies(self):
+        """Применение синергий между бизнесами"""
+        for (biz1_name, biz2_name), synergy in self.synergies.items():
+            biz1 = self.get_business_by_name(biz1_name)
+            biz2 = self.get_business_by_name(biz2_name)
+            
+            if biz1 and biz2:
+                req = synergy['requirements']
+                if (biz1['level'] >= req.get(f'{biz1_name.lower().split()[0]}_level', 1) and 
+                    biz2['level'] >= req.get(f'{biz2_name.lower().split()[0]}_level', 1)):
+                    
+                    # Применяем эффекты синергии
+                    for effect, value in synergy['effects'].items():
+                        if effect in biz1:
+                            biz1[effect] *= value
+                        if effect in biz2:
+                            biz2[effect] *= value
+    
+    def update_global_events(self):
+        """Обновление глобальных событий"""
+        # Упрощенная логика для демонстрации
+        if random.random() < 0.01:  # 1% шанс каждые 5 секунд
+            event = random.choice(self.global_events)
+            event['active'] = True
+            event['start_time'] = time.time()
+            
+            QMessageBox.information(None, "Глобальное событие", 
+                                  f"{event['name']}\n\n{event['description']}")
+    
+    def get_business_by_id(self, business_id):
+        """Поиск бизнеса по ID"""
+        return next((b for b in self.my_businesses if b['id'] == business_id), None)
+    
+    def get_business_by_name(self, business_name):
+        """Поиск бизнеса по имени"""
+        return next((b for b in self.my_businesses if b['name'] == business_name), None)
+    
+    def buy_business(self, business_template):
+        """Покупка бизнеса"""
+        if self.player_balance >= business_template['price']:
+            new_business = business_template.copy()
+            new_business['is_owned'] = True
+            new_business['level'] = 1
+            new_business['experience'] = 0
+            
+            # Инициализация систем
+            new_business['upgrade_system'] = BusinessUpgradeSystem(new_business)
+            new_business['specialization'] = BusinessSpecialization(new_business)
+            new_business['resource_system'] = BusinessResourceSystem(new_business)
+            
+            self.my_businesses.append(new_business)
+            self.player_balance -= business_template['price']
+            return True, f"Бизнес '{business_template['name']}' успешно приобретен!"
+        else:
+            return False, f"Недостаточно средств. Нужно ${business_template['price']:,}"
+
+class RevolutionaryBusinessMenu(QWidget):
+    """Совершенно новое меню бизнесов с революционным дизайном"""
+    
+    exitToClicker = pyqtSignal()
+    exitToMenu = pyqtSignal()
+    
+    def __init__(self):
+        super().__init__()
+        self.business_manager = AdvancedBusinessManager()
+        self.current_filter = "all"
+        self.selected_specialization = None
+        
+        self.init_ui()
+        self.setup_business_timers()
+    
+    def init_ui(self):
+        """Инициализация революционного UI"""
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        
+        # Заголовок с расширенной статистикой
+        header_widget = self.create_enhanced_header()
+        main_layout.addWidget(header_widget)
+        
+        # Кнопка возврата
+        back_btn = AnimatedButton("🚪 Назад в меню")
+        back_btn.clicked.connect(self.exitToClicker.emit)
+        main_layout.addWidget(back_btn)
+        
+        # Панель быстрых действий
+        quick_actions = self.create_quick_actions_panel()
+        main_layout.addWidget(quick_actions)
+        
+        # Вкладки с улучшенной навигацией
+        self.tab_widget = self.create_enhanced_tabs()
+        main_layout.addWidget(self.tab_widget)
+        
+        self.setLayout(main_layout)
+    
+    def create_enhanced_header(self):
+        """Создание улучшенного заголовка"""
+        header = QFrame()
+        header.setStyleSheet(f"""
+            QFrame {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 {PANEL_BG.name()}, stop:1 {DEEP_PURPLE.name()});
+                border-radius: 15px;
+                padding: 20px;
+            }}
+        """)
+        
+        layout = QHBoxLayout()
+        
+        # Основная информация
+        info_layout = QVBoxLayout()
+        
+        title = QLabel("🏢 БИЗНЕС ИМПЕРИЯ 2.0")
+        title.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 28px; font-weight: bold;")
+        
+        stats_layout = QHBoxLayout()
+        
+        stats = [
+            (f"💰 ${self.business_manager.player_balance:,}", "Баланс"),
+            (f"📈 {len(self.business_manager.my_businesses)}", "Бизнесов"),
+            (f"⚡ {self.business_manager.innovation_points}", "Инновации"),
+            (f"🛡️ {self.business_manager.reputation}", "Репутация"),
+            (f"⚠️ {self.business_manager.risk_level}%", "Риск")
+        ]
+        
+        for value, label in stats:
+            stat_widget = self.create_stat_widget(value, label)
+            stats_layout.addWidget(stat_widget)
+        
+        info_layout.addWidget(title)
+        info_layout.addLayout(stats_layout)
+        layout.addLayout(info_layout)
+        
+        # Кнопки глобальных действий
+        action_layout = QVBoxLayout()
+        
+        global_actions = [
+            ("🎯 Автооптимизация", self.auto_optimize),
+            ("📊 Анализ рынка", self.market_analysis),
+            ("🚀 Ускорение", self.global_boost)
+        ]
+        
+        for text, callback in global_actions:
+            btn = AnimatedButton(text)
+            btn.setFixedHeight(35)
+            btn.clicked.connect(callback)
+            action_layout.addWidget(btn)
+        
+        layout.addLayout(action_layout)
+        
+        header.setLayout(layout)
+        return header
+    
+    def create_stat_widget(self, value, label):
+        """Создание виджета статистики"""
+        widget = QFrame()
+        widget.setStyleSheet(f"""
+            QFrame {{
+                background-color: rgba(255,255,255,0.1);
+                border-radius: 8px;
+                padding: 10px;
+                margin: 5px;
+            }}
+        """)
+        
+        layout = QVBoxLayout()
+        
+        value_label = QLabel(value)
+        value_label.setStyleSheet(f"color: {ACCENT2.name()}; font-size: 16px; font-weight: bold;")
+        
+        label_label = QLabel(label)
+        label_label.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 12px;")
+        
+        layout.addWidget(value_label)
+        layout.addWidget(label_label)
+        widget.setLayout(layout)
+        
+        return widget
+    
+    def create_quick_actions_panel(self):
+        """Панель быстрых действий"""
+        panel = QFrame()
+        panel.setStyleSheet(f"""
+            QFrame {{
+                background-color: {CARD_BG.name()};
+                border-radius: 10px;
+                padding: 15px;
+            }}
+        """)
+        
+        layout = QHBoxLayout()
+        
+        actions = [
+            ("🔍 Все бизнесы", "all"),
+            ("💡 Светлые", "light"),
+            ("🌑 Темные", "dark"),
+            ("🚀 Технологии", "tech"),
+            ("🏭 Производство", "manufacturing")
+        ]
+        
+        for text, filter_type in actions:
+            btn = QPushButton(text)
+            btn.setCheckable(True)
+            btn.setChecked(filter_type == "all")
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {PANEL_BG.name()};
+                    color: {TEXT_PRIMARY.name()};
+                    border: 2px solid {PURPLE_PRIMARY.name()};
+                    border-radius: 8px;
+                    padding: 8px 12px;
+                    margin: 2px;
+                }}
+                QPushButton:checked {{
+                    background-color: {PURPLE_PRIMARY.name()};
+                    color: white;
+                }}
+                QPushButton:hover {{
+                    border-color: {PURPLE_ACCENT.name()};
+                }}
+            """)
+            btn.clicked.connect(lambda checked, ft=filter_type: self.filter_businesses(ft))
+            layout.addWidget(btn)
+        
+        panel.setLayout(layout)
+        return panel
+    
+    def create_enhanced_tabs(self):
+        """Создание улучшенных вкладок"""
+        tab_widget = QTabWidget()
+        tab_widget.setStyleSheet(f"""
+            QTabWidget::pane {{
+                border: 2px solid {PURPLE_PRIMARY.name()};
+                border-radius: 10px;
+                background-color: {PANEL_BG.name()};
+            }}
+            QTabBar::tab {{
+                background-color: {DEEP_PURPLE.name()};
+                color: {TEXT_PRIMARY.name()};
+                padding: 12px 20px;
+                border: 1px solid {PURPLE_PRIMARY.name()};
+                border-radius: 5px;
+                margin-right: 2px;
+                font-weight: bold;
+            }}
+            QTabBar::tab:selected {{
+                background-color: {PURPLE_PRIMARY.name()};
+            }}
+            QTabBar::tab:hover {{
+                background-color: {PURPLE_ACCENT.name()};
+            }}
+        """)
+        
+        # Мои бизнесы
+        my_businesses_tab = self.create_my_businesses_tab()
+        tab_widget.addTab(my_businesses_tab, "💼 МОИ БИЗНЕСЫ")
+        
+        # Каталог
+        catalog_tab = self.create_enhanced_catalog_tab()
+        tab_widget.addTab(catalog_tab, "📋 КАТАЛОГ")
+        
+        # Синергии
+        synergies_tab = self.create_synergies_tab()
+        tab_widget.addTab(synergies_tab, "🔄 СИНЕРГИИ")
+        
+        # Аналитика
+        analytics_tab = self.create_analytics_tab()
+        tab_widget.addTab(analytics_tab, "📊 АНАЛИТИКА")
+        
+        return tab_widget
+    
+    def create_my_businesses_tab(self):
+        """Вкладка моих бизнесов"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        
+        # Статистика империи
+        empire_stats = self.create_empire_stats()
+        layout.addWidget(empire_stats)
+        
+        # Сетка бизнесов
+        self.my_businesses_scroll = QScrollArea()
+        self.my_businesses_scroll.setWidgetResizable(True)
+        self.my_businesses_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        
+        self.my_businesses_container = QWidget()
+        self.my_businesses_layout = QGridLayout(self.my_businesses_container)
+        self.my_businesses_layout.setSpacing(15)
+        self.my_businesses_scroll.setWidget(self.my_businesses_container)
+        
+        layout.addWidget(self.my_businesses_scroll)
+        
+        self.load_my_businesses()
+        return widget
+    
+    def create_enhanced_catalog_tab(self):
+        """Улучшенная вкладка каталога"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        
+        # Фильтры каталога
+        filter_layout = QHBoxLayout()
+        
+        categories = [
+            ("🔬 Наука", "research"),
+            ("🏭 Производство", "manufacturing"), 
+            ("💻 Технологии", "tech"),
+            ("🛎️ Сервисы", "service"),
+            ("🌑 Теневые", "dark")
+        ]
+        
+        for icon, category in categories:
+            btn = QPushButton(icon)
+            btn.setCheckable(True)
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {PANEL_BG.name()};
+                    color: {TEXT_PRIMARY.name()};
+                    border: 2px solid {PURPLE_PRIMARY.name()};
+                    border-radius: 8px;
+                    padding: 10px;
+                    font-size: 16px;
+                    margin: 2px;
+                }}
+                QPushButton:checked {{
+                    background-color: {PURPLE_PRIMARY.name()};
+                }}
+                QPushButton:hover {{
+                    border-color: {PURPLE_ACCENT.name()};
+                }}
+            """)
+            btn.clicked.connect(lambda checked, c=category: self.filter_catalog_by_category(c))
+            filter_layout.addWidget(btn)
+        
+        filter_layout.addStretch()
+        layout.addLayout(filter_layout)
+        
+        # Сетка каталога
+        self.catalog_scroll = QScrollArea()
+        self.catalog_scroll.setWidgetResizable(True)
+        self.catalog_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        
+        self.catalog_container = QWidget()
+        self.catalog_layout = QGridLayout(self.catalog_container)
+        self.catalog_layout.setSpacing(15)
+        self.catalog_scroll.setWidget(self.catalog_container)
+        
+        layout.addWidget(self.catalog_scroll)
+        
+        self.load_catalog()
+        return widget
+    
+    def create_synergies_tab(self):
+        """Вкладка синергий"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        
+        synergies_label = QLabel("🔄 СИСТЕМА СИНЕРГИЙ")
+        synergies_label.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 20px; font-weight: bold;")
+        layout.addWidget(synergies_label)
+        
+        # Отображение доступных синергий
+        for (biz1, biz2), synergy in self.business_manager.synergies.items():
+            synergy_widget = self.create_synergy_widget(biz1, biz2, synergy)
+            layout.addWidget(synergy_widget)
+        
+        layout.addStretch()
+        return widget
+    
+    def create_analytics_tab(self):
+        """Вкладка аналитики"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        
+        analytics_label = QLabel("📊 АНАЛИТИКА ИМПЕРИИ")
+        analytics_label.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 20px; font-weight: bold;")
+        layout.addWidget(analytics_label)
+        
+        # Статистика доходов
+        income_analysis = self.create_income_analysis()
+        layout.addWidget(income_analysis)
+        
+        # Рекомендации
+        recommendations = self.create_recommendations()
+        layout.addWidget(recommendations)
+        
+        layout.addStretch()
+        return widget
+    
+    def create_empire_stats(self):
+        """Статистика империи"""
+        widget = QFrame()
+        widget.setStyleSheet(f"""
+            QFrame {{
+                background-color: {CARD_BG.name()};
+                border: 2px solid {PURPLE_ACCENT.name()};
+                border-radius: 10px;
+                padding: 15px;
+            }}
+        """)
+        
+        layout = QHBoxLayout()
+        
+        total_income = sum(business['income_per_hour'] for business in self.business_manager.my_businesses)
+        total_workers = sum(business['workers'] for business in self.business_manager.my_businesses)
+        avg_risk = sum(business['risk'] for business in self.business_manager.my_businesses) / max(1, len(self.business_manager.my_businesses))
+        
+        stats = [
+            (f"${total_income:,}/час", "Общий доход"),
+            (str(len(self.business_manager.my_businesses)), "Активных бизнесов"),
+            (str(total_workers), "Всего работников"),
+            (f"{avg_risk:.1f}%", "Средний риск"),
+            (f"{self.business_manager.innovation_points}", "Инновационные очки")
+        ]
+        
+        for value, label in stats:
+            stat_widget = self.create_stat_widget(value, label)
+            layout.addWidget(stat_widget)
+        
+        widget.setLayout(layout)
+        return widget
+    
+    def create_revolutionary_business_card(self, business_data, is_owned=False):
+        """Создание революционной карточки бизнеса"""
+        card = QFrame()
+        
+        # Динамический стиль в зависимости от типа бизнеса
+        border_color = PURPLE_PRIMARY.name() if business_data['category'] == 'light' else "#dc2626"
+        bg_gradient = f"""
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 {CARD_BG.name()}, stop:1 {DEEP_PURPLE.name()});
+        """ if business_data['category'] == 'light' else f"""
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 {CARD_BG.name()}, stop:1 #7f1d1d);
+        """
+        
+        card.setStyleSheet(f"""
+            QFrame {{
+                {bg_gradient}
+                border: 3px solid {border_color};
+                border-radius: 15px;
+                padding: 20px;
+            }}
+        """)
+        
+        if is_owned:
+            card.setFixedSize(600, 700)
+        else:
+            card.setFixedSize(450, 400)
+        
+        layout = QVBoxLayout()
+        card.setLayout(layout)
+        
+        # Верхняя панель с основной информацией
+        header_layout = QHBoxLayout()
+        
+        # Иконка и название
+        title_layout = QVBoxLayout()
+        icon_label = QLabel(business_data['icon'])
+        icon_label.setStyleSheet("font-size: 24px;")
+        name_label = QLabel(business_data['name'])
+        name_label.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 20px; font-weight: bold;")
+        
+        title_layout.addWidget(icon_label)
+        title_layout.addWidget(name_label)
+        header_layout.addLayout(title_layout)
+        
+        # Статус и уровень
+        status_layout = QVBoxLayout()
+        level_label = QLabel(f"Ур. {business_data['level']}")
+        level_label.setStyleSheet(f"color: {ACCENT2.name()}; font-size: 16px; font-weight: bold;")
+        
+        risk_label = QLabel(f"⚠️ Риск: {business_data['risk']}%")
+        risk_label.setStyleSheet(f"color: {'#ef4444' if business_data['risk'] > 50 else '#f59e0b'}; font-size: 12px;")
+        
+        status_layout.addWidget(level_label)
+        status_layout.addWidget(risk_label)
+        header_layout.addLayout(status_layout)
+        
+        layout.addLayout(header_layout)
+        
+        # Описание
+        desc_label = QLabel(business_data['description'])
+        desc_label.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 12px;")
+        desc_label.setWordWrap(True)
+        layout.addWidget(desc_label)
+        
+        # Основные показатели
+        stats_layout = QHBoxLayout()
+        
+        indicators = [
+            (f"💰 ${business_data['income_per_hour']:,}", "Доход/час"),
+            (f"👥 {business_data['workers']}", "Работники"),
+            (f"⚡ {business_data.get('efficiency', 1.0):.1f}x", "Эффективность")
+        ]
+        
+        for value, label in indicators:
+            indicator = QLabel(value)
+            indicator.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 12px; font-weight: bold;")
+            stats_layout.addWidget(indicator)
+        
+        layout.addLayout(stats_layout)
+        
+        # Основное действие
+        primary_action_layout = QHBoxLayout()
+        
+        if is_owned:
+            primary_btn = AnimatedButton(business_data['primary_action'])
+            primary_btn.setFixedHeight(40)
+            primary_btn.clicked.connect(lambda: self.handle_primary_action(business_data))
+            primary_action_layout.addWidget(primary_btn)
+            
+            # Дополнительные действия
+            if business_data['name'] == 'Биотех Лаборатория':
+                research_btn = AnimatedButton("🔬 Исследования")
+                research_btn.clicked.connect(lambda: self.show_research_dialog(business_data))
+                primary_action_layout.addWidget(research_btn)
+            elif business_data['name'] == 'AI разработки':
+                training_btn = AnimatedButton("🤖 Обучение AI")
+                training_btn.clicked.connect(lambda: self.show_training_dialog(business_data))
+                primary_action_layout.addWidget(training_btn)
+        else:
+            # Для каталога - кнопка покупки
+            buy_btn = AnimatedButton(f"Купить за ${business_data['price']:,}")
+            buy_btn.setFixedHeight(40)
+            buy_btn.clicked.connect(lambda: self.buy_business(business_data))
+            primary_action_layout.addWidget(buy_btn)
+        
+        layout.addLayout(primary_action_layout)
+        
+        # Система улучшений (только для owned)
+        if is_owned:
+            upgrades_label = QLabel("⚡ УЛУЧШЕНИЯ")
+            upgrades_label.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 14px; font-weight: bold;")
+            layout.addWidget(upgrades_label)
+            
+            upgrades_layout = QGridLayout()
+            
+            for upgrade_type in range(1, 6):
+                upgrade_info = BusinessUpgradeSystem.UPGRADE_TYPES[upgrade_type]
+                current_level = business_data['upgrade_system'].levels[upgrade_type]
+                
+                upgrade_btn = QPushButton(f"{upgrade_info['icon']} {upgrade_type}")
+                upgrade_btn.setFixedSize(50, 50)
+                upgrade_btn.setToolTip(f"{upgrade_info['name']}\nУровень: {current_level}\n{upgrade_info['description']}")
+                upgrade_btn.setStyleSheet(f"""
+                    QPushButton {{
+                        background-color: {PANEL_BG.name()};
+                        border: 2px solid {PURPLE_PRIMARY.name()};
+                        border-radius: 8px;
+                        color: {TEXT_PRIMARY.name()};
+                        font-size: 14px;
+                    }}
+                    QPushButton:hover {{
+                        background-color: {PURPLE_PRIMARY.name()};
+                    }}
+                """)
+                upgrade_btn.clicked.connect(lambda checked, idx=upgrade_type, biz=business_data: 
+                                          self.upgrade_business(biz, idx))
+                
+                row = (upgrade_type - 1) // 3
+                col = (upgrade_type - 1) % 3
+                upgrades_layout.addWidget(upgrade_btn, row, col)
+            
+            layout.addLayout(upgrades_layout)
+            
+            # Специализированные панели
+            if business_data.get('current_research'):
+                self.add_research_progress_panel(layout, business_data)
+            elif business_data.get('current_training'):
+                self.add_training_progress_panel(layout, business_data)
+            
+            # Кнопка перехода в темную сторону
+            if business_data.get('can_go_dark', False) and business_data['category'] == 'light':
+                dark_btn = AnimatedButton("🌑 Перейти в Тень")
+                dark_btn.setStyleSheet("""
+                    QPushButton {
+                        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                            stop:0 #7f1d1d, stop:1 #991b1b);
+                        border: 2px solid #dc2626;
+                        border-radius: 10px;
+                        color: white;
+                        font-size: 14px;
+                        font-weight: bold;
+                        padding: 8px 16px;
+                    }
+                    QPushButton:hover {
+                        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                            stop:0 #991b1b, stop:1 #b91c1c);
+                        border: 2px solid #ef4444;
+                    }
+                """)
+                dark_btn.clicked.connect(lambda: self.show_dark_side_dialog(business_data))
+                layout.addWidget(dark_btn)
+        
+        layout.addStretch()
+        return card
+    
+    def add_research_progress_panel(self, layout, business_data):
+        """Добавление панели прогресса исследования"""
+        research_frame = QFrame()
+        research_frame.setStyleSheet(f"""
+            QFrame {{
+                background-color: rgba(6, 246, 230, 0.1);
+                border: 1px solid {ACCENT2.name()};
+                border-radius: 8px;
+                padding: 10px;
+            }}
+        """)
+        
+        research_layout = QVBoxLayout(research_frame)
+        
+        research_label = QLabel(f"🔬 {business_data['current_research']}")
+        research_label.setStyleSheet(f"color: {ACCENT2.name()}; font-size: 14px; font-weight: bold;")
+        
+        progress_bar = QProgressBar()
+        progress_bar.setValue(int(business_data['research_progress']))
+        progress_bar.setMaximum(100)
+        progress_bar.setStyleSheet(f"""
+            QProgressBar {{
+                border: 2px solid {ACCENT2.name()};
+                border-radius: 5px;
+                text-align: center;
+                background-color: {DARK_BG.name()};
+            }}
+            QProgressBar::chunk {{
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 {ACCENT1.name()}, stop:1 {ACCENT2.name()});
+                border-radius: 3px;
+            }}
+        """)
+        
+        research_layout.addWidget(research_label)
+        research_layout.addWidget(progress_bar)
+        layout.addWidget(research_frame)
+    
+    def add_training_progress_panel(self, layout, business_data):
+        """Добавление панели прогресса обучения"""
+        training_frame = QFrame()
+        training_frame.setStyleSheet(f"""
+            QFrame {{
+                background-color: rgba(255, 59, 111, 0.1);
+                border: 1px solid #ff3b6f;
+                border-radius: 8px;
+                padding: 10px;
+            }}
+        """)
+        
+        training_layout = QVBoxLayout(training_frame)
+        
+        training_label = QLabel(f"🤖 {business_data['current_training']}")
+        training_label.setStyleSheet("color: #ff3b6f; font-size: 14px; font-weight: bold;")
+        
+        progress_bar = QProgressBar()
+        progress_bar.setValue(int(business_data['training_progress']))
+        progress_bar.setMaximum(100)
+        progress_bar.setStyleSheet("""
+            QProgressBar {
+                border: 2px solid #ff3b6f;
+                border-radius: 5px;
+                text-align: center;
+                background-color: #0b0f12;
+            }
+            QProgressBar::chunk {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #ff3b6f, stop:1 #ff2a4a);
+                border-radius: 3px;
+            }
+        """)
+        
+        training_layout.addWidget(training_label)
+        training_layout.addWidget(progress_bar)
+        layout.addWidget(training_frame)
+    
+    def handle_primary_action(self, business_data):
+        """Обработка основного действия"""
+        business_name = business_data['name']
+        
+        if business_name == 'Биотех Лаборатория':
+            self.show_research_dialog(business_data)
+        elif business_name == 'AI разработки':
+            self.show_training_dialog(business_data)
+        elif business_name == 'Автопром':
+            self.show_production_dialog(business_data)
+        elif business_name == 'Крипто-майнинг':
+            self.show_mining_dialog(business_data)
+        else:
+            QMessageBox.information(self, "Действие", 
+                                  f"Выполнено: {business_data['primary_action']}")
+    
+    def show_research_dialog(self, business_data):
+        """Диалог исследований для биотеха"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("🔬 Исследовательские проекты")
+        dialog.setFixedSize(500, 400)
+        
+        layout = QVBoxLayout(dialog)
+        
+        title = QLabel("Выберите исследовательский проект:")
+        title.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 16px; font-weight: bold;")
+        layout.addWidget(title)
+        
+        for project in business_data['special_mechanics']['research_projects']:
+            project_frame = QFrame()
+            project_frame.setStyleSheet(f"""
+                QFrame {{
+                    background-color: {CARD_BG.name()};
+                    border: 1px solid {PURPLE_PRIMARY.name()};
+                    border-radius: 8px;
+                    padding: 15px;
+                    margin: 5px;
+                }}
+            """)
+            
+            project_layout = QHBoxLayout(project_frame)
+            
+            info_layout = QVBoxLayout()
+            name_label = QLabel(project['name'])
+            name_label.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 14px; font-weight: bold;")
+            
+            details_label = QLabel(f"Стоимость: ${project['cost']:,} | Длительность: {project['duration']}ч")
+            details_label.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 12px;")
+            
+            reward_label = QLabel(f"Награда: Увеличение дохода в {project['reward']}x")
+            reward_label.setStyleSheet(f"color: {ACCENT2.name()}; font-size: 12px;")
+            
+            info_layout.addWidget(name_label)
+            info_layout.addWidget(details_label)
+            info_layout.addWidget(reward_label)
+            
+            start_btn = AnimatedButton("Начать")
+            start_btn.setFixedSize(80, 30)
+            start_btn.clicked.connect(lambda checked, p=project['name']: 
+                                    self.start_research(business_data, p))
+            
+            project_layout.addLayout(info_layout)
+            project_layout.addWidget(start_btn)
+            
+            layout.addWidget(project_frame)
+        
+        dialog.exec()
+    
+    def show_training_dialog(self, business_data):
+        """Диалог обучения AI моделей"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("🤖 Обучение AI моделей")
+        dialog.setFixedSize(450, 350)
+        
+        layout = QVBoxLayout(dialog)
+        
+        title = QLabel("Выберите модель для обучения:")
+        title.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 16px; font-weight: bold;")
+        layout.addWidget(title)
+        
+        for model in business_data['special_mechanics']['ai_models']:
+            model_btn = AnimatedButton(f"{model['name']}\n"
+                                     f"Стоимость: ${model['cost']:,} | Время: {model['training_time']}ч")
+            model_btn.clicked.connect(lambda checked, m=model['name']: 
+                                    self.start_training(business_data, m))
+            layout.addWidget(model_btn)
+        
+        dialog.exec()
+    
+    def show_production_dialog(self, business_data):
+        """Диалог обновления производственных линий"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("🏭 Обновление производства")
+        dialog.setFixedSize(400, 300)
+        
+        layout = QVBoxLayout(dialog)
+        
+        title = QLabel("Выберите тип производственной линии:")
+        title.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 16px; font-weight: bold;")
+        layout.addWidget(title)
+        
+        for line in business_data['special_mechanics']['production_lines']:
+            line_btn = AnimatedButton(f"{line['type']}\n"
+                                    f"Эффективность: {line['efficiency']}x | Стоимость: ${line['cost']:,}")
+            line_btn.clicked.connect(lambda checked, l=line['type']: 
+                                   self.upgrade_production(business_data, l))
+            layout.addWidget(line_btn)
+        
+        dialog.exec()
+    
+    def show_mining_dialog(self, business_data):
+        """Диалог покупки майнинг-оборудования"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("⛏️ Майнинг оборудование")
+        dialog.setFixedSize(400, 300)
+        
+        layout = QVBoxLayout(dialog)
+        
+        title = QLabel("Выберите майнинг-риг:")
+        title.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 16px; font-weight: bold;")
+        layout.addWidget(title)
+        
+        for rig in business_data['special_mechanics']['mining_rigs']:
+            rig_btn = AnimatedButton(f"{rig['type']}\n"
+                                   f"Хэшрейт: {rig['hashrate']} | Стоимость: ${rig['cost']:,}")
+            rig_btn.clicked.connect(lambda checked, r=rig['type']: 
+                                  self.buy_mining_rig(business_data, r))
+            layout.addWidget(rig_btn)
+        
+        dialog.exec()
+    
+    def start_research(self, business_data, project_name):
+        """Запуск исследования"""
+        success, message = self.business_manager.start_research(business_data['id'], project_name)
+        if success:
+            QMessageBox.information(self, "Исследование начато", message)
+            self.refresh_interface()
+        else:
+            QMessageBox.warning(self, "Ошибка", message)
+    
+    def start_training(self, business_data, model_name):
+        """Запуск обучения AI"""
+        success, message = self.business_manager.start_ai_training(business_data['id'], model_name)
+        if success:
+            QMessageBox.information(self, "Обучение начато", message)
+            self.refresh_interface()
+        else:
+            QMessageBox.warning(self, "Ошибка", message)
+    
+    def upgrade_production(self, business_data, line_type):
+        """Обновление производственной линии"""
+        success, message = self.business_manager.upgrade_production_line(business_data['id'], line_type)
+        if success:
+            QMessageBox.information(self, "Производство обновлено", message)
+            self.refresh_interface()
+        else:
+            QMessageBox.warning(self, "Ошибка", message)
+    
+    def buy_mining_rig(self, business_data, rig_type):
+        """Покупка майнинг-рига"""
+        success, message = self.business_manager.buy_mining_rig(business_data['id'], rig_type)
+        if success:
+            QMessageBox.information(self, "Оборудование приобретено", message)
+            self.refresh_interface()
+        else:
+            QMessageBox.warning(self, "Ошибка", message)
+    
+    def upgrade_business(self, business_data, upgrade_type):
+        """Улучшение бизнеса"""
+        success, message = business_data['upgrade_system'].upgrade(upgrade_type, self.business_manager.player_balance)
+        if success:
+            self.business_manager.player_balance -= business_data['upgrade_system'].get_upgrade_cost(
+                upgrade_type, business_data['upgrade_system'].levels[upgrade_type] - 1)
+            QMessageBox.information(self, "Улучшение применено", message)
+            self.refresh_interface()
+        else:
+            QMessageBox.warning(self, "Ошибка", message)
+    
+    def buy_business(self, business_template):
+        """Покупка бизнеса"""
+        success, message = self.business_manager.buy_business(business_template)
+        if success:
+            QMessageBox.information(self, "Покупка успешна", message)
+            self.refresh_interface()
+        else:
+            QMessageBox.warning(self, "Ошибка", message)
+    
+    def show_dark_side_dialog(self, business_data):
+        """Диалог перехода в темную сторону"""
+        reply = QMessageBox.question(
+            self,
+            "Переход в Тень",
+            f"Вы уверены, что хотите перевести {business_data['name']} на темную сторону?\n\n"
+            "✨ ПРЕИМУЩЕСТВА:\n"
+            "• Доход увеличится на 80%\n"
+            "• Откроются эксклюзивные операции\n"
+            "• Доступ к черным рынкам\n\n"
+            "⚠️ РИСКИ:\n"
+            "• Риск возрастет до 70%\n" 
+            "• Репутация уменьшится на 25\n"
+            "• Возможны рейды и санкции\n\n"
+            "Это действие НЕОБРАТИМО!",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            # Здесь будет логика перехода в темную сторону
+            QMessageBox.information(self, "Переход завершен", 
+                                  f"{business_data['name']} теперь работает в тени!")
+    
+    def load_my_businesses(self):
+        """Загрузка моих бизнесов"""
+        if hasattr(self, 'my_businesses_layout'):
+            self.clear_layout(self.my_businesses_layout)
+            
+            row, col = 0, 0
+            max_cols = 2
+            
+            for business in self.business_manager.my_businesses:
+                card = self.create_revolutionary_business_card(business, is_owned=True)
+                self.my_businesses_layout.addWidget(card, row, col)
+                
+                col += 1
+                if col >= max_cols:
+                    col = 0
+                    row += 1
+            
+            if len(self.business_manager.my_businesses) == 0:
+                empty_label = QLabel("У вас пока нет бизнесов. Посетите каталог для покупки!")
+                empty_label.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 16px; text-align: center;")
+                empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.my_businesses_layout.addWidget(empty_label, 0, 0, 1, max_cols)
+    
+    def load_catalog(self):
+        """Загрузка каталога"""
+        if hasattr(self, 'catalog_layout'):
+            self.clear_layout(self.catalog_layout)
+            
+            row, col = 0, 0
+            max_cols = 2
+            
+            available_businesses = [b for b in self.business_manager.available_businesses 
+                                  if not any(owned['id'] == b['id'] for owned in self.business_manager.my_businesses)]
+            
+            for business in available_businesses:
+                card = self.create_revolutionary_business_card(business, is_owned=False)
+                self.catalog_layout.addWidget(card, row, col)
+                
+                col += 1
+                if col >= max_cols:
+                    col = 0
+                    row += 1
+            
+            if len(available_businesses) == 0:
+                empty_label = QLabel("Все доступные бизнесы уже приобретены!")
+                empty_label.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 16px; text-align: center;")
+                empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.catalog_layout.addWidget(empty_label, 0, 0, 1, max_cols)
+    
+    def filter_businesses(self, filter_type):
+        """Фильтрация бизнесов"""
+        self.current_filter = filter_type
+        self.load_my_businesses()
+    
+    def filter_catalog_by_category(self, category):
+        """Фильтрация каталога по категории"""
+        # Здесь будет логика фильтрации по категориям
+        pass
+    
+    def create_synergy_widget(self, biz1, biz2, synergy):
+        """Создание виджета синергии"""
+        widget = QFrame()
+        widget.setStyleSheet(f"""
+            QFrame {{
+                background-color: {CARD_BG.name()};
+                border: 2px solid {PURPLE_ACCENT.name()};
+                border-radius: 10px;
+                padding: 15px;
+                margin: 5px;
+            }}
+        """)
+        
+        layout = QVBoxLayout(widget)
+        
+        # Заголовок
+        title = QLabel(f"🔄 {synergy['name']}")
+        title.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 16px; font-weight: bold;")
+        layout.addWidget(title)
+        
+        # Описание
+        desc = QLabel(synergy['description'])
+        desc.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 12px;")
+        desc.setWordWrap(True)
+        layout.addWidget(desc)
+        
+        # Бизнесы
+        businesses_label = QLabel(f"💼 {biz1} + {biz2}")
+        businesses_label.setStyleSheet(f"color: {ACCENT2.name()}; font-size: 14px;")
+        layout.addWidget(businesses_label)
+        
+        # Бонус
+        bonus_label = QLabel(f"📈 Бонус: +{int((synergy['bonus'] - 1) * 100)}%")
+        bonus_label.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 12px;")
+        layout.addWidget(bonus_label)
+        
+        # Требования
+        req_text = "Требования: "
+        reqs = []
+        for req, level in synergy['requirements'].items():
+            reqs.append(f"{req}: ур. {level}")
+        
+        req_label = QLabel(req_text + ", ".join(reqs))
+        req_label.setStyleSheet(f"color: {TEXT_TERTIARY.name()}; font-size: 10px;")
+        layout.addWidget(req_label)
+        
+        return widget
+    
+    def create_income_analysis(self):
+        """Анализ доходов"""
+        widget = QFrame()
+        widget.setStyleSheet(f"""
+            QFrame {{
+                background-color: {CARD_BG.name()};
+                border-radius: 10px;
+                padding: 15px;
+            }}
+        """)
+        
+        layout = QVBoxLayout(widget)
+        
+        title = QLabel("📊 Анализ доходов")
+        title.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 16px; font-weight: bold;")
+        layout.addWidget(title)
+        
+        # Здесь будет детальный анализ доходов по бизнесам
+        analysis_text = "• Биотех Лаборатория: $12,000/час\n"
+        analysis_text += "• Автопром: $15,000/час\n"
+        analysis_text += "• AI разработки: $18,000/час\n"
+        analysis_text += "• Общий доход: $45,000/час"
+        
+        analysis_label = QLabel(analysis_text)
+        analysis_label.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 12px;")
+        layout.addWidget(analysis_label)
+        
+        return widget
+    
+    def create_recommendations(self):
+        """Рекомендации по развитию"""
+        widget = QFrame()
+        widget.setStyleSheet(f"""
+            QFrame {{
+                background-color: {CARD_BG.name()};
+                border-radius: 10px;
+                padding: 15px;
+            }}
+        """)
+        
+        layout = QVBoxLayout(widget)
+        
+        title = QLabel("💡 Рекомендации")
+        title.setStyleSheet(f"color: {TEXT_PRIMARY.name()}; font-size: 16px; font-weight: bold;")
+        layout.addWidget(title)
+        
+        recommendations = [
+            "• Улучшите производительность Биотех до уровня 3",
+            "• Запустите исследование генной терапии",
+            "• Купите майнинг-риг для увеличения дохода",
+            "• Рассмотрите переход AI разработок в тень"
+        ]
+        
+        for rec in recommendations:
+            rec_label = QLabel(rec)
+            rec_label.setStyleSheet(f"color: {TEXT_SECONDARY.name()}; font-size: 12px;")
+            layout.addWidget(rec_label)
+        
+        return widget
+    
+    def auto_optimize(self):
+        """Автооптимизация бизнесов"""
+        QMessageBox.information(self, "Автооптимизация", "Система оптимизировала ваши бизнесы!")
+    
+    def market_analysis(self):
+        """Анализ рынка"""
+        QMessageBox.information(self, "Анализ рынка", "Текущие рыночные условия анализированы!")
+    
+    def global_boost(self):
+        """Глобальное ускорение"""
+        QMessageBox.information(self, "Ускорение", "Все процессы ускорены на 24 часа!")
+    
+    def setup_business_timers(self):
+        """Настройка таймеров для бизнесов"""
+        self.update_timer = QTimer()
+        self.update_timer.timeout.connect(self.refresh_interface)
+        self.update_timer.start(1000)  # Обновление каждую секунду
+    
+    def refresh_interface(self):
+        """Обновление интерфейса"""
+        self.load_my_businesses()
+        self.load_catalog()
+    
+    def clear_layout(self, layout):
+        """Очистка layout"""
+        while layout.count():
+            item = layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+    
+    def keyPressEvent(self, a0):
+        """Обработка клавиш"""
+        if a0.key() == Qt.Key.Key_Escape:
+            self.exitToMenu.emit()
+        else:
+            super().keyPressEvent(a0)
+
 class ProfileMenu(QWidget):
     """Меню профиля"""
     
@@ -3307,7 +5080,8 @@ class MainWindow(QMainWindow):
         self.investment_menu = InvestmentMenu()
         self.shop_selection = ShopSelectionMenu()
         self.light_shop = LightShopMenu()
-        self.business_menu = BusinessMenu()
+        #self.business_menu = BusinessMenu()
+        self.business_menu = RevolutionaryBusinessMenu()
         self.profile_menu = ProfileMenu()
         self.settings_menu = SettingsMenu()
         
